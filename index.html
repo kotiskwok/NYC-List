@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My NYC List</title>
+<meta name="theme-color" content="#FFF3DF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NYC List">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Kotis's map of NYC restaurants, cafes and cute shops to visit.">
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<style>
+/* Design tokens from the "NYC List v2" Claude Design file. Single deliberate look (no dark variant). */
+:root{--blue:#1B3DB8;--navy:#10183F;--orange:#FF6B1A;--yellow:#FFC425;--cream:#FFF3DF;--st:46px;--sb:0px;color-scheme:light}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--blue);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;color:var(--navy)}
+a{color:var(--blue)}a:hover{color:var(--orange)}
+button{font-family:inherit}
+input::placeholder,textarea::placeholder{color:#8A8FA8}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.leaflet-container{font-family:'Archivo',sans-serif}
+.noscroll{scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.noscroll::-webkit-scrollbar{display:none}
+.press:active{transform:scale(.97)}
+.press94:active{transform:scale(.94)}
+.hov:hover{background:var(--cream)!important}
+#root{height:100%}
+.emo{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;line-height:1;font-style:normal}
+
+/* Desktop: the app sits in the phone frame from the design. */
+.stage{min-height:100%;display:flex;align-items:center;justify-content:center;padding:28px 12px;background:var(--blue)}
+.device{position:relative;width:390px;max-width:100%;height:844px;border-radius:54px;background:var(--navy);padding:10px;box-shadow:0 30px 80px rgba(5,10,40,.5)}
+.screen{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--cream)}
+.statusbar{position:absolute;top:0;left:0;right:0;height:46px;z-index:1200;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0;font-weight:700;font-size:15px;color:var(--navy);pointer-events:none}
+
+/* Phone (or a short window): the app fills the screen, no frame or fake status bar. */
+@media (max-width:520px),(max-height:760px){
+  body{background:var(--cream);overscroll-behavior:none}
+  :root{--st:12px;--sb:0px}
+  .stage{padding:0;height:100%;min-height:0;display:block}
+  .device{width:100%;height:100%;border-radius:0;padding:0;box-shadow:none;background:var(--cream)}
+  .screen{border-radius:0}
+  .statusbar{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="/vendor/react.production.min.js"></script>
+<script src="/vendor/react-dom.production.min.js"></script>
+<script src="/vendor/htm.umd.js"></script>
+<script src="/vendor/leaflet.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/data/nyc-map-data.js"></script>
+<script src="/data/nyc-subway-data.js"></script>
+<script src="/data/nyc-streets-data.js"></script>
+<script src="/config.js"></script>
+<script src="/src/runtime.js"></script>
+<script src="/src/sync.js"></script>
+<script src="/src/logic.js"></script>
+<script src="/src/view.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
