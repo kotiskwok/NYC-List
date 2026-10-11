@@ -1,7 +1,12 @@
 {
   "headers": [
+    { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/config.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
     { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
-    { "source": "/(config.js|index.html|src/(.*))", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
-    { "source": "/(data|vendor|icons)/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+    { "source": "/src/:path*", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/data/:path*", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    { "source": "/vendor/:path*", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    { "source": "/icons/:path*", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
   ]
 }

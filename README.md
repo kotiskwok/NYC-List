@@ -24,7 +24,7 @@ It's a plain static site with no build step. Vercel serves the files as they are
 ### 1. Supabase (the database)
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor → New query**, paste everything from `supabase/schema.sql`, and click **Run**.
-3. Go to **Project Settings → API** (or click **Connect**). Copy the **Project URL** and the **anon / publishable** key into `config.js`. This key is safe to commit, because the security rules only let each signed-in person see their own list.
+3. Go to **Project Settings → API** (or click **Connect**). Copy the **Project URL** and the **publishable** key into `config.js` (already done for this project). This key is safe to commit, because the security rules only let each signed-in person see their own list.
 4. After the Vercel site is live, go to **Authentication → URL Configuration**. Set **Site URL** to your Vercel address so the confirmation email links back to the app.
 
 ### 2. Vercel (the website)
