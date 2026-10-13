@@ -146,6 +146,11 @@ const NYCSync = (() => {
     app.resetLocal();
   }
 
-  return { enabled, attach, queue, submit, signOut, syncNow: () => sync() };
+  async function getToken() {
+    if (!sb || !user) return null;
+    try { const { data } = await sb.auth.getSession(); return (data.session && data.session.access_token) || null; } catch (e) { return null; }
+  }
+
+  return { enabled, attach, queue, submit, signOut, getToken, syncNow: () => sync() };
 })();
 window.NYCSync = NYCSync;

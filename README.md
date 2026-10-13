@@ -13,6 +13,7 @@ It's a plain static site with no build step. Vercel serves the files as they are
 | `src/logic.js` | All app behavior: maps, filters, routing estimates, plan ordering, forms |
 | `src/view.js` | Every screen, written with React + htm (no JSX build) |
 | `src/sync.js` | Supabase sign-in and cloud sync, with offline merge |
+| `api/extract.js` | Server function that reads a TikTok / Instagram / Threads post and asks Claude which places it mentions |
 | `config.js` | Your Supabase URL and anon key |
 | `data/` | NYC neighborhoods, streets and subway stations |
 | `vendor/` | React, htm, Leaflet and supabase-js, kept locally so the app works offline |
@@ -32,12 +33,19 @@ It's a plain static site with no build step. Vercel serves the files as they are
 2. Leave **Framework Preset** as **Other**, with no build command, and click **Deploy**.
 3. From now on, every push to `main` redeploys automatically.
 
-### 3. Your account
+### 3. AI fill from links
+1. Create an API key at [console.anthropic.com](https://console.anthropic.com) (**Settings → API Keys**) and add a little credit under **Billing**. Each link costs a fraction of a cent.
+2. In Vercel, open the project and go to **Settings → Environment Variables**. Add `ANTHROPIC_API_KEY` with that key, then **Redeploy**.
+3. In the app, paste a TikTok, Instagram or Threads link into **Add A Spot**. The app reads the caption and cover image, then fills in the name, category, neighborhood, address, price and notes, and pins the place. If a post lists several places, pick one or tap **Add All**.
+- It reads the post's caption and cover image, not the spoken audio. If a post only names a place out loud, paste the place name or the caption into **Notes** and tap **✨ Fill From Link** again.
+- Only signed-in users can use it, so nobody else can spend your API credit.
+
+### 4. Your account
 1. Open the site and tap **New Here? Create An Account**.
 2. Confirm your email from the link Supabase sends, then sign in.
 3. To make it a private app, turn off **Authentication → Sign In / Providers → Allow new users to sign up** in Supabase once your account exists.
 
-### 4. Put it on your phone
+### 5. Put it on your phone
 - **iPhone:** open the site in Safari, tap **Share**, then **Add to Home Screen**.
 - **Android:** open it in Chrome, tap **⋮**, then **Add to Home screen** (or **Install app**).
 

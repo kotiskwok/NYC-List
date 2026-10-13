@@ -336,7 +336,22 @@ function AddSheet(v) {
           <button onClick=${v.pasteUrl} style=${S('flex:none;height:52px;padding:0 16px;border-radius:16px;border:0;background:#FFC425;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Paste</button>
         </div>
         ${v.hasSrcBadge && html`<div style=${S('display:flex')}><span style=${S(`font-size:12px;font-weight:800;background:${v.srcBadgeBg};color:#fff;padding:5px 10px;border-radius:999px`)}>${v.srcBadge}</span></div>`}
-        <div style=${S('font-size:12px;color:#5A6080')}>Optional — Skip It If You're Adding By Name.</div>
+        ${v.aiShow && html`
+        <button onClick=${v.aiRun} disabled=${v.aiBusy} class=${v.aiBusy ? 'ai-busy' : ''} style=${S(`height:48px;border-radius:16px;border:2px solid #10183F;background:${v.aiBusy ? '#FFF3DF' : '#10183F'};color:${v.aiBusy ? '#10183F' : '#FFC425'};font-weight:900;font-style:italic;font-size:16px;cursor:${v.aiBusy ? 'default' : 'pointer'};box-shadow:0 4px 0 #FFC425`)}>${v.aiBtn}</button>`}
+        ${v.aiHasMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${v.aiMsg}</div>`}
+        ${v.aiMulti && html`
+        <div style=${S('background:#fff;border:2px solid #10183F;border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:8px')}>
+          <div style=${S('font-weight:900;font-style:italic;font-size:17px;color:#1B3DB8')}>This Post Mentions ${v.aiCount} Places</div>
+          <div style=${S('font-size:12px;font-weight:600;color:#4A5275;margin-top:-4px')}>Tap One To Fill The Form, Or Add Them All At Once.</div>
+          ${v.aiRows.map((r, i) => html`
+          <button key=${i} onClick=${r.onPick} style=${S(`display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border-radius:14px;border:2px solid ${r.on ? '#FF6B1A' : 'rgba(16,24,63,.1)'};background:${r.on ? '#FFF3DF' : '#fff'};cursor:pointer;color:#10183F`)}>
+            <span class="emo" aria-hidden="true" style=${S(`width:32px;height:32px;border-radius:10px;background:${r.bg};flex:none;display:flex;align-items:center;justify-content:center;font-size:17px`)}>${r.emoji}</span>
+            <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
+            ${r.on && html`<span style=${S('font-weight:900;color:#FF6B1A')}>✓</span>`}
+          </button>`)}
+          <button onClick=${v.aiAddAll} style=${S('height:44px;margin-top:2px;border-radius:14px;border:0;background:#FF6B1A;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${v.aiAddAllLabel}</button>
+        </div>`}
+        <div style=${S('font-size:12px;color:#5A6080')}>Paste A Post And AI Fills In The Rest. Optional — Skip It If You're Adding By Name.</div>
       </div>
       <div style=${col8}>
         <label for="f-name" style=${lab}>Place Name</label>
