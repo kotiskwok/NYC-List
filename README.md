@@ -13,7 +13,9 @@ It's a plain static site with no build step. Vercel serves the files as they are
 | `src/logic.js` | All app behavior: maps, filters, routing estimates, plan ordering, forms |
 | `src/view.js` | Every screen, written with React + htm (no JSX build) |
 | `src/sync.js` | Supabase sign-in and cloud sync, with offline merge |
-| `api/extract.js` | Server function that reads a TikTok / Instagram / Threads post and asks Claude which places it mentions |
+| `api/extract.js` | Server function that reads a TikTok / Instagram / Threads post (caption, cover, TikTok's spoken captions) and asks Claude which places it mentions |
+| `api/transcribe.js` | Server function that turns a video's audio into text (OpenAI speech-to-text) |
+| `src/video.js` | Pulls the audio and a few frames out of a video on the phone, so only small pieces are uploaded |
 | `config.js` | Your Supabase URL and anon key |
 | `data/` | NYC neighborhoods, streets and subway stations |
 | `vendor/` | React, htm, Leaflet and supabase-js, kept locally so the app works offline |
@@ -37,7 +39,8 @@ It's a plain static site with no build step. Vercel serves the files as they are
 1. Create an API key at [console.anthropic.com](https://console.anthropic.com) (**Settings → API Keys**) and add a little credit under **Billing**. Each link costs a fraction of a cent.
 2. In Vercel, open the project and go to **Settings → Environment Variables**. Add `ANTHROPIC_API_KEY` with that key, then **Redeploy**.
 3. In the app, paste a TikTok, Instagram or Threads link into **Add A Spot**. The app reads the caption and cover image, then fills in the name, category, neighborhood, address, price and notes, and pins the place. If a post lists several places, pick one or tap **Add All**.
-- It reads the post's caption and cover image, not the spoken audio. If a post only names a place out loud, paste the place name or the caption into **Notes** and tap **✨ Fill From Link** again.
+- **What's said out loud:** for TikTok links, the app uses TikTok's own automatic captions when the video has them, with no extra setup.
+- **🎬 From A Video:** for any platform, save the video to your phone and pick it. The app pulls out the soundtrack and three still frames on the phone itself, so the full video is never uploaded. A speech-to-text service turns the audio into words, and the AI reads those plus any place names shown on screen. This needs a second key: create one at [platform.openai.com](https://platform.openai.com/api-keys), add a little credit, and add `OPENAI_API_KEY` in Vercel's Environment Variables, then redeploy. A 1-minute video costs well under a cent. Videos are listened to up to 10 minutes.
 - Only signed-in users can use it, so nobody else can spend your API credit.
 
 ### 4. Your account

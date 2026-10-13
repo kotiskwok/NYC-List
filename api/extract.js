@@ -1,5 +1,7 @@
-// POST /api/extract  { url, notes?, categories:[{id,name}], neighborhoods?:[string] }
-// Reads a TikTok / Instagram / Threads / website post (caption, title and cover image),
+// POST /api/extract  { url?, notes?, transcript?, frames?:[base64 jpeg], categories:[{id,name}], neighborhoods?:[string] }
+// Reads a TikTok / Instagram / Threads / website post (caption, cover image, and for TikTok the
+// auto-generated captions of what's said in the video), plus anything the app sends from an
+// uploaded video (spoken-word transcript and a few still frames),
 // asks Claude which NYC places it mentions, and returns them as structured form data.
 //
 // Only signed-in users of this app can call it: the request must carry the Supabase
@@ -10,25 +12,15 @@
 //   ANTHROPIC_MODEL     (optional)  defaults to claude-haiku-5-5
 //   SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY (optional) default to the values in config.js
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://octgaltlmqwcqewbxocb.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg';
+const { send, requireUser, readJson } = require('./_shared');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 const UA_BOT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 const UA_BROWSER = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
-const send = (res, code, body) => { res.statusCode = code; res.setHeader('content-type', 'application/json'); res.setHeader('cache-control', 'no-store'); res.end(JSON.stringify(body)); };
-
-async function readJson(req) {
-  if (req.body && typeof req.body === 'object') return req.body;
-  if (typeof req.body === 'string') return JSON.parse(req.body || '{}');
-  const chunks = []; for await (const c of req) chunks.push(c);
-  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-}
-
-async function fetchText(url, ua, ms = 8000) {
+async function fetchText(url, ua, ms = 8000, extra) {
   const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms);
   try {
-    const r = await fetch(url, { headers: { 'user-agent': ua, 'accept-language': 'en-US,en;q=0.9', accept: 'text/html,application/json;q=0.9,*/*;q=0.8' }, redirect: 'follow', signal: ac.signal });
+    const r = await fetch(url, { headers: { 'user-agent': ua, 'accept-language': 'en-US,en;q=0.9', accept: 'text/html,application/json;q=0.9,*/*;q=0.8', ...(extra || {}) }, redirect: 'follow', signal: ac.signal });
     return { ok: r.ok, status: r.status, url: r.url, text: r.ok ? await r.text() : '' };
   } catch (e) { return { ok: false, status: 0, url, text: '' }; }
   finally { clearTimeout(t); }
@@ -46,9 +38,42 @@ function meta(html, key) {
   return m ? decode(m[1]).trim() : '';
 }
 
+// TikTok makes automatic captions (speech-to-text) for many videos. They're listed in the
+// video page's embedded data; fetch the best English track and flatten it to plain text.
+function findSubtitles(html) {
+  const grab = id => { const m = html.match(new RegExp('<script[^>]+id="' + id + '"[^>]*>([\\s\\S]*?)</script>')); try { return m ? JSON.parse(m[1]) : null; } catch (e) { return null; } };
+  let item = null;
+  const u = grab('__UNIVERSAL_DATA_FOR_REHYDRATION__');
+  if (u) { const d = (u.__DEFAULT_SCOPE__ || {})['webapp.video-detail']; item = d && d.itemInfo && d.itemInfo.itemStruct; }
+  if (!item) { const g = grab('SIGI_STATE'); if (g && g.ItemModule) item = Object.values(g.ItemModule)[0]; }
+  if (!item) return { subs: [], desc: '' };
+  const v = item.video || {};
+  const subs = [...(v.subtitleInfos || []), ...((v.claInfo || {}).captionInfos || []).map(c => ({ LanguageCodeName: c.language, Url: c.url, Source: 'CLA' }))]
+    .filter(x => x && (x.Url || x.url));
+  return { subs, desc: item.desc || '' };
+}
+function vttToText(vtt) {
+  const seen = new Set();
+  return String(vtt || '').split(/\r?\n/)
+    .filter(l => l && !/^WEBVTT|^NOTE|^\d+$|-->/.test(l.trim()))
+    .map(l => l.replace(/<[^>]+>/g, '').trim()).filter(l => l && !seen.has(l) && seen.add(l)).join(' ');
+}
+async function tiktokSpoken(videoUrl) {
+  const p = await fetchText(videoUrl, UA_BROWSER, 9000);
+  if (!p.ok || !p.text) return { text: '', desc: '' };
+  const { subs, desc } = findSubtitles(p.text);
+  const rank = s => { const l = String(s.LanguageCodeName || s.language || '').toLowerCase(); return (l.startsWith('en') ? 0 : 2) + (s.Source === 'ASR' || s.Source === 'CLA' ? 0 : 1); };
+  for (const sub of subs.sort((a, b) => rank(a) - rank(b)).slice(0, 2)) {
+    const r = await fetchText(sub.Url || sub.url, UA_BROWSER, 7000, { referer: 'https://www.tiktok.com/' });
+    const text = r.ok ? vttToText(r.text) : '';
+    if (text) return { text: text.slice(0, 8000), desc };
+  }
+  return { text: '', desc };
+}
+
 // Pull whatever text and cover image we can from the post.
 async function readPost(url) {
-  const out = { source: 'link', text: [], image: '', author: '', finalUrl: url };
+  const out = { source: 'link', text: [], image: '', author: '', finalUrl: url, spoken: '' };
   const host = (() => { try { return new URL(url).hostname; } catch (e) { return ''; } })();
 
   if (/tiktok\.com$/i.test(host) || /\.tiktok\.com$/i.test(host)) {
@@ -58,6 +83,7 @@ async function readPost(url) {
     out.finalUrl = u;
     const o = await fetchText('https://www.tiktok.com/oembed?url=' + encodeURIComponent(u), UA_BROWSER);
     if (o.ok) { try { const j = JSON.parse(o.text); if (j.title) out.text.push(j.title); out.author = j.author_name || j.author_unique_id || ''; out.image = j.thumbnail_url || ''; } catch (e) {} }
+    try { const sp = await tiktokSpoken(u); out.spoken = sp.text; if (!out.text.length && sp.desc) out.text.push(sp.desc); } catch (e) {}
     if (!out.text.length) { const p = await fetchText(u, UA_BOT); const d = meta(p.text, 'og:description') || meta(p.text, 'description'); if (d) out.text.push(d); out.image = out.image || meta(p.text, 'og:image'); }
   } else if (/instagram\.com$|instagr\.am$/i.test(host)) {
     out.source = 'instagram';
@@ -115,16 +141,19 @@ const TOOL = {
   }
 };
 
-async function askClaude({ post, notes, categories, neighborhoods, withImage }) {
+async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (neighborhoods || []).slice(0, 400).join(', ');
   const lines = [
     `Platform: ${post.source}`, post.author ? `Posted by: ${post.author}` : '', `Link: ${post.finalUrl}`,
-    post.text.length ? `Post text:\n${post.text.join('\n---\n')}` : 'Post text: (could not be read)',
+    post.text.length ? `Post text:\n${post.text.join('\n---\n')}` : (post.source === 'video' ? '' : 'Post text: (could not be read)'),
+    post.spoken ? `What is said in the video (TikTok auto-captions, may have spelling mistakes):\n${post.spoken}` : '',
+    transcript ? `What is said in the video (speech-to-text; place names may be misspelled, so correct them to the real business name when you recognize it):\n${transcript}` : '',
     notes ? `Extra notes the user typed:\n${notes}` : ''
   ].filter(Boolean).join('\n\n');
   const content = [];
   if (withImage && post.image) content.push({ type: 'image', source: { type: 'url', url: post.image } });
+  (frames || []).forEach(b64 => content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }));
   content.push({ type: 'text', text:
 `Find the NYC places (restaurants, cafes, bakeries, bars, shops, markets and similar) mentioned in this social media post, so they can be saved to a personal "places to visit" map.
 
@@ -137,7 +166,8 @@ Neighborhood names the app knows (prefer one of these spellings): ${hoods}
 
 Rules:
 - Only include real, specific places a person could walk into. Skip general areas, dishes, brands without a storefront, and the creator's own name.
-- Use text visible in the cover image too, if there is one.
+- Use text visible in the images too (cover image and video frames): creators often put the place name on screen.
+- Spoken words are often the main source; listen for "this is", "go to", "called", and street names.
 - If the post names a place but not where it is, fill neighborhood and address from your own knowledge only when you are confident; otherwise null.
 - If nothing identifiable is mentioned, return an empty places list.
 Call save_places with the result.` });
@@ -157,28 +187,26 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI Isn’t Set Up Yet — Add ANTHROPIC_API_KEY In Vercel.' });
 
-  // Signed-in users only.
-  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (!token) return send(res, 401, { error: 'Sign In To Use AI Fill.' });
-  try {
-    const u = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: SUPABASE_KEY, authorization: 'Bearer ' + token } });
-    if (!u.ok) return send(res, 401, { error: 'Your Sign-In Expired — Sign In Again.' });
-  } catch (e) { return send(res, 502, { error: 'Couldn’t Check Your Sign-In. Try Again.' }); }
+  if (!(await requireUser(req, res))) return;
 
   let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
   const url = String(body.url || '').trim(), notes = String(body.notes || '').slice(0, 3000);
-  if (!/^https?:\/\//i.test(url) && !notes) return send(res, 400, { error: 'Paste A Link First.' });
+  const transcript = String(body.transcript || '').slice(0, 20000);
+  const frames = (Array.isArray(body.frames) ? body.frames : []).filter(f => typeof f === 'string' && /^[A-Za-z0-9+/=]+$/.test(f) && f.length < 900000).slice(0, 4);
+  const hasLink = /^https?:\/\//i.test(url);
+  if (!hasLink && !notes && !transcript && !frames.length) return send(res, 400, { error: 'Paste A Link Or Pick A Video First.' });
 
-  const post = /^https?:\/\//i.test(url) ? await readPost(url) : { source: 'notes', text: [], image: '', author: '', finalUrl: '' };
-  if (!post.text.length && !post.image && !notes) {
+  const post = hasLink ? await readPost(url) : { source: transcript || frames.length ? 'video' : 'notes', text: [], image: '', author: '', finalUrl: '', spoken: '' };
+  if (!post.text.length && !post.spoken && !post.image && !notes && !transcript && !frames.length) {
     return send(res, 200, { places: [], readable: false, source: post.source, message: 'Couldn’t Read This Post. Paste The Caption Into Notes And Tap Fill Again.' });
   }
   try {
     let out;
-    try { out = await askClaude({ post, notes, categories: body.categories, neighborhoods: body.neighborhoods, withImage: true }); }
-    catch (e) { if (post.image && e.status === 400) out = await askClaude({ post, notes, categories: body.categories, neighborhoods: body.neighborhoods, withImage: false }); else throw e; }
+    const args = { post, notes, transcript, frames, categories: body.categories, neighborhoods: body.neighborhoods };
+    try { out = await askClaude({ ...args, withImage: true }); }
+    catch (e) { if (post.image && e.status === 400) out = await askClaude({ ...args, withImage: false }); else throw e; }
     const places = (out.places || []).filter(p => p && p.name).slice(0, 12);
-    return send(res, 200, { places, summary: out.summary || '', readable: post.text.length > 0, source: post.source,
+    return send(res, 200, { places, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript), source: post.source,
       message: places.length ? '' : 'No Specific Places Found In This Post. Add It By Name Instead.' });
   } catch (e) {
     return send(res, 502, { error: 'AI Couldn’t Read It Right Now — ' + (e.message || 'Try Again') });

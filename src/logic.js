@@ -89,7 +89,7 @@ class Component extends DCLogic {
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:true,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
-      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false};})();
+      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false};})();
 
   // ---- cloud sync hooks (used by sync.js) ----
   snapshot(){const s=this.state;return {places:s.places,cats:s.cats,home:s.home,plan:s.plan};}
@@ -295,6 +295,36 @@ class Component extends DCLogic {
     if(!places.length){this.setState({aiBusy:false,aiMsg:(j&&j.message)||'No Places Found In This Post.'});return;}
     this.setState({aiBusy:false,aiPlaces:places,aiMsg:places.length>1?'':'Filled In From The Post — Check It Looks Right.'});
     await this.aiApply(places[0],places.length>1);}
+  // ---- AI fill from a video saved to the phone: speech-to-text + on-screen text ----
+  async aiVideo(file){if(!file||this.state.aiBusy)return;
+    if(!/^video\//.test(file.type||'')&&!/\.(mp4|mov|m4v|webm|3gp)$/i.test(file.name||'')){this.setState({aiMsg:'That Isn’t A Video — Pick A Video From Your Photos.'});return;}
+    if(file.size>400*1024*1024){this.setState({aiMsg:'That Video Is Too Big. Try A Shorter Clip (Under 10 Minutes).'});return;}
+    const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
+    if(!token){this.setState({aiMsg:'Sign In To Use AI Fill.'});return;}
+    const f=this.state.form,url=f.url.trim();
+    this.setState({aiBusy:true,aiStage:'🎬 Watching The Video…',aiMsg:'',aiPlaces:[],aiFor:url});
+    const frames=await NYCVideo.frames(file,3).catch(()=>[]);
+    let transcript='',heardNote='';
+    this.setState({aiStage:'🎧 Listening To The Video…'});
+    try{const {chunks,trimmed}=await NYCVideo.audioChunks(file);
+      for(let i=0;i<chunks.length;i++){
+        if(chunks.length>1)this.setState({aiStage:`🎧 Listening… ${i+1} Of ${chunks.length}`});
+        const r=await fetch('/api/transcribe',{method:'POST',headers:{'content-type':'audio/wav',authorization:'Bearer '+token},body:chunks[i]});
+        const j=await r.json().catch(()=>null);
+        if(!r.ok){heardNote=(j&&j.error)||'Couldn’t Listen To The Video.';break;}
+        transcript+=(transcript?' ':'')+((j&&j.text)||'');}
+      if(trimmed)heardNote='Only The First 10 Minutes Were Listened To.';}
+    catch(e){heardNote=e&&e.message==='silent'?'No Speech In This Video — Used What’s On Screen.':'Couldn’t Get The Sound From This Video — Used What’s On Screen.';}
+    if(!transcript.trim()&&!frames.length){this.setState({aiBusy:false,aiStage:'',aiMsg:heardNote||'Couldn’t Read This Video.'});return;}
+    this.setState({aiStage:'✨ Finding The Places…'});
+    let j=null;try{const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},
+        body:JSON.stringify({url,notes:f.note.trim(),transcript:transcript.trim(),frames,categories:this.state.cats.map(c=>({id:c.id,name:c.name})),neighborhoods:areas().map(a=>a.name)})});
+      j=await r.json().catch(()=>null);if(!r.ok){this.setState({aiBusy:false,aiStage:'',aiMsg:(j&&j.error)||'AI Fill Isn’t Available Right Now.'});return;}}
+    catch(e){this.setState({aiBusy:false,aiStage:'',aiMsg:'Couldn’t Reach AI Fill. Check Your Connection.'});return;}
+    const places=(j&&j.places)||[];
+    if(!places.length){this.setState({aiBusy:false,aiStage:'',aiMsg:'No Specific Places Found In This Video.'+(heardNote?' '+heardNote:'')});return;}
+    this.setState({aiBusy:false,aiStage:'',aiPlaces:places,aiMsg:places.length>1?(heardNote||''):'Filled In From The Video — Check It Looks Right.'+(heardNote?' '+heardNote:'')});
+    await this.aiApply(places[0],true);}
   aiArea(name){if(!name)return null;const n=name.toLowerCase().trim(),A=areas();return (A.find(a=>a.name.toLowerCase()===n)||A.find(a=>n.includes(a.name.toLowerCase())||a.name.toLowerCase().includes(n))||{}).name||null;}
   async aiLocate(p,areaName){const ao=areas().find(a=>a.name===areaName);
     const q=[p.name,p.address,areaName||p.neighborhood].filter(Boolean).join(', ')+', New York City';
@@ -418,7 +448,7 @@ class Component extends DCLogic {
       goMap:()=>this.setState({tab:'map',selId:null,placing:false,routeFor:null}),goExplore:()=>this.setState({tab:'explore',selId:null,placing:false,routeFor:null}),goPlan:()=>this.setState({tab:'plan',selId:null,placing:false,routeFor:null}),
       tabMapFg:tabC('map'),tabMapDot:tabD('map'),tabExFg:tabC('explore'),tabExDot:tabD('explore'),tabPlanFg:tabC('plan'),tabPlanDot:tabD('plan'),
       openAdd:()=>this.setState({addOpen:true,placing:false,form:blank(),selId:null,routeFor:null,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:''}),closeAdd:()=>this.setState({addOpen:false}),
-      aiShow:!f.id&&(!!f.url.trim()||!!f.note.trim()),aiBtn:s.aiBusy?'✨ Reading The Post…':s.aiFor&&s.aiFor===f.url.trim()?'✨ Read It Again':'✨ Fill From Link',aiBusy:s.aiBusy,
+      aiShow:!f.id&&!!f.url.trim(),aiVidShow:!f.id,onVideo:e=>{const fl=e.target.files&&e.target.files[0];e.target.value='';this.aiVideo(fl);},aiBtn:s.aiBusy?(s.aiStage||'✨ Reading The Post…'):s.aiFor&&s.aiFor===f.url.trim()?'✨ Read It Again':'✨ Fill From Link',aiBusy:s.aiBusy,
       aiRun:()=>this.aiFill(),aiHasMsg:!!s.aiMsg&&!s.aiBusy,aiMsg:s.aiMsg,aiMulti:s.aiPlaces.length>1&&!s.aiBusy,aiCount:s.aiPlaces.length,
       aiAddAllLabel:s.aiAdding?'Adding…':`Add All ${s.aiPlaces.length} To My Map`,aiAddAll:()=>this.aiAddAll(),
       aiRows:s.aiPlaces.map((p,i)=>{const c=cat[p.category_id];return {name:p.name,emoji:c?emo(c):'📍',bg:c?c.color:'#A9ADC2',sub:[c&&c.name,p.neighborhood].filter(Boolean).join(' · ')||'NYC',on:p.name===f.name,onPick:()=>this.aiApply(p)};}),

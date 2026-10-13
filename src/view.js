@@ -336,8 +336,14 @@ function AddSheet(v) {
           <button onClick=${v.pasteUrl} style=${S('flex:none;height:52px;padding:0 16px;border-radius:16px;border:0;background:#FFC425;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Paste</button>
         </div>
         ${v.hasSrcBadge && html`<div style=${S('display:flex')}><span style=${S(`font-size:12px;font-weight:800;background:${v.srcBadgeBg};color:#fff;padding:5px 10px;border-radius:999px`)}>${v.srcBadge}</span></div>`}
-        ${v.aiShow && html`
-        <button onClick=${v.aiRun} disabled=${v.aiBusy} class=${v.aiBusy ? 'ai-busy' : ''} style=${S(`height:48px;border-radius:16px;border:2px solid #10183F;background:${v.aiBusy ? '#FFF3DF' : '#10183F'};color:${v.aiBusy ? '#10183F' : '#FFC425'};font-weight:900;font-style:italic;font-size:16px;cursor:${v.aiBusy ? 'default' : 'pointer'};box-shadow:0 4px 0 #FFC425`)}>${v.aiBtn}</button>`}
+        ${v.aiBusy ? html`
+        <div role="status" class="ai-busy" style=${S('height:48px;border-radius:16px;border:2px solid #10183F;background:#FFF3DF;color:#10183F;font-weight:900;font-style:italic;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #FFC425')}>${v.aiBtn}</div>`
+        : v.aiVidShow && html`
+        <div style=${S(`display:grid;grid-template-columns:${v.aiShow ? '1fr 1fr' : '1fr'};gap:8px`)}>
+          ${v.aiShow && html`<button onClick=${v.aiRun} style=${S('height:48px;border-radius:16px;border:2px solid #10183F;background:#10183F;color:#FFC425;font-weight:900;font-style:italic;font-size:15px;cursor:pointer;box-shadow:0 4px 0 #FFC425;padding:0 8px')}>${v.aiBtn}</button>`}
+          <label for="f-video" style=${S('height:48px;border-radius:16px;border:2px solid #10183F;background:#fff;color:#10183F;font-weight:900;font-style:italic;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 0 #10183F;padding:0 8px;text-align:center')}>🎬 ${v.aiShow ? 'From A Video' : 'Add From A Saved Video'}</label>
+          <input id="f-video" type="file" accept="video/*" onChange=${v.onVideo} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')} />
+        </div>`}
         ${v.aiHasMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${v.aiMsg}</div>`}
         ${v.aiMulti && html`
         <div style=${S('background:#fff;border:2px solid #10183F;border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:8px')}>
@@ -351,7 +357,7 @@ function AddSheet(v) {
           </button>`)}
           <button onClick=${v.aiAddAll} style=${S('height:44px;margin-top:2px;border-radius:14px;border:0;background:#FF6B1A;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${v.aiAddAllLabel}</button>
         </div>`}
-        <div style=${S('font-size:12px;color:#5A6080')}>Paste A Post And AI Fills In The Rest. Optional — Skip It If You're Adding By Name.</div>
+        <div style=${S('font-size:12px;color:#5A6080')}>Paste A Post, Or Pick A Video Saved To Your Phone, And AI Fills In The Rest — Including What's Said Out Loud. Optional.</div>
       </div>
       <div style=${col8}>
         <label for="f-name" style=${lab}>Place Name</label>
