@@ -32,7 +32,8 @@ async function fetchText(url, ua, ms = 8000, extra) {
 async function nextHop(url) {
   const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 6000);
   try {
-    const r = await fetch(url, { method: 'GET', redirect: 'manual', signal: ac.signal, headers: { 'user-agent': UA_DESKTOP, 'accept-language': 'en-US,en;q=0.9' } });
+    // Note: a desktop-Chrome user agent gets a "open in app" holding page instead of a redirect, so ask as a phone.
+    const r = await fetch(url, { method: 'GET', redirect: 'manual', signal: ac.signal, headers: { 'user-agent': UA_BROWSER, 'accept-language': 'en-US,en;q=0.9' } });
     const loc = r.headers.get('location');
     try { r.body && r.body.cancel && r.body.cancel(); } catch (e) {}
     return loc ? new URL(loc, url).toString() : '';
@@ -97,8 +98,10 @@ async function readPost(url) {
     // Read the redirect itself rather than loading Google's (very heavy) map page.
     let final = url;
     for (let i = 0; i < 4 && !/\/maps\/(place|search)|[?&](q|query)=/i.test(final); i++) { const next = await nextHop(final); if (!next) break; final = next; }
-    let g = G.parseUrl(final);
-    const enough = g.name && g.ll && g.exact;
+    let g = G.parseUrl(final), qAddr = '';
+    // Share links usually land on ?q=Name,+Street,+New+York,+NY+zip — the name and full address in one.
+    if (!g.name && g.query && g.query.includes(',')) { const parts = g.query.split(','); g.name = parts[0].trim(); qAddr = parts.slice(1).join(',').trim(); }
+    const enough = g.name && ((g.ll && g.exact) || qAddr);
     const r = enough ? { text: '', url: final } : await fetchText(final, UA_DESKTOP, 8000);
     if (r.url && r.url !== final && !g.name) { final = r.url; g = G.parseUrl(final); }
     if (!g.name && !g.query) {
@@ -111,8 +114,8 @@ async function readPost(url) {
     if (!g.ll && (g.name || title.name)) { const c = G.coordsFromHtml(r.text, meta(r.text, 'og:image')); if (c) { g.ll = c; g.exact = true; } }
     const name = title.name || g.name;
     if (name) out.text.push('Place name on Google Maps: ' + name);
-    if (title.address) out.text.push('Address on Google Maps: ' + title.address);
-    if (g.query && g.query !== name) out.text.push('Google Maps search: ' + g.query);
+    if (title.address || qAddr) out.text.push('Address on Google Maps: ' + (title.address || qAddr));
+    if (g.query && !qAddr && g.query !== name) out.text.push('Google Maps search: ' + g.query);
     if (desc && !/^find local businesses/i.test(desc)) out.text.push('Google Maps listing: ' + desc);
     if (g.ll && G.inNyc(g.ll.lat, g.ll.lng)) { out.pin = { ...g.ll, exact: g.exact }; out.text.push(`Pinned at: ${g.ll.lat.toFixed(5)}, ${g.ll.lng.toFixed(5)}`); }
     out.image = '';

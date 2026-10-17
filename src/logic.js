@@ -369,7 +369,8 @@ class Component extends DCLogic {
     const exact=p.lat!=null&&!!ll;
     if(ll)this.setForm({lat:ll[0],lng:ll[1],area:(exact&&hoodAt(ll))||area||hoodAt(ll)||'auto'});
     if(!multi&&exact&&detect(this.state.form.url.trim())==='gmaps'){this.setState({aiMsg:'Filled In And Pinned From Google Maps — Check It Looks Right.'});return;}
-    if(!multi)this.setState({aiMsg:ll?'Filled In And Pinned From The Post — Check It Looks Right.':area?'Filled In From The Post — It’ll Go In '+area+'. Drop A Pin To Be Exact.':'Filled In From The Post — Drop A Pin Or Pick A Neighborhood.'});}
+    const from=detect(this.state.form.url.trim())==='gmaps'?'Google Maps':'The Post';
+    if(!multi)this.setState({aiMsg:ll?'Filled In And Pinned From '+from+' — Check It Looks Right.':area?'Filled In From '+from+' — It’ll Go In '+area+'. Drop A Pin To Be Exact.':'Filled In From '+from+' — Drop A Pin Or Pick A Neighborhood.'});}
   async aiAddAll(){const s=this.state;if(s.aiAdding||!s.aiPlaces.length)return;this.setState({aiAdding:true});
     const url=s.form.url.trim(),made=[];let skipped=0;
     for(const p of s.aiPlaces){const area=this.aiArea(p.neighborhood);let ll=await this.aiLocate(p,area);

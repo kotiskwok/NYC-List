@@ -75,13 +75,13 @@ As of this handoff, steps 1–2 were in progress. The Vercel deploy error ("inva
 - **Place record:** `{id, name, cat, area, lat, lng, url, source: tiktok|instagram|threads|gmaps|link|manual, address, note, price: 0-4, visited}`. **Category:** `{id, name, color, emoji}`. **Plan:** `{ids: [...], start: 'first'|'home'|'here'}`. **Home:** `{lat, lng, area}`.
 - **Geocoding:** OpenStreetMap Nominatim, from the browser (address search and pinning AI results). Name suggestions use Photon (`suggest`, `runSuggest`, `osmCat`, `pickSugg` in `logic.js`).
 - **Subway routing:** an *estimate* from station coordinates and shared lines (not live). Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code are fetched from the network first. **When you change files in `src/`, bump `CACHE` in `sw.js`** (currently `nyc-list-v4`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code are fetched from the network first. **When you change files in `src/`, bump `CACHE` in `sw.js`** (currently `nyc-list-v5`).
 
 ### AI pipeline
 1. **Link:** the app calls `POST /api/extract` with `{url, notes, categories, neighborhoods}` and the Supabase access token as `Authorization: Bearer …`. The server checks the token with Supabase, then reads the post:
    - TikTok: oEmbed (caption + thumbnail), plus TikTok's subtitle tracks from the video page (`__UNIVERSAL_DATA_FOR_REHYDRATION__` / `SIGI_STATE` → `subtitleInfos`, `claInfo.captionInfos`).
    - Instagram: `/p|reel/<id>/embed/captioned/`.
-   - Google Maps (`api/_gmaps.js`): follows the share link, takes the name from `/maps/place/<name>/` or the page title, the exact pin from `!3d<lat>!4d<lng>` (or the preview image / page data), and the address from the page title. The result is limited to one place and carries `lat`/`lng`, which the app uses instead of geocoding. Saved spots get `source: 'gmaps'`.
+   - Google Maps (`api/_gmaps.js`): follows the share link (asking as a phone: a desktop-Chrome user agent gets an "open in app" page instead of a redirect; share links usually land on `?q=Name, Street, New York, NY zip`), takes the name from `/maps/place/<name>/` or the page title, the exact pin from `!3d<lat>!4d<lng>` (or the preview image / page data), and the address from the page title. The result is limited to one place and carries `lat`/`lng`, which the app uses instead of geocoding. Saved spots get `source: 'gmaps'`.
    - Threads and other sites: `og:` meta tags.
 
    It then calls Claude Haiku with a forced tool `save_places` and returns `{places:[{name, category_id, neighborhood, address, price, note, confidence}]}`.
