@@ -81,6 +81,11 @@ const _x=0;const toTitle=s=>s.replace(/\S+/g,w=>w[0].toUpperCase()+w.slice(1));
 const PRICES=['$','$$','$$$','$$$$'],PRICE_HINT=['Under $20 A Person','$20–40 A Person','$40–80 A Person','$80+ A Person'];
 const blank=()=>({id:null,price:0,url:'',name:'',cat:null,area:'auto',address:'',note:'',lat:null,lng:null,newCatOpen:false,newCatName:'',newCatColor:C.purple,newCatEmoji:'⭐'});
 const gmaps=(a,b,mode)=>'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(a)+'&destination='+encodeURIComponent(b)+'&travelmode='+mode;
+// A link shared into the app: ?add=<link> (iPhone Shortcut) or ?url= / ?text= / ?title= (Android share menu).
+const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const raw=['add','url','text','title'].map(k=>q.get(k)||'').join(' ');
+  const m=raw.match(/https?:\/\/[^\s"'<>]+/i);if(!m&&!q.has('add'))return '';
+  ['add','url','text','title'].forEach(k=>q.delete(k));const rest=q.toString();history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+location.hash);
+  return m?m[0].replace(/[.,!?)\]]+$/,''):'';}catch(e){return '';}})();
 const placeQ=p=>p.address?`${p.name}, ${p.address}, New York`:`${p.name}, ${p.area}, New York`;
 
 class Component extends DCLogic {
@@ -101,14 +106,18 @@ class Component extends DCLogic {
       selId:places.some(p=>p.id===st.selId)?st.selId:null,routeFor:places.some(p=>p.id===st.routeFor)?st.routeFor:null}));}
   resetLocal(){try{localStorage.removeItem(LS)}catch(e){}this.applyRemote(this.emptyData());this.setState({acctOpen:false,authEmail:'',authPass:''});}
 
-  componentDidMount(){this._on=true;window.NYCSync&&NYCSync.attach(this);const go=()=>{if(!this._on)return;
+  // Open Add A Spot with a shared link once sign-in has settled, and let AI read it.
+  takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;
+    this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
+    setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link Added — Tap ✨ Fill From Link To Read It.'});else this.aiAuto(u,true);}},400);}
+  componentDidMount(){this._on=true;this._share=SHARED_LINK;setTimeout(()=>this.takeShared(),0);window.NYCSync&&NYCSync.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
       const names=new Set(areas().map(a=>a.name));
       this.setState(st=>({places:st.places.map(p=>names.has(p.area)?p:{...p,area:hoodAt([p.lat,p.lng])||p.area})}));
       this.syncMaps();setTimeout(()=>this.refreshVisible(),80);}
     else setTimeout(go,100);};go();}
-  componentDidUpdate(){const s=this.state;
+  componentDidUpdate(){const s=this.state;if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan){this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;
       try{localStorage.setItem(LS,JSON.stringify({places:s.places,cats:s.cats,home:s.home,plan:s.plan}))}catch(e){}
       window.NYCSync&&NYCSync.queue(this.snapshot());}
