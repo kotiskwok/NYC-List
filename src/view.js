@@ -362,7 +362,7 @@ function AddSheet(v) {
       <div style=${col8}>
         <label for="f-name" style=${lab}>Place Name</label>
         <input id="f-name" value=${f.name} onChange=${v.onName} autocomplete="off" placeholder="Start Typing, E.g. Devoción" style=${S(`height:52px;${inp};font-size:16px;font-weight:600`)} />
-        ${v.suggBusy && html`<div role="status" style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Looking For Matches…</div>`}
+        ${v.suggBusy && html`<div role="status" style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Looking It Up…</div>`}
         ${v.hasSugg && html`
         <div style=${S('display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;border:2px solid #10183F')}>
           <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;font-size:12px;font-weight:800;color:#4A5275')}>
@@ -374,6 +374,7 @@ function AddSheet(v) {
             <span class="emo" aria-hidden="true" style=${S(`width:30px;height:30px;border-radius:10px;background:${r.bg};flex:none;display:flex;align-items:center;justify-content:center;font-size:16px`)}>${r.emoji}</span>
             <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
           </button>`)}
+          ${v.suggGoogle && html`<div style=${S('padding:6px 14px 8px;border-top:1px solid #EFE8DB;font-size:11px;font-weight:700;color:#7A809C;text-align:right')}>Suggestions From Google</div>`}
         </div>`}
         ${v.webShow && html`<button onClick=${v.webFind} style=${S('height:44px;border-radius:14px;border:2px solid #10183F;background:#10183F;color:#FFC425;font-weight:900;font-style:italic;font-size:14px;cursor:pointer;padding:0 12px')}>${v.webLabel}</button>`}
         ${v.webBusy && html`<div role="status" class="ai-busy" style=${S('height:44px;border-radius:14px;border:2px solid #10183F;background:#FFF3DF;color:#10183F;font-weight:900;font-style:italic;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #FFC425')}>✨ Searching The Web…</div>`}

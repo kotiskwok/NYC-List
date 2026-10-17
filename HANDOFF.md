@@ -19,7 +19,7 @@ It was designed in **Claude Design** (project "NYC Exploration Spot Mapper", fil
 - **Add A Spot (+ button):** paste a link, set name, location (address search, or drop a pin), category, price, neighborhood, address and notes.
   - **✨ Fill From Link:** pasting a TikTok, Instagram or Threads link fills the form automatically. It reads the caption, the cover image and, for TikTok, TikTok's automatic captions of what's said. If a post mentions several places, it shows a picker plus **Add All N To My Map**.
   - **Google Maps links:** paste a Google Maps share link (`maps.app.goo.gl/…`) or a `google.com/maps/place/…` link and Fill From Link reads the place's name, address and **exact pin** from Google, then AI adds the category, neighborhood, price and a note.
-  - **Name suggestions:** typing 3+ letters in Place Name shows "Is It One Of These?" with up to 5 matching NYC places (name, street, neighborhood). Tapping one fills the name, address, pin, neighborhood and a guessed category. Uses Photon (photon.komoot.io, OpenStreetMap search made for type-ahead), called from the browser, biased toward My Location or Home.
+  - **Name suggestions:** typing 3+ letters in Place Name shows "Is It One Of These?" with up to 5 matching NYC places (name, street, neighborhood). Tapping one fills the name, address, pin, neighborhood and a guessed category. Uses **Google's place search** (Places API (New): Autocomplete + Place Details, through `POST /api/places` so the key stays on the server, with a session token per lookup) when `GOOGLE_MAPS_API_KEY` is set in Vercel; picking a Google suggestion also fills the price level. Without the key it falls back to Photon (photon.komoot.io, OpenStreetMap search made for type-ahead), called from the browser. Both are biased toward My Location or Home.
   - **✨ Search The Web:** when the map search has no match (OpenStreetMap misses some newer/smaller spots), or none of its matches are right, a button asks AI with web search (`POST /api/find`, Claude + `web_search` tool, ~a few cents per tap) to find the place; results show as "Found On The Web" and fill the form like an AI link fill.
   - **🎬 From A Video:** pick a video saved to the phone. The app pulls out the audio and three still frames *on the phone itself*, sends the audio to speech-to-text, and AI finds the places from the spoken words and on-screen text.
   - **+ New Category:** a name, an emoji (16 choices) and a pin color.
@@ -49,7 +49,7 @@ It was designed in **Claude Design** (project "NYC Exploration Spot Mapper", fil
 
 ### Keys and settings
 - **Public values (safe, already in `config.js`):** Supabase URL above and publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`. These are also hard-coded as fallbacks in `api/_shared.js`.
-- **Secret values (only in Vercel → Settings → Environment Variables, never in code or chat):** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `ANTHROPIC_MODEL`, `OPENAI_TRANSCRIBE_MODEL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`. After changing a variable, redeploy.
+- **Secret values (only in Vercel → Settings → Environment Variables, never in code or chat):** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. Optional: `GOOGLE_MAPS_API_KEY` (Google Cloud key with Places API (New) enabled; turns on Google name suggestions). Optional overrides: `ANTHROPIC_MODEL`, `OPENAI_TRANSCRIBE_MODEL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`. After changing a variable, redeploy.
 - **Supabase settings:** Authentication → URL Configuration → **Site URL** = the Vercel address. After Kotis's own account exists, turn **off** "Allow new users to sign up" so the app stays private.
 
 ### Setup checklist
@@ -76,7 +76,7 @@ As of this handoff, steps 1–2 were in progress. The Vercel deploy error ("inva
 - **Place record:** `{id, name, cat, area, lat, lng, url, source: tiktok|instagram|threads|gmaps|link|manual, address, note, price: 0-4, visited}`. **Category:** `{id, name, color, emoji}`. **Plan:** `{ids: [...], start: 'first'|'home'|'here'}`. **Home:** `{lat, lng, area}`.
 - **Geocoding:** OpenStreetMap Nominatim, from the browser (address search and pinning AI results). Name suggestions use Photon (`suggest`, `runSuggest`, `osmCat`, `pickSugg` in `logic.js`).
 - **Subway routing:** an *estimate* from station coordinates and shared lines (not live). Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code are fetched from the network first. **When you change files in `src/`, bump `CACHE` in `sw.js`** (currently `nyc-list-v6`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code are fetched from the network first. **When you change files in `src/`, bump `CACHE` in `sw.js`** (currently `nyc-list-v7`).
 
 ### AI pipeline
 1. **Link:** the app calls `POST /api/extract` with `{url, notes, categories, neighborhoods}` and the Supabase access token as `Authorization: Bearer …`. The server checks the token with Supabase, then reads the post:
@@ -102,6 +102,7 @@ As of this handoff, steps 1–2 were in progress. The Vercel deploy error ("inva
 | `src/sync.js` | Supabase client, sign-in/up/out, three-way merge sync, `getToken()` | sync or sign-in behavior |
 | `src/video.js` | On-device audio extraction (WAV pieces) and frame capture | video upload limits/quality |
 | `api/extract.js` | Server: reads posts, calls Claude, returns places | AI prompt, platforms, model |
+| `api/places.js` | Server: Google place search for Place Name suggestions (autocomplete + details) | Google fields |
 | `api/find.js` | Server: finds a place by name with Claude + web search (for names the map search doesn't know) | search prompt |
 | `api/transcribe.js` | Server: OpenAI speech-to-text | transcription model/prompt |
 | `api/_shared.js` | Server helpers: `send`, `requireUser` (Supabase token check), body readers | — |
