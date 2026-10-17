@@ -18,6 +18,8 @@ It was designed in **Claude Design** (project "NYC Exploration Spot Mapper", fil
 - **Route tab (Plan A Day):** an ordered list of stops shown on a map with a dotted route. Start from the first stop, Home or My Location, with estimated travel time per leg (tap a leg to open Google Maps). Includes **Auto-Order Route** (shortest-trip ordering), reordering with up/down, removing stops and **+ Add Spots**.
 - **Add A Spot (+ button):** paste a link, set name, location (address search, or drop a pin), category, price, neighborhood, address and notes.
   - **✨ Fill From Link:** pasting a TikTok, Instagram or Threads link fills the form automatically. It reads the caption, the cover image and, for TikTok, TikTok's automatic captions of what's said. If a post mentions several places, it shows a picker plus **Add All N To My Map**.
+  - **Google Maps links:** paste a Google Maps share link (`maps.app.goo.gl/…`) or a `google.com/maps/place/…` link and Fill From Link reads the place's name, address and **exact pin** from Google, then AI adds the category, neighborhood, price and a note.
+  - **Name suggestions:** typing 3+ letters in Place Name shows "Is It One Of These?" with up to 5 matching NYC places (name, street, neighborhood). Tapping one fills the name, address, pin, neighborhood and a guessed category. Uses Photon (photon.komoot.io, OpenStreetMap search made for type-ahead), called from the browser, biased toward My Location or Home.
   - **🎬 From A Video:** pick a video saved to the phone. The app pulls out the audio and three still frames *on the phone itself*, sends the audio to speech-to-text, and AI finds the places from the spoken words and on-screen text.
   - **+ New Category:** a name, an emoji (16 choices) and a pin color.
 - **Sign-in screen:** email + password (Supabase). Tap the spot counter on the map to open **Your Account** (sync status, Sync Now, Sign Out).
@@ -70,15 +72,16 @@ As of this handoff, steps 1–2 were in progress. The Vercel deploy error ("inva
 - **The app's structure comes from the Claude Design runtime:** `src/logic.js` defines `class Component extends DCLogic` with `state`, lifecycle methods and a big `renderVals()` that returns every value and handler the view uses. `src/view.js` turns those values into the screens. `src/runtime.js` supplies the `DCLogic` base class (setState applies immediately to `this.state`, then React re-renders).
 - **Data:** stored locally in `localStorage['nycList.v1']` (`{places, cats, home, plan}`), and synced as **one JSON row per user** in Supabase (`nyc_list.data`).
 - **Sync** (`src/sync.js`): about a second after any change, it reads the cloud copy, does a three-way merge against the last synced "base" (stored at `localStorage['nycList.base.<userId>']`), writes the result and saves it as the new base. It also syncs when the app returns to the foreground or comes back online. A spot added offline and a spot added on another device both survive.
-- **Place record:** `{id, name, cat, area, lat, lng, url, source: tiktok|instagram|threads|link|manual, address, note, price: 0-4, visited}`. **Category:** `{id, name, color, emoji}`. **Plan:** `{ids: [...], start: 'first'|'home'|'here'}`. **Home:** `{lat, lng, area}`.
-- **Geocoding:** OpenStreetMap Nominatim, from the browser (address search and pinning AI results).
+- **Place record:** `{id, name, cat, area, lat, lng, url, source: tiktok|instagram|threads|gmaps|link|manual, address, note, price: 0-4, visited}`. **Category:** `{id, name, color, emoji}`. **Plan:** `{ids: [...], start: 'first'|'home'|'here'}`. **Home:** `{lat, lng, area}`.
+- **Geocoding:** OpenStreetMap Nominatim, from the browser (address search and pinning AI results). Name suggestions use Photon (`suggest`, `runSuggest`, `osmCat`, `pickSugg` in `logic.js`).
 - **Subway routing:** an *estimate* from station coordinates and shared lines (not live). Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code are fetched from the network first. **When you change files in `src/`, bump `CACHE` in `sw.js`** (currently `nyc-list-v3`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code are fetched from the network first. **When you change files in `src/`, bump `CACHE` in `sw.js`** (currently `nyc-list-v4`).
 
 ### AI pipeline
 1. **Link:** the app calls `POST /api/extract` with `{url, notes, categories, neighborhoods}` and the Supabase access token as `Authorization: Bearer …`. The server checks the token with Supabase, then reads the post:
    - TikTok: oEmbed (caption + thumbnail), plus TikTok's subtitle tracks from the video page (`__UNIVERSAL_DATA_FOR_REHYDRATION__` / `SIGI_STATE` → `subtitleInfos`, `claInfo.captionInfos`).
    - Instagram: `/p|reel/<id>/embed/captioned/`.
+   - Google Maps (`api/_gmaps.js`): follows the share link, takes the name from `/maps/place/<name>/` or the page title, the exact pin from `!3d<lat>!4d<lng>` (or the preview image / page data), and the address from the page title. The result is limited to one place and carries `lat`/`lng`, which the app uses instead of geocoding. Saved spots get `source: 'gmaps'`.
    - Threads and other sites: `og:` meta tags.
 
    It then calls Claude Haiku with a forced tool `save_places` and returns `{places:[{name, category_id, neighborhood, address, price, note, confidence}]}`.

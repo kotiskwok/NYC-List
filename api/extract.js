@@ -1,5 +1,5 @@
 // POST /api/extract  { url?, notes?, transcript?, frames?:[base64 jpeg], categories:[{id,name}], neighborhoods?:[string] }
-// Reads a TikTok / Instagram / Threads / website post (caption, cover image, and for TikTok the
+// Reads a TikTok / Instagram / Threads / Google Maps / website link (caption, cover image, and for TikTok the
 // auto-generated captions of what's said in the video), plus anything the app sends from an
 // uploaded video (spoken-word transcript and a few still frames),
 // asks Claude which NYC places it mentions, and returns them as structured form data.
@@ -13,8 +13,10 @@
 //   SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY (optional) default to the values in config.js
 
 const { send, requireUser, readJson } = require('./_shared');
+const G = require('./_gmaps');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 const UA_BOT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+const UA_DESKTOP = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 const UA_BROWSER = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
 async function fetchText(url, ua, ms = 8000, extra) {
@@ -73,10 +75,30 @@ async function tiktokSpoken(videoUrl) {
 
 // Pull whatever text and cover image we can from the post.
 async function readPost(url) {
-  const out = { source: 'link', text: [], image: '', author: '', finalUrl: url, spoken: '' };
+  const out = { source: 'link', text: [], image: '', author: '', finalUrl: url, spoken: '', pin: null };
   const host = (() => { try { return new URL(url).hostname; } catch (e) { return ''; } })();
 
-  if (/tiktok\.com$/i.test(host) || /\.tiktok\.com$/i.test(host)) {
+  if (G.isGmaps(url)) {
+    // Google Maps: one specific place. Follow the share link, then read the name, address and exact pin.
+    out.source = 'gmaps';
+    const r = await fetchText(url, UA_DESKTOP, 9000);
+    let final = r.url || url, g = G.parseUrl(final);
+    if (!g.name && !g.query) {
+      const m = r.text.match(/https:\/\/www\.google\.[a-z.]+\/maps\/place\/[^"'\s<\\]+/i);
+      if (m) { final = decode(m[0]); const g2 = G.parseUrl(final); g = { ...g2, ll: g2.ll || g.ll, exact: g2.ll ? g2.exact : g.exact }; }
+    }
+    out.finalUrl = final;
+    const title = G.splitTitle(meta(r.text, 'og:title') || decode((r.text.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || ''));
+    const desc = meta(r.text, 'og:description');
+    if (!g.ll && (g.name || title.name)) { const c = G.coordsFromHtml(r.text, meta(r.text, 'og:image')); if (c) { g.ll = c; g.exact = true; } }
+    const name = title.name || g.name;
+    if (name) out.text.push('Place name on Google Maps: ' + name);
+    if (title.address) out.text.push('Address on Google Maps: ' + title.address);
+    if (g.query && g.query !== name) out.text.push('Google Maps search: ' + g.query);
+    if (desc && !/^find local businesses/i.test(desc)) out.text.push('Google Maps listing: ' + desc);
+    if (g.ll && G.inNyc(g.ll.lat, g.ll.lng)) { out.pin = { ...g.ll, exact: g.exact }; out.text.push(`Pinned at: ${g.ll.lat.toFixed(5)}, ${g.ll.lng.toFixed(5)}`); }
+    out.image = '';
+  } else if (/tiktok\.com$/i.test(host) || /\.tiktok\.com$/i.test(host)) {
     out.source = 'tiktok';
     let u = url;
     if (/^(vm|vt)\./i.test(host) || /\/t\//.test(url)) { const r = await fetchText(url, UA_BROWSER); if (r.url) u = r.url; }
@@ -144,6 +166,7 @@ const TOOL = {
 async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (neighborhoods || []).slice(0, 400).join(', ');
+  const isMap = post.source === 'gmaps';
   const lines = [
     `Platform: ${post.source}`, post.author ? `Posted by: ${post.author}` : '', `Link: ${post.finalUrl}`,
     post.text.length ? `Post text:\n${post.text.join('\n---\n')}` : (post.source === 'video' ? '' : 'Post text: (could not be read)'),
@@ -154,7 +177,22 @@ async function askClaude({ post, notes, transcript, frames, categories, neighbor
   const content = [];
   if (withImage && post.image) content.push({ type: 'image', source: { type: 'url', url: post.image } });
   (frames || []).forEach(b64 => content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }));
-  content.push({ type: 'text', text:
+  content.push({ type: 'text', text: isMap ?
+`This is a Google Maps link to one specific NYC place. Identify it so it can be saved to a personal "places to visit" map.
+
+${lines}
+
+Category list (use these ids for category_id):
+${cats}
+
+Neighborhood names the app knows (prefer one of these spellings): ${hoods}
+
+Rules:
+- Return exactly one place: the one this link points to, with its proper business name.
+- Use the Google Maps address as the address (street part only, e.g. "69 Grand St"), if given.
+- Work out the neighborhood from the address or the pinned coordinates.
+- Pick the category, price and a short note (what it's known for or what to order) from your own knowledge of the place; leave price null and note empty if you don't know it.
+Call save_places with the result.` :
 `Find the NYC places (restaurants, cafes, bakeries, bars, shops, markets and similar) mentioned in this social media post, so they can be saved to a personal "places to visit" map.
 
 ${lines}
@@ -205,7 +243,11 @@ module.exports = async (req, res) => {
     const args = { post, notes, transcript, frames, categories: body.categories, neighborhoods: body.neighborhoods };
     try { out = await askClaude({ ...args, withImage: true }); }
     catch (e) { if (post.image && e.status === 400) out = await askClaude({ ...args, withImage: false }); else throw e; }
-    const places = (out.places || []).filter(p => p && p.name).slice(0, 12);
+    let places = (out.places || []).filter(p => p && p.name).slice(0, 12);
+    if (post.source === 'gmaps') {
+      places = places.slice(0, 1);
+      if (places[0] && post.pin) Object.assign(places[0], { lat: post.pin.lat, lng: post.pin.lng });
+    }
     return send(res, 200, { places, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript), source: post.source,
       message: places.length ? '' : 'No Specific Places Found In This Post. Add It By Name Instead.' });
   } catch (e) {

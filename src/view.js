@@ -332,7 +332,7 @@ function AddSheet(v) {
       <div style=${col8}>
         <label for="f-url" style=${lab}>Paste A Link</label>
         <div style=${S('display:flex;gap:8px')}>
-          <input id="f-url" value=${f.url} onChange=${v.onUrl} placeholder="TikTok, Instagram Or Threads Link" style=${S(`flex:1;min-width:0;height:52px;${inp}`)} />
+          <input id="f-url" value=${f.url} onChange=${v.onUrl} placeholder="TikTok, IG, Threads Or Maps Link" style=${S(`flex:1;min-width:0;height:52px;${inp}`)} />
           <button onClick=${v.pasteUrl} style=${S('flex:none;height:52px;padding:0 16px;border-radius:16px;border:0;background:#FFC425;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Paste</button>
         </div>
         ${v.hasSrcBadge && html`<div style=${S('display:flex')}><span style=${S(`font-size:12px;font-weight:800;background:${v.srcBadgeBg};color:#fff;padding:5px 10px;border-radius:999px`)}>${v.srcBadge}</span></div>`}
@@ -357,11 +357,24 @@ function AddSheet(v) {
           </button>`)}
           <button onClick=${v.aiAddAll} style=${S('height:44px;margin-top:2px;border-radius:14px;border:0;background:#FF6B1A;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${v.aiAddAllLabel}</button>
         </div>`}
-        <div style=${S('font-size:12px;color:#5A6080')}>Paste A Post, Or Pick A Video Saved To Your Phone, And AI Fills In The Rest — Including What's Said Out Loud. Optional.</div>
+        <div style=${S('font-size:12px;color:#5A6080')}>Paste A Post Or A Google Maps Link, Or Pick A Video Saved To Your Phone, And AI Fills In The Rest — Including What's Said Out Loud. Optional.</div>
       </div>
       <div style=${col8}>
         <label for="f-name" style=${lab}>Place Name</label>
-        <input id="f-name" value=${f.name} onChange=${v.onName} placeholder="E.g. Devoción" style=${S(`height:52px;${inp};font-size:16px;font-weight:600`)} />
+        <input id="f-name" value=${f.name} onChange=${v.onName} autocomplete="off" placeholder="Start Typing, E.g. Devoción" style=${S(`height:52px;${inp};font-size:16px;font-weight:600`)} />
+        ${v.suggBusy && html`<div role="status" style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Looking For Matches…</div>`}
+        ${v.hasSugg && html`
+        <div style=${S('display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;border:2px solid #10183F')}>
+          <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;font-size:12px;font-weight:800;color:#4A5275')}>
+            <span>Is It One Of These?</span>
+            <button onClick=${v.closeSugg} style=${S('border:0;background:transparent;color:#1B3DB8;font-weight:800;font-size:12px;cursor:pointer;padding:0')}>None Of These</button>
+          </div>
+          ${v.suggRows.map((r, i) => html`
+          <button key=${i} class="hov" onClick=${r.onPick} style=${S('display:flex;align-items:center;gap:10px;text-align:left;padding:9px 14px;border:0;border-top:1px solid #EFE8DB;background:#fff;cursor:pointer;color:#10183F')}>
+            <span class="emo" aria-hidden="true" style=${S(`width:30px;height:30px;border-radius:10px;background:${r.bg};flex:none;display:flex;align-items:center;justify-content:center;font-size:16px`)}>${r.emoji}</span>
+            <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
+          </button>`)}
+        </div>`}
       </div>
       <div style=${col8}>
         <label for="f-look" style=${lab}>Location</label>
