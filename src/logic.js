@@ -90,7 +90,7 @@ class Component extends DCLogic {
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:true,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
-      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:''};})();
+      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''};})();
 
   // ---- cloud sync hooks (used by sync.js) ----
   snapshot(){const s=this.state;return {places:s.places,cats:s.cats,home:s.home,plan:s.plan};}
@@ -286,21 +286,37 @@ class Component extends DCLogic {
       const r=await fetch('https://photon.komoot.io/api/?limit=10&lang=en&bbox=-74.27,40.49,-73.68,40.93&lat='+c[0]+'&lon='+c[1]+'&q='+encodeURIComponent(q),{signal:ac.signal});clearTimeout(t);
       if(r.ok)feats=((await r.json()).features)||[];}catch(e){}
     if(this.state.form.name.trim()!==q)return;
-    if(!feats){this.setState({suggBusy:false,sugg:[]});return;}
+    if(!feats){this.setState({suggBusy:false,sugg:[],suggNone:q});return;}
     const POI=/^(amenity|shop|tourism|leisure|craft|office|club|historic)$/;
     const seen=new Set(),out=[];
     feats.filter(f=>f.properties&&f.properties.name&&f.geometry&&f.properties.osm_key!=='highway').sort((a,b)=>(POI.test(b.properties.osm_key)?1:0)-(POI.test(a.properties.osm_key)?1:0)).forEach(f=>{
       const p=f.properties,ll=[r5(f.geometry.coordinates[1]),r5(f.geometry.coordinates[0])],k=p.name+'|'+Math.round(ll[0]*1e3)+'|'+Math.round(ll[1]*1e3);
       if(seen.has(k)||out.length>=5)return;seen.add(k);
       out.push({name:p.name,ll,street:[p.housenumber,p.street].filter(Boolean).join(' '),hood:hoodAt(ll)||p.district||p.locality||p.city||'',cat:this.osmCat(p)});});
-    this.setState({suggBusy:false,sugg:out});}
+    this.setState({suggBusy:false,sugg:out,suggNone:out.length?'':q});}
+  async webFind(){const s=this.state,q=s.form.name.trim();if(s.webBusy||q.length<2)return;
+    const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
+    if(!token){this.setState({webMsg:'Sign In To Search The Web.'});return;}
+    clearTimeout(this._sgt);this.setState({webBusy:true,webMsg:'',sugg:[],suggNone:''});
+    let j=null;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),65000);
+      const r=await fetch('/api/find',{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+        body:JSON.stringify({q,categories:s.cats.map(c=>({id:c.id,name:c.name})),neighborhoods:areas().map(a=>a.name)})});
+      clearTimeout(t);j=await r.json().catch(()=>null);if(!r.ok){this.setState({webBusy:false,webMsg:(j&&j.error)||'Web Search Isn’t Available Right Now.'});return;}}
+    catch(e){this.setState({webBusy:false,webMsg:'Couldn’t Reach Web Search. Check Your Connection.'});return;}
+    if(this.state.form.name.trim()!==q){this.setState({webBusy:false});return;}
+    const places=(j&&j.places)||[];
+    if(!places.length){this.setState({webBusy:false,webMsg:(j&&j.message)||'Couldn’t Find It On The Web.',suggPicked:q});return;}
+    this.setState({webBusy:false,webFor:q,sugg:places.map(p=>({name:p.name,street:p.address||'',hood:this.aiArea(p.neighborhood)||p.neighborhood||'',cat:s.cats.some(c=>c.id===p.category_id)?p.category_id:null,web:p}))});}
   osmCat(p){const k=p.osm_key,v=p.osm_value||'',has=id=>this.state.cats.some(c=>c.id===id)?id:null;
     if(v==='cafe'||(k==='shop'&&(v==='coffee'||v==='tea')))return has('coffee');
     if(v==='bakery'||v==='pastry'||v==='confectionery')return has('bakery');
     if(k==='amenity'&&/^(restaurant|fast_food|food_court|bar|pub|ice_cream|biergarten)$/.test(v))return has('food');
     if(k==='shop'&&/^(deli|cheese|greengrocer|supermarket|butcher|seafood|wine|alcohol|chocolate|spices|health_food|farm|convenience|food|frozen_food|pasta|dairy)$/.test(v))return has('grocery');
     if(k==='shop')return has('shop');return null;}
-  pickSugg(g){const f=this.state.form,area=hoodAt(g.ll);
+  async pickSugg(g){if(g.web){this.setState({sugg:[],suggPicked:g.name,suggNone:'',lookResults:[],lookMsg:''});
+      await this.aiApply(g.web,true);const f=this.state.form;if(f.name!==g.name)return;
+      this.toast(f.lat!=null?'Found It'+(f.area&&f.area!=='auto'?' In '+f.area:'')+'!':'Filled In — Drop A Pin To Place It');return;}
+    const f=this.state.form,area=hoodAt(g.ll);
     this.setState({sugg:[],suggPicked:g.name,lookResults:[],lookMsg:''});
     this.setForm({name:g.name,lat:g.ll[0],lng:g.ll[1],area:area||'auto',address:g.street||f.address,cat:f.cat||g.cat});
     this.toast('Found It'+(area?' In '+area:'')+'!');}
@@ -480,16 +496,20 @@ class Component extends DCLogic {
         onClick:()=>this.setState(st=>({plan:{...st.plan,ids:ip?st.plan.ids.filter(x=>x!==p.id):[...st.plan.ids,p.id]}}))};}),
       goMap:()=>this.setState({tab:'map',selId:null,placing:false,routeFor:null}),goExplore:()=>this.setState({tab:'explore',selId:null,placing:false,routeFor:null}),goPlan:()=>this.setState({tab:'plan',selId:null,placing:false,routeFor:null}),
       tabMapFg:tabC('map'),tabMapDot:tabD('map'),tabExFg:tabC('explore'),tabExDot:tabD('explore'),tabPlanFg:tabC('plan'),tabPlanDot:tabD('plan'),
-      openAdd:()=>this.setState({addOpen:true,placing:false,form:blank(),selId:null,routeFor:null,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:''}),closeAdd:()=>this.setState({addOpen:false,sugg:[]}),
+      openAdd:()=>this.setState({addOpen:true,placing:false,form:blank(),selId:null,routeFor:null,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''}),closeAdd:()=>this.setState({addOpen:false,sugg:[]}),
       hasSugg:!!s.sugg.length&&!f.id,suggRows:s.sugg.map(g=>{const c=s.cats.find(x=>x.id===g.cat);return {name:g.name,sub:[g.street,g.hood].filter(Boolean).join(' · ')||'NYC',emoji:c?emo(c):'📍',bg:c?c.color:'#E9E4DA',onPick:()=>this.pickSugg(g)};}),
       suggBusy:s.suggBusy&&!s.sugg.length&&!f.id,closeSugg:()=>this.setState({sugg:[],suggPicked:f.name.trim()}),
+      suggWeb:!!s.sugg.length&&s.sugg[0].web,suggTitle:s.sugg.length&&s.sugg[0].web?'Found On The Web':'Is It One Of These?',
+      webShow:!f.id&&!s.webBusy&&f.name.trim().length>=3&&(!!s.sugg.length&&!s.sugg[0].web||s.suggNone===f.name.trim()),
+      webLabel:s.sugg.length?'✨ Not Here? Search The Web':'✨ Not Found? Search The Web',webFind:()=>this.webFind(),
+      webBusy:s.webBusy,webHasMsg:!!s.webMsg&&!s.webBusy,webMsg:s.webMsg,
       aiShow:!f.id&&!!f.url.trim(),aiVidShow:!f.id,onVideo:e=>{const fl=e.target.files&&e.target.files[0];e.target.value='';this.aiVideo(fl);},aiBtn:s.aiBusy?(s.aiStage||'✨ Reading The Post…'):s.aiFor&&s.aiFor===f.url.trim()?'✨ Read It Again':'✨ Fill From Link',aiBusy:s.aiBusy,
       aiRun:()=>this.aiFill(),aiHasMsg:!!s.aiMsg&&!s.aiBusy,aiMsg:s.aiMsg,aiMulti:s.aiPlaces.length>1&&!s.aiBusy,aiCount:s.aiPlaces.length,
       aiAddAllLabel:s.aiAdding?'Adding…':`Add All ${s.aiPlaces.length} To My Map`,aiAddAll:()=>this.aiAddAll(),
       aiRows:s.aiPlaces.map((p,i)=>{const c=cat[p.category_id];return {name:p.name,emoji:c?emo(c):'📍',bg:c?c.color:'#A9ADC2',sub:[c&&c.name,p.neighborhood].filter(Boolean).join(' · ')||'NYC',on:p.name===f.name,onPick:()=>this.aiApply(p)};}),
       addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':'Add A Spot',form:f,
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
-      onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
+      onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
       onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),
       pasteUrl:()=>navigator.clipboard?.readText().then(t=>{this.setForm({url:t.trim()});this.aiAuto(t.trim(),true);}).catch(()=>this.toast('Long-Press The Field To Paste')),
       hasSrcBadge:!!fsrc,srcBadge:fsrc?(fsrc==='link'?'Website Link':SRC[fsrc].label+' Link Detected'):'',srcBadgeBg:fsrc?SRC[fsrc].bg:C.navy,

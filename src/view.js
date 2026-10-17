@@ -366,7 +366,7 @@ function AddSheet(v) {
         ${v.hasSugg && html`
         <div style=${S('display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;border:2px solid #10183F')}>
           <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;font-size:12px;font-weight:800;color:#4A5275')}>
-            <span>Is It One Of These?</span>
+            <span>${v.suggTitle}</span>
             <button onClick=${v.closeSugg} style=${S('border:0;background:transparent;color:#1B3DB8;font-weight:800;font-size:12px;cursor:pointer;padding:0')}>None Of These</button>
           </div>
           ${v.suggRows.map((r, i) => html`
@@ -375,6 +375,9 @@ function AddSheet(v) {
             <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
           </button>`)}
         </div>`}
+        ${v.webShow && html`<button onClick=${v.webFind} style=${S('height:44px;border-radius:14px;border:2px solid #10183F;background:#10183F;color:#FFC425;font-weight:900;font-style:italic;font-size:14px;cursor:pointer;padding:0 12px')}>${v.webLabel}</button>`}
+        ${v.webBusy && html`<div role="status" class="ai-busy" style=${S('height:44px;border-radius:14px;border:2px solid #10183F;background:#FFF3DF;color:#10183F;font-weight:900;font-style:italic;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #FFC425')}>✨ Searching The Web…</div>`}
+        ${v.webHasMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${v.webMsg}</div>`}
       </div>
       <div style=${col8}>
         <label for="f-look" style=${lab}>Location</label>
