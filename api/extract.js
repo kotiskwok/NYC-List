@@ -28,6 +28,18 @@ async function fetchText(url, ua, ms = 8000, extra) {
   finally { clearTimeout(t); }
 }
 
+// Follow one redirect step without downloading the page: returns the Location it points to, or ''.
+async function nextHop(url) {
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 6000);
+  try {
+    const r = await fetch(url, { method: 'GET', redirect: 'manual', signal: ac.signal, headers: { 'user-agent': UA_DESKTOP, 'accept-language': 'en-US,en;q=0.9' } });
+    const loc = r.headers.get('location');
+    try { r.body && r.body.cancel && r.body.cancel(); } catch (e) {}
+    return loc ? new URL(loc, url).toString() : '';
+  } catch (e) { return ''; }
+  finally { clearTimeout(t); }
+}
+
 const decode = s => String(s || '')
   .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
   .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
@@ -81,8 +93,14 @@ async function readPost(url) {
   if (G.isGmaps(url)) {
     // Google Maps: one specific place. Follow the share link, then read the name, address and exact pin.
     out.source = 'gmaps';
-    const r = await fetchText(url, UA_DESKTOP, 9000);
-    let final = r.url || url, g = G.parseUrl(final);
+    // Share links (maps.app.goo.gl/…) redirect to the full place link, which already has the name and exact pin.
+    // Read the redirect itself rather than loading Google's (very heavy) map page.
+    let final = url;
+    for (let i = 0; i < 4 && !/\/maps\/(place|search)|[?&](q|query)=/i.test(final); i++) { const next = await nextHop(final); if (!next) break; final = next; }
+    let g = G.parseUrl(final);
+    const enough = g.name && g.ll && g.exact;
+    const r = enough ? { text: '', url: final } : await fetchText(final, UA_DESKTOP, 8000);
+    if (r.url && r.url !== final && !g.name) { final = r.url; g = G.parseUrl(final); }
     if (!g.name && !g.query) {
       const m = r.text.match(/https:\/\/www\.google\.[a-z.]+\/maps\/place\/[^"'\s<\\]+/i);
       if (m) { final = decode(m[0]); const g2 = G.parseUrl(final); g = { ...g2, ll: g2.ll || g.ll, exact: g2.ll ? g2.exact : g.exact }; }
