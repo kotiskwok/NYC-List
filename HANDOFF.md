@@ -1,4 +1,4 @@
-# My NYC List: Project Handoff
+# Spotted In (formerly My NYC List): Project Handoff
 
 Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a new chat to keep working on the app.
 
@@ -6,7 +6,7 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 
 ## 1. What the app is
 
-**My NYC List** is Kotis's personal map of New York City places to visit: restaurants, cafes, bakeries, gourmet groceries and cute shops, mostly saved from TikTok, Instagram, Threads and Google Maps. It runs in a phone browser and installs to the iPhone home screen like an app (a PWA). The list syncs across devices through Supabase.
+**Spotted In** (formerly My NYC List) is Kotis's personal map of New York City places to visit: restaurants, cafes, bakeries, gourmet groceries and cute shops, mostly saved from TikTok, Instagram, Threads and Google Maps. It runs in a phone browser and installs to the iPhone home screen like an app (a PWA). The list syncs across devices through Supabase.
 
 - **Live address:** https://nyc-lovat.vercel.app
 - **Design source:** Claude Design project "NYC Exploration Spot Mapper", file `NYC List v2.dc.html`. The look (colors, type, layout) follows that file.
@@ -143,7 +143,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 
 ### Maps, routing and offline
 - **Subway routing:** an *estimate* from station coordinates and shared lines, not live. Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v10`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v11`).
 
 ### Server functions (`/api`)
 Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files starting with `_` are helpers, not endpoints.

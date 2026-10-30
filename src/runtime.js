@@ -1,4 +1,4 @@
-// My NYC List — standalone runtime.
+// Spotted In (formerly My NYC List) — standalone runtime.
 // The app logic (logic.js) is carried over verbatim from the Claude Design prototype
 // "NYC List v2". This file supplies the small base class it was written against:
 // setState applies immediately to this.state, then the React host re-renders.

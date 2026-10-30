@@ -17,6 +17,13 @@ const S = str => {
 const T = n => `calc(var(--st) + ${n - 46}px)`;
 const B = n => `calc(var(--sb) + ${n}px)`;
 
+// The Spotted In wordmark: a yellow "Spotted" pill with an orange "in NYC" tag, like the app icon.
+const Logo = (big) => html`
+  <div aria-label="Spotted In NYC" role="img" style=${S(`display:flex;align-items:flex-end;flex:none;pointer-events:auto;transform:rotate(${big ? -3 : -2}deg)`)}>
+    <span style=${S(`background:#FFC425;color:#10183F;padding:${big ? '9px 20px 11px' : '6px 15px 8px'};border-radius:999px;font-weight:900;font-stretch:100%;font-style:italic;font-size:${big ? 30 : 20}px;letter-spacing:-.02em;line-height:1;white-space:nowrap;box-shadow:0 ${big ? 5 : 4}px 0 #10183F`)}>Spotted</span>
+    <span style=${S(`margin:0 0 ${big ? -10 : -8}px ${big ? -12 : -9}px;background:#FF6B1A;color:#fff;padding:${big ? '5px 11px 6px' : '4px 8px 5px'};border-radius:999px;font-weight:900;font-style:italic;font-size:${big ? 15 : 11.5}px;line-height:1;white-space:nowrap;box-shadow:0 3px 0 #10183F;transform:rotate(6deg)`)}>in NYC</span>
+  </div>`;
+
 const Bul = (b, i) => html`<span key=${i} style=${S(`width:20px;height:20px;border-radius:50%;background:${b.bg};color:${b.fg};font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center`)}>${b.t}</span>`;
 const H3 = (title, onClear, clearLabel, mt) => html`
   <div style=${S(`display:flex;align-items:baseline;justify-content:space-between;margin:${mt}`)}>
@@ -30,7 +37,7 @@ function MapScreen(v) {
     <div ref=${v.mainMapRef} style=${S('position:absolute;inset:0')}></div>
     <div style=${S(`position:absolute;top:${T(52)};left:14px;right:14px;z-index:500;display:flex;flex-direction:column;gap:10px;pointer-events:none`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
-        <div style=${S('background:#FFC425;color:#10183F;padding:7px 16px 9px;border-radius:999px;font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;letter-spacing:-.01em;white-space:nowrap;flex:none;box-shadow:0 4px 0 #10183F;transform:rotate(-2deg);pointer-events:auto')}>My NYC List</div>
+        ${Logo(false)}
         <button onClick=${v.openAcct} aria-label=${v.syncOn ? 'Account and sync: ' + v.syncLabel : 'Your spots'} style=${S(`display:flex;align-items:center;gap:7px;border:0;background:#fff;color:#10183F;border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;white-space:nowrap;box-shadow:0 4px 14px rgba(16,24,63,.18);pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>${v.statsText}${v.syncOn && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${v.syncDot};flex:none`)}></span>`}</button>
       </div>
       <div class="noscroll" style=${S('display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:2px 14px 6px;pointer-events:auto')}>
@@ -736,7 +743,7 @@ function AuthScreen(v) {
   const inp = S('height:52px;border-radius:16px;border:2px solid #10183F;background:#fff;padding:0 14px;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none');
   return html`
   <div data-screen-label="Sign In" class="noscroll" style=${S(`position:absolute;inset:0;z-index:1250;background:#1B3DB8;overflow-y:auto;padding:${T(90)} 22px ${B(30)};display:flex;flex-direction:column;gap:22px`)}>
-    <div style=${S('align-self:flex-start;background:#FFC425;color:#10183F;padding:9px 20px 11px;border-radius:999px;font-weight:900;font-style:italic;font-size:28px;letter-spacing:-.01em;box-shadow:0 5px 0 #10183F;transform:rotate(-3deg)')}>My NYC List</div>
+    <div style=${S('align-self:flex-start')}>${Logo(true)}</div>
     <div style=${S('display:flex;flex-direction:column;gap:8px;color:#fff')}>
       <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:40px;line-height:.95;letter-spacing:-.02em;color:#fff')}>${v.authTitle}</div>
       <div style=${S('font-size:15px;font-weight:600;color:#C9D0F0')}>Sign In To Keep Your Spots In Sync On Every Device.</div>

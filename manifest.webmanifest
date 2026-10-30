@@ -1,7 +1,7 @@
 {
-  "name": "My NYC List",
-  "short_name": "NYC List",
-  "description": "Restaurants, cafes and cute shops to visit in NYC.",
+  "name": "Spotted In",
+  "short_name": "Spotted In",
+  "description": "Save the restaurants, cafes and cute shops you spot online, on a map of NYC.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

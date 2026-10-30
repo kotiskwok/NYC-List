@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>My NYC List</title>
+<title>Spotted In</title>
 <meta name="theme-color" content="#FFF3DF">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="NYC List">
+<meta name="apple-mobile-web-app-title" content="Spotted In">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="description" content="Kotis's map of NYC restaurants, cafes and cute shops to visit.">
+<meta name="description" content="Spotted In: save the NYC restaurants, cafes and cute shops you spot on TikTok and Instagram, and plan where to go.">
 <link rel="stylesheet" href="/vendor/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
@@ -45,7 +45,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 /* Phone (or a short window): the app fills the screen, no frame or fake status bar. */
 @media (max-width:520px),(max-height:760px){
   body{background:var(--cream);overscroll-behavior:none}
-  :root{--st:12px;--sb:0px}
+  :root{--st:calc(env(safe-area-inset-top,0px) + 12px);--sb:max(0px,calc(env(safe-area-inset-bottom,0px) - 12px))}
   .stage{padding:0;height:100%;min-height:0;display:block}
   .device{width:100%;height:100%;border-radius:0;padding:0;box-shadow:none;background:var(--cream)}
   .screen{border-radius:0}
@@ -53,7 +53,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 </head>
 <body>
 <div id="root"></div>

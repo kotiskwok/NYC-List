@@ -7,7 +7,7 @@ const NYCNative = (() => {
   const plug = name => (C.Plugins && C.Plugins[name]) || (C.registerPlugin && C.registerPlugin(name));
   const Geo = plug('Geolocation'), Share = plug('Share'), App = plug('App'), Haptics = plug('Haptics'), StatusBar = plug('StatusBar'), Inbox = plug('AppGroup');
 
-  // Location through iOS's own permission prompt ("Allow NYC List to use your location?").
+  // Location through iOS's own permission prompt ("Allow Spotted In to use your location?").
   if (Geo) {
     const ids = new Map(); let n = 0;
     const err = e => { const m = String((e && e.message) || ''); return { code: /denied|permission|not authorized|disabled/i.test(m) ? 1 : /timeout/i.test(m) ? 3 : 2, message: m }; };
@@ -36,7 +36,7 @@ const NYCNative = (() => {
   // Dark status-bar text on the cream background.
   try { StatusBar && StatusBar.setStyle({ style: 'LIGHT' }); } catch (e) {}
 
-  // Links saved from the share sheet ("Share → NYC List") wait in a shared app-group inbox.
+  // Links saved from the share sheet ("Share → Spotted In") wait in a shared app-group inbox.
   async function takeInbox() {
     if (!Inbox) return;
     try { const r = await Inbox.takeLinks(); const links = (r && r.links) || []; if (links.length) window.dispatchEvent(new CustomEvent('nyc-shared', { detail: links })); } catch (e) {}

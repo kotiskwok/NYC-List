@@ -283,7 +283,7 @@ Object.assign(Component.prototype, {
   },
   inviteLink(t) { return SITE() + '/?join=' + encodeURIComponent(t.invite_code); },
   inviteText(t) { const what = t.share_list && t.share_map ? 'plan “' + t.name + '” and see my NYC map' : t.share_list ? 'plan “' + t.name + '”' : 'see my NYC map';
-    return `${t.owner_name || NYCLists.myName()} invited you to ${what} on My NYC List 🗽`; },
+    return `${t.owner_name || NYCLists.myName()} invited you to ${what} on Spotted In 🗽`; },
   async shareInvite(t) { const url = this.inviteLink(t), text = this.inviteText(t);
     if (navigator.share) { try { await navigator.share({ title: t.name, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     this.copyInvite(t); },
