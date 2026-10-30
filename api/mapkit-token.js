@@ -14,11 +14,17 @@ const b64 = x => Buffer.from(typeof x === 'string' ? x : JSON.stringify(x)).toSt
 // Only hand out tokens to the app's own pages: the live site, its Vercel previews and the iPhone app.
 const okHost = h => h === 'nyc-lovat.vercel.app' || /^nyc-[a-z0-9-]+-kotis1\.vercel\.app$/.test(h) || h === 'localhost' || h === '127.0.0.1';
 
+// Rebuild the .p8 text whatever happened to it on the way into Vercel: line breaks turned into spaces or "\n",
+// quotes around it, or only the middle part pasted.
 function pem(raw) {
-  let k = String(raw || '').replace(/\\n/g, '\n').trim();
-  if (/BEGIN/.test(k)) return k;
-  const body = k.replace(/\s+/g, '');
+  const body = String(raw || '').replace(/\\n/g, '\n').replace(/^["']|["']$/g, '')
+    .replace(/-----(BEGIN|END)[A-Z ]*-----/g, '').replace(/[^A-Za-z0-9+/=]/g, '');
   return '-----BEGIN PRIVATE KEY-----\n' + body.match(/.{1,64}/g).join('\n') + '\n-----END PRIVATE KEY-----\n';
+}
+// Safe hints about what's wrong with the key (never the key itself).
+function keyHint(raw) {
+  const t = String(raw || '');
+  return { length: t.length, hasBegin: /BEGIN/.test(t), hasEnd: /END/.test(t), bodyChars: pem(t).replace(/-----[^-]+-----|\s/g, '').length };
 }
 
 module.exports = async (req, res) => {
@@ -41,6 +47,6 @@ module.exports = async (req, res) => {
     const sig = crypto.sign('sha256', Buffer.from(data), { key: pem(raw), dsaEncoding: 'ieee-p1363' }).toString('base64url');
     send(res, 200, { token: data + '.' + sig });
   } catch (e) {
-    send(res, 500, { error: 'The Apple Maps Key Couldn’t Be Read. Check MAPKIT_PRIVATE_KEY.' });
+    send(res, 500, { error: 'The Apple Maps Key Couldn’t Be Read. Check MAPKIT_PRIVATE_KEY.', hint: keyHint(raw), why: String(e && e.message || '').slice(0, 80) });
   }
 };
