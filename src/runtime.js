@@ -26,6 +26,11 @@ class DCLogic {
   };
 })();
 
+// Running inside the iPhone app (Capacitor)? Then /api calls and shareable links go to the live website.
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const SITE = () => (NATIVE && window.NYC_CONFIG && NYC_CONFIG.siteUrl) || location.origin;
+const API = p => (NATIVE ? SITE() : '') + p;
+
 // Options that were editable props in the design tool. Defaults match the design;
 // override with ?style=Minimal or ?tab=Explore|Plan (or #explore / #plan).
 const APP_PROPS = (() => {

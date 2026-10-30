@@ -3,6 +3,21 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://octgaltlmqwcqewbxocb.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg';
 
+// The iPhone app runs its pages from capacitor://localhost and calls these functions across origins.
+const ORIGINS = new Set(['capacitor://localhost', 'ionic://localhost', 'http://localhost', 'https://localhost']);
+function cors(req, res) {
+  const o = req.headers.origin;
+  if (o && ORIGINS.has(o)) {
+    res.setHeader('access-control-allow-origin', o);
+    res.setHeader('vary', 'origin');
+    res.setHeader('access-control-allow-headers', 'authorization, content-type');
+    res.setHeader('access-control-allow-methods', 'POST, OPTIONS');
+    res.setHeader('access-control-max-age', '86400');
+  }
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return true; }
+  return false;
+}
+
 function send(res, code, body) {
   res.statusCode = code;
   res.setHeader('content-type', 'application/json');
@@ -34,4 +49,4 @@ async function readJson(req) {
   return JSON.parse(raw.toString('utf8') || '{}');
 }
 
-module.exports = { send, requireUser, readRaw, readJson };
+module.exports = { cors, send, requireUser, readRaw, readJson };

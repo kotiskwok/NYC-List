@@ -3,7 +3,7 @@
 // and returns matching NYC places in the same shape as /api/extract.
 // Only signed-in users of this app can call it. Costs a few cents per call, so the app only calls it on a tap.
 
-const { send, requireUser, readJson } = require('./_shared');
+const { cors, send, requireUser, readJson } = require('./_shared');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 
 const TOOL = {
@@ -34,6 +34,7 @@ const TOOL = {
 };
 
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI Isn’t Set Up Yet — Add ANTHROPIC_API_KEY In Vercel.' });
   if (!(await requireUser(req, res))) return;

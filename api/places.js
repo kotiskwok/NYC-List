@@ -8,7 +8,7 @@
 // Vercel environment variable:
 //   GOOGLE_MAPS_API_KEY  (optional) — without it this returns 503 and the app falls back to OpenStreetMap search.
 
-const { send, requireUser, readJson } = require('./_shared');
+const { cors, send, requireUser, readJson } = require('./_shared');
 
 // The five boroughs (a little generous).
 const NYC = { low: { latitude: 40.49, longitude: -74.27 }, high: { latitude: 40.93, longitude: -73.68 } };
@@ -38,6 +38,7 @@ async function google(path, opts) {
 const tidy = s => String(s || '').replace(/,?\s*(New York|NY)(,\s*NY)?(\s*\d{5})?,\s*(USA|United States)$/i, '').replace(/,\s*(USA|United States)$/i, '').trim();
 
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.GOOGLE_MAPS_API_KEY) return send(res, 503, { error: 'Google place search isn’t set up (add GOOGLE_MAPS_API_KEY in Vercel).' });
   if (!(await signedIn(req, res))) return;

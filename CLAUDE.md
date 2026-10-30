@@ -10,3 +10,4 @@ Rules of thumb:
 - Secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) live only in Vercel environment variables.
 - `vercel.json` header sources must use `/path/:path*` style patterns.
 - Pushing to `main` deploys to Vercel automatically.
+- The iPhone app is in `native/` (Capacitor). Use `API('/api/...')` for server calls and `SITE()` for shareable links so they work inside the app.

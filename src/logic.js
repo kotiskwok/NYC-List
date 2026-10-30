@@ -97,7 +97,7 @@ class Component extends DCLogic {
       showSubway:true,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
-      newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripNameEdit:null,joinInfo:null,addTarget:null,authName:''};})();
+      newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripNameEdit:null,joinInfo:null,addTarget:null,authName:'',acctDel:0};})();
 
   // ---- cloud sync hooks (used by sync.js) ----
   snapshot(){const s=this.state;return {places:s.places,cats:s.cats,home:s.home,plan:s.plan};}
@@ -109,17 +109,18 @@ class Component extends DCLogic {
   resetLocal(){try{localStorage.removeItem(LS)}catch(e){}this.applyRemote(this.emptyData());this.setState({acctOpen:false,authEmail:'',authPass:''});}
 
   // Open Add A Spot with a shared link once sign-in has settled, and let AI read it.
-  takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;
+  takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;if(this._shareQ&&this._shareQ.length)setTimeout(()=>this.toast(this._shareQ.length+' More Shared '+(this._shareQ.length===1?'Link':'Links')+' Waiting'),900);
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link Added — Tap ✨ Fill From Link To Read It.'});else this.aiAuto(u,true);}},400);}
-  componentDidMount(){this._on=true;this._share=SHARED_LINK;setTimeout(()=>this.takeShared(),0);window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
+  componentDidMount(){this._on=true;this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
+    window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
       const names=new Set(areas().map(a=>a.name));
       this.setState(st=>({places:st.places.map(p=>names.has(p.area)?p:{...p,area:hoodAt([p.lat,p.lng])||p.area})}));
       this.syncMaps();setTimeout(()=>this.refreshVisible(),80);}
     else setTimeout(go,100);};go();}
-  componentDidUpdate(){const s=this.state;if(this._share)this.takeShared();
+  componentDidUpdate(){const s=this.state;if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan){this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;
       try{localStorage.setItem(LS,JSON.stringify({places:s.places,cats:s.cats,home:s.home,plan:s.plan}))}catch(e){}
       window.NYCSync&&NYCSync.queue(this.snapshot());
@@ -261,7 +262,7 @@ class Component extends DCLogic {
     this.setState({lookBusy:false,lookResults:res.slice(0,5)});}
   pickLookup(r){const ll=[r5(+r.lat),r5(+r.lon)],a=r.address||{},area=hoodAt(ll);const street=[a.house_number,a.road].filter(Boolean).join(' ');
     this.setState(st=>({lookResults:[],lookMsg:'',form:{...st.form,lat:ll[0],lng:ll[1],area:area||st.form.area,address:st.form.address||street,name:st.form.name||(r.name&&r.name!==street?r.name:'')}}));this.toast('Found It'+(area?' In '+area:'')+'!');}
-  toast(t){this.setState({toast:t});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:null}),2400);}
+  toast(t){this.setState({toast:t});window.NYCNative&&NYCNative.tap();clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:null}),2400);}
   toggle(k,id){this.setState(st=>({[k]:st[k].includes(id)?st[k].filter(x=>x!==id):[...st[k],id]}));}
   togglePlan(id){const inP=this.state.plan.ids.includes(id);this.setState(st=>({plan:{...st.plan,ids:inP?st.plan.ids.filter(x=>x!==id):[...st.plan.ids,id]}}));this.toast(inP?'Removed From Plan':'Added To Your Plan');}
   setForm(p){this.setState(st=>({form:{...st.form,...p}}));}
@@ -289,6 +290,14 @@ class Component extends DCLogic {
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?p:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
     this.toast(orig?'Changes Saved':'Pinned To Your Map!');}
+  // Apple requires in-app account deletion. Server: /api/delete-account (needs SUPABASE_SERVICE_ROLE_KEY in Vercel).
+  async deleteAccount(){const s=this.state;if(s.acctDel===2)return;if(s.acctDel!==1){this.setState({acctDel:1});clearTimeout(this._adt);this._adt=setTimeout(()=>this.setState({acctDel:0}),6000);return;}
+    this.setState({acctDel:2});const token=await NYCSync.getToken();
+    try{const r=await fetch(API('/api/delete-account'),{method:'POST',headers:{authorization:'Bearer '+token}});const j=await r.json().catch(()=>null);
+      if(!r.ok){this.setState({acctDel:0});this.toast((j&&j.error)||'Couldn’t Delete The Account Right Now');return;}}
+    catch(e){this.setState({acctDel:0});this.toast('Couldn’t Reach The Server. Check Your Connection.');return;}
+    try{Object.keys(localStorage).filter(k=>k.startsWith('nycList.')).forEach(k=>localStorage.removeItem(k));}catch(e){}
+    await NYCSync.signOut(true);this.setState({acctDel:0});this.toast('Your Account Was Deleted');}
   openRouteFor(id){const s=this.state;let mode=s.routeMode;if(mode==='home'&&!s.home)mode=s.here?'here':'home';
     const other=s.places.find(p=>p.id!==id);this.setState({routeFor:id,selId:null,tab:'map',routeMode:mode,routePick:0,routeSpot:s.routeSpot&&s.routeSpot!==id?s.routeSpot:(other&&other.id)});}
 
@@ -301,7 +310,7 @@ class Component extends DCLogic {
   async googleCall(body){if(this._gOff)return null;const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token)return null;
     if(!this._gs)this._gs=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2));
     try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),8000);
-      const r=await fetch('/api/places',{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify({...body,session:this._gs})});clearTimeout(t);
+      const r=await fetch(API('/api/places'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify({...body,session:this._gs})});clearTimeout(t);
       if(r.status===503||r.status===404){this._gOff=true;return null;}if(!r.ok)return null;return await r.json();}catch(e){return null;}}
   gCat(types){const t=types||[],has=id=>this.state.cats.some(c=>c.id===id)?id:null,any=re=>t.some(x=>re.test(x));
     if(any(/^(cafe|coffee_shop|tea_house|cat_cafe|dog_cafe)$/))return has('coffee');
@@ -331,7 +340,7 @@ class Component extends DCLogic {
     if(!token){this.setState({webMsg:'Sign In To Search The Web.'});return;}
     clearTimeout(this._sgt);this.setState({webBusy:true,webMsg:'',sugg:[],suggNone:''});
     let j=null;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),65000);
-      const r=await fetch('/api/find',{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+      const r=await fetch(API('/api/find'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
         body:JSON.stringify({q,categories:s.cats.map(c=>({id:c.id,name:c.name})),neighborhoods:areas().map(a=>a.name)})});
       clearTimeout(t);j=await r.json().catch(()=>null);if(!r.ok){this.setState({webBusy:false,webMsg:(j&&j.error)||'Web Search Isn’t Available Right Now.'});return;}}
     catch(e){this.setState({webBusy:false,webMsg:'Couldn’t Reach Web Search. Check Your Connection.'});return;}
@@ -370,7 +379,7 @@ class Component extends DCLogic {
     if(!token){this.setState({aiMsg:'Sign In To Use AI Fill.'});return;}
     this.setState({aiBusy:true,aiMsg:'',aiPlaces:[],aiFor:url});
     let j=null;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),45000);
-      const r=await fetch('/api/extract',{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+      const r=await fetch(API('/api/extract'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
         body:JSON.stringify({url,notes:f.note.trim(),categories:this.state.cats.map(c=>({id:c.id,name:c.name})),neighborhoods:areas().map(a=>a.name)})});
       clearTimeout(t);j=await r.json().catch(()=>null);if(!r.ok){this.setState({aiBusy:false,aiMsg:(j&&j.error)||'AI Fill Isn’t Available Right Now.'});return;}}
     catch(e){this.setState({aiBusy:false,aiMsg:'Couldn’t Reach AI Fill. Check Your Connection.'});return;}
@@ -393,7 +402,7 @@ class Component extends DCLogic {
     try{const {chunks,trimmed}=await NYCVideo.audioChunks(file);
       for(let i=0;i<chunks.length;i++){
         if(chunks.length>1)this.setState({aiStage:`🎧 Listening… ${i+1} Of ${chunks.length}`});
-        const r=await fetch('/api/transcribe',{method:'POST',headers:{'content-type':'audio/wav',authorization:'Bearer '+token},body:chunks[i]});
+        const r=await fetch(API('/api/transcribe'),{method:'POST',headers:{'content-type':'audio/wav',authorization:'Bearer '+token},body:chunks[i]});
         const j=await r.json().catch(()=>null);
         if(!r.ok){heardNote=(j&&j.error)||'Couldn’t Listen To The Video.';break;}
         transcript+=(transcript?' ':'')+((j&&j.text)||'');}
@@ -401,7 +410,7 @@ class Component extends DCLogic {
     catch(e){heardNote=e&&e.message==='silent'?'No Speech In This Video — Used What’s On Screen.':'Couldn’t Get The Sound From This Video — Used What’s On Screen.';}
     if(!transcript.trim()&&!frames.length){this.setState({aiBusy:false,aiStage:'',aiMsg:heardNote||'Couldn’t Read This Video.'});return;}
     this.setState({aiStage:'✨ Finding The Places…'});
-    let j=null;try{const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},
+    let j=null;try{const r=await fetch(API('/api/extract'),{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},
         body:JSON.stringify({url,notes:f.note.trim(),transcript:transcript.trim(),frames,categories:this.state.cats.map(c=>({id:c.id,name:c.name})),neighborhoods:areas().map(a=>a.name)})});
       j=await r.json().catch(()=>null);if(!r.ok){this.setState({aiBusy:false,aiStage:'',aiMsg:(j&&j.error)||'AI Fill Isn’t Available Right Now.'});return;}}
     catch(e){this.setState({aiBusy:false,aiStage:'',aiMsg:'Couldn’t Reach AI Fill. Check Your Connection.'});return;}
@@ -502,7 +511,7 @@ class Component extends DCLogic {
       mapDisplay:s.tab==='map'?'block':'none',exDisplay:s.tab==='explore'?'block':'none',planDisplay:s.tab==='plan'?'block':'none',
       exPickDisplay:s.exStage==='pick'?'block':'none',exResDisplay:s.exStage==='results'?'flex':'none',exListDisplay:s.exView==='list'?'flex':'none',exMapVis:s.exView==='map'?'visible':'hidden',
       mainMapRef:this.mainMapRef,exMapRef:this.exMapRef,planMapRef:this.planMapRef,
-      statsText:`${s.places.length} Spots · ${vis} Visited`,mapChips,exTiles,exBoroughs,
+      statsText:`${s.places.length} ${s.places.length===1?'Spot':'Spots'} · ${vis} Visited`,mapChips,exTiles,exBoroughs,
       subBtnBg:s.showSubway?C.navy:'#fff',subBtnFg:s.showSubway?'#fff':C.navy,toggleSubway:()=>this.setState({showSubway:!s.showSubway}),
       locateMe:()=>{this.setState({tab:'map',selId:null,routeFor:null});if(s.here&&!s.locating&&this.maps&&!s.locFail){this.maps.main.map.flyTo(s.here,16,{duration:.6});}this.locate(ll=>this.maps&&this.maps.main.map.flyTo(ll,16,{duration:.7}));},
       locBg:s.locating?C.yellow:s.here?C.blue:'#fff',locFg:s.here&&!s.locating?'#fff':C.navy,
@@ -574,7 +583,8 @@ class Component extends DCLogic {
       syncOn:s.auth==='signedIn',syncDot:({saved:C.green,saving:C.yellow,syncing:C.yellow,offline:'#A9ADC2'})[s.syncState]||'#A9ADC2',
       syncLabel:({saved:'All Changes Saved',saving:'Saving…',syncing:'Syncing…',offline:'Offline — Saves When You’re Back Online'})[s.syncState]||'Connecting…',
       openAcct:()=>s.auth==='signedIn'&&this.setState({acctOpen:true}),closeAcct:()=>this.setState({acctOpen:false}),acctOpen:s.acctOpen&&s.auth==='signedIn',
-      syncEmail:s.syncEmail,signOut:()=>NYCSync.signOut(),syncNow:()=>{NYCSync.syncNow();this.toast('Syncing…');},
+      syncEmail:s.syncEmail,signOut:()=>NYCSync.signOut(),
+      delAcctLabel:s.acctDel===2?'Deleting…':s.acctDel===1?'Tap Again To Delete Everything — This Can’t Be Undone':'Delete My Account',deleteAccount:()=>this.deleteAccount(),privacyUrl:SITE()+'/privacy.html',syncNow:()=>{NYCSync.syncNow();this.toast('Syncing…');},
       showPrice:!!f.cat&&this.priced(f.cat),priceHint:f.price?PRICE_HINT[f.price-1]+' · Tap Again To Clear':'How Pricey Is It? Optional.',
       priceChips:PRICES.map((lb,i)=>{const on=f.price===i+1;return {label:lb,bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.14)',onClick:()=>this.setForm({price:on?0:i+1})};}),
       exShowPrice:!s.exCats.length||s.exCats.some(id=>this.priced(id)),clearPrices:()=>this.setState({exPrices:[]}),clearPricesLabel:s.exPrices.length?'Clear':'',

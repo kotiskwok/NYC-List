@@ -5,5 +5,7 @@
 // Leave both empty to run without sign-in (data stays on the device).
 window.NYC_CONFIG = {
   supabaseUrl: 'https://octgaltlmqwcqewbxocb.supabase.co',
-  supabaseAnonKey: 'sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg'
+  supabaseAnonKey: 'sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg',
+  // The live website. The iPhone app calls its /api functions and uses it for invite and email links.
+  siteUrl: 'https://nyc-lovat.vercel.app'
 };

@@ -1,9 +1,9 @@
 // Offline support: map data and libraries come from the cache first (they rarely change);
 // the page, app code and config always try the network first so updates arrive right away.
 // Requests to other sites (Supabase, Google Maps, fonts) are never touched.
-const CACHE = 'nyc-list-v9';
+const CACHE = 'nyc-list-v10';
 const CORE = ['/', '/index.html', '/config.js', '/manifest.webmanifest',
-  '/src/runtime.js', '/src/sync.js', '/src/video.js', '/src/logic.js', '/src/lists.js', '/src/view.js',
+  '/src/runtime.js', '/src/native.js', '/src/sync.js', '/src/video.js', '/src/logic.js', '/src/lists.js', '/src/view.js',
   '/vendor/react.production.min.js', '/vendor/react-dom.production.min.js', '/vendor/htm.umd.js',
   '/vendor/leaflet.js', '/vendor/leaflet.css', '/vendor/supabase.js',
   '/data/nyc-map-data.js', '/data/nyc-subway-data.js', '/data/nyc-streets-data.js'];

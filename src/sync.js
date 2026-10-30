@@ -129,7 +129,7 @@ const NYCSync = (() => {
     try {
       const join = window.NYCLists ? NYCLists.pendingCode() : '', name = (s.authName || '').trim();
       const r = s.authMode === 'up'
-        ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + (join ? '/?join=' + encodeURIComponent(join) : ''), data: name ? { name } : undefined } })
+        ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: SITE() + (join ? '/?join=' + encodeURIComponent(join) : ''), data: name ? { name } : undefined } })
         : await sb.auth.signInWithPassword({ email, password });
       if (r.error) { set({ authBusy: false, authMsg: friendly(r.error.message) }); return; }
       if (s.authMode === 'up' && !r.data.session) {
@@ -140,9 +140,9 @@ const NYCSync = (() => {
     } catch (e) { set({ authBusy: false, authMsg: friendly(e && e.message) }); }
   }
 
-  async function signOut() {
+  async function signOut(skipSync) {
     if (!sb) return;
-    await sync();
+    if (!skipSync) await sync();
     try { localStorage.removeItem(baseKey()); } catch (e) {}
     try { await sb.auth.signOut(); } catch (e) {}
     app.resetLocal();

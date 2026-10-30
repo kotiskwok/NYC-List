@@ -1,0 +1,14 @@
+{
+  "appId": "com.kotiskwok.nyclist",
+  "appName": "NYC List",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#FFF3DF",
+    "scheme": "NYC List"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 600, "backgroundColor": "#1B3DB8", "showSpinner": false },
+    "StatusBar": { "style": "LIGHT", "overlaysWebView": true }
+  }
+}

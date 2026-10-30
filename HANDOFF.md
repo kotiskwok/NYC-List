@@ -107,6 +107,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 | `ANTHROPIC_API_KEY` | ✅ Set | Fill From Link, Google Maps links, Search The Web, video place-finding |
 | `GOOGLE_MAPS_API_KEY` | ☐ Not set yet | Google name suggestions (otherwise OpenStreetMap). Create in Google Cloud → enable **Places API (New)** → APIs & Services → Credentials → API key, restricted to Places API (New). A daily quota cap is a good idea. |
 | `OPENAI_API_KEY` | ☐ Not set yet | 🎬 From A Video |
+| `SUPABASE_SERVICE_ROLE_KEY` | ☐ Not set yet | Delete My Account (required by Apple). Supabase → Project Settings → API Keys → secret key. |
 
 - **Optional overrides:** `ANTHROPIC_MODEL`, `OPENAI_TRANSCRIBE_MODEL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
 - **Supabase:** Authentication → URL Configuration → **Site URL** is the Vercel address. "Allow new users to sign up" (Authentication → Sign In / Providers) must stay **on** for friends to join shared lists. A new account only sees its own empty map plus the lists it was invited to; the AI features cost a little per use for any signed-in account.
@@ -142,7 +143,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 
 ### Maps, routing and offline
 - **Subway routing:** an *estimate* from station coordinates and shared lines, not live. Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v9`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v10`).
 
 ### Server functions (`/api`)
 Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files starting with `_` are helpers, not endpoints.
@@ -180,6 +181,16 @@ How `extract.js` reads each kind of link:
 
 ---
 
+## 3b. iPhone app
+
+The App Store version is the same website wrapped with Capacitor 8 in `native/`. See `native/README.md` for the Mac steps and `native/APP_STORE.md` for the listing.
+
+- `native/scripts/copy-web.mjs` copies the site into `native/www`; `npm run sync` then copies it into the Xcode project (`native/ios/App`). Vercel ignores `native/` (`.vercelignore`).
+- In the app, `NATIVE` is true (`src/runtime.js`). `API(path)` sends `/api` calls to `NYC_CONFIG.siteUrl` (`config.js`), and `SITE()` is used for invite and email links. The API functions answer CORS requests from `capacitor://localhost` (`cors()` in `api/_shared.js`).
+- `src/native.js` (app only): native location permission, the iOS share sheet for invites, dark status-bar text, haptics on toasts, and the share inbox. The **Share extension** (`native/ios/App/ShareExtension`) saves a shared link into the app group `group.com.kotiskwok.nyclist`. The app reads it on open/resume (`AppGroup.takeLinks`) and opens Add A Spot with AI fill, one link after another.
+- **Delete My Account** (Account sheet) calls `POST /api/delete-account`, which needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel. Apple requires in-app deletion.
+- `privacy.html` and `support.html` are the App Store privacy-policy and support URLs.
+
 ## 4. File map
 
 | File | What's in it | Edit it to… |
@@ -189,6 +200,10 @@ How `extract.js` reads each kind of link:
 | `src/view.js` | **All screens**: `MapScreen`, `ExploreScreen`, `PlanScreen`, `PlaceCard`, `RouteSheet`, `Picker`, `TabBar`, `AddSheet`, `AccountSheet`, `AuthScreen`, `App`. Uses the helper `S('css string')` for inline styles; `T(n)` / `B(n)` offset for the status bar and safe areas. | change layout, text or look |
 | `src/runtime.js` | `DCLogic` base class, `window.open` fallback, `APP_PROPS` (`?style=Minimal`, `?tab=Explore`) | rarely |
 | `src/lists.js` | Shared lists: Supabase reads/writes, merge and invite joining (`NYCLists`), plus the Lists tab behaviour mixed into `Component` (`listVals()` feeds the view) | change how lists, sharing or invites work |
+| `src/native.js` | iPhone-app-only bridges: location, share sheet, status bar, haptics, share-extension inbox | native behaviour |
+| `api/delete-account.js` | Server: deletes the signed-in account (needs `SUPABASE_SERVICE_ROLE_KEY`) | — |
+| `privacy.html`, `support.html` | Privacy policy and support pages for the App Store | policy text |
+| `native/` | The iPhone app (Capacitor project, Share extension, icon) | iPhone-specific changes |
 | `src/sync.js` | Supabase client, sign-in/up/out, three-way merge sync, `getToken()` | sync or sign-in behavior |
 | `src/video.js` | On-device audio extraction (WAV pieces) and frame capture | video upload limits or quality |
 | `api/extract.js` | Server: reads posts and links, calls Claude, returns places | AI prompt, platforms, model |
@@ -197,7 +212,7 @@ How `extract.js` reads each kind of link:
 | `api/places.js` | Server: Google place search for name suggestions | Google fields, search area |
 | `api/transcribe.js` | Server: OpenAI speech-to-text | transcription model or prompt |
 | `api/_shared.js` | Server helpers: `send`, `requireUser` (Supabase token check), body readers | — |
-| `config.js` | Supabase URL and publishable key | switching Supabase projects |
+| `config.js` | Supabase URL and publishable key, plus `siteUrl` (the live site the iPhone app calls) | switching Supabase projects or domains |
 | `supabase/schema.sql` | Table `nyc_list` and row-level security | database changes |
 | `supabase/lists.sql` | Shared-list tables, security rules and the join / preview / shared-map functions. Run once (safe to re-run). | shared-list database changes |
 | `sw.js` | Offline cache (bump `CACHE` whenever `src/` changes) | — |

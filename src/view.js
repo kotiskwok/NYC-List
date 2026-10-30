@@ -724,6 +724,10 @@ function AccountSheet(v) {
         <button onClick=${v.syncNow} style=${S('height:46px;border-radius:14px;border:2px solid #10183F;background:#fff;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Sync Now</button>
         <button onClick=${v.signOut} style=${S('height:46px;border-radius:14px;border:0;background:#FFE2DF;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer')}>Sign Out</button>
       </div>
+      <div style=${S('display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center')}>
+        <button onClick=${v.deleteAccount} style=${S('border:0;background:none;color:#E8242C;font-weight:700;font-size:12.5px;cursor:pointer;padding:6px')}>${v.delAcctLabel}</button>
+        <span style=${S('font-size:11px;color:#6A7090')}>Deletes Your Account, Your Map And The Lists You Made. <a href=${v.privacyUrl} target="_blank" rel="noopener">Privacy Policy</a></span>
+      </div>
     </div>
   </div>`;
 }

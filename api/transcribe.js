@@ -5,7 +5,7 @@
 //   OPENAI_API_KEY             (required) from platform.openai.com
 //   OPENAI_TRANSCRIBE_MODEL    (optional) defaults to gpt-4o-mini-transcribe, falls back to whisper-1
 
-const { send, requireUser, readRaw } = require('./_shared');
+const { cors, send, requireUser, readRaw } = require('./_shared');
 
 const MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || 'gpt-4o-mini-transcribe';
 const HINT = 'A short New York City food and shopping video. Expect names of restaurants, cafes, bakeries, bars, shops, streets and neighborhoods.';
@@ -25,6 +25,7 @@ async function transcribe(buf, model) {
 }
 
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.OPENAI_API_KEY) return send(res, 503, { error: 'Listening To Videos Isn’t Set Up Yet — Add OPENAI_API_KEY In Vercel.' });
   if (!(await requireUser(req, res))) return;

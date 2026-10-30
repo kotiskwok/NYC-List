@@ -12,7 +12,7 @@
 //   ANTHROPIC_MODEL     (optional)  defaults to claude-haiku-5-5
 //   SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY (optional) default to the values in config.js
 
-const { send, requireUser, readJson } = require('./_shared');
+const { cors, send, requireUser, readJson } = require('./_shared');
 const G = require('./_gmaps');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 const UA_BOT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
@@ -243,6 +243,7 @@ Call save_places with the result.` });
 }
 
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI Isn’t Set Up Yet — Add ANTHROPIC_API_KEY In Vercel.' });
 
