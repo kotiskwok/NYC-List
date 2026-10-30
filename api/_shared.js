@@ -11,7 +11,7 @@ function cors(req, res) {
     res.setHeader('access-control-allow-origin', o);
     res.setHeader('vary', 'origin');
     res.setHeader('access-control-allow-headers', 'authorization, content-type');
-    res.setHeader('access-control-allow-methods', 'POST, OPTIONS');
+    res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
     res.setHeader('access-control-max-age', '86400');
   }
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return true; }

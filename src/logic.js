@@ -19,6 +19,22 @@ const CAT_ICON={'☕':'M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z M16 9h2a2 2 0 0 
 const iconSvg=(em,px,col)=>CAT_ICON[em]?`<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CAT_ICON[em]}"/></svg>`:`<span style="font-size:${Math.round(px*.95)}px;line-height:1">${em}</span>`;
 const EMOJIS=['⭐','🍵','🧋','🍜','🍣','🍕','🌮','🥯','🍦','🍷','🍸','📚','🌿','🎨','🧘','🖼️'];
 const BOROUGHS=['Manhattan','Brooklyn','Queens','Bronx','Staten Island'];
+// Apple Maps (MapKit JS). Each map draws the colorful map first. Once /api/mapkit-token answers and MapKit loads,
+// the map swaps its base for Apple's map, drawn underneath Leaflet: pins, subway, routes and taps stay on Leaflet
+// and Apple's map follows every move and pinch. If Apple Maps isn't set up or fails, the colorful map stays.
+const APPLE={state:'',cbs:[],fail:null};
+function appleMaps(cb){if(APPLE.state==='ok')return cb(true);if(APPLE.state==='off')return cb(false);APPLE.cbs.push(cb);if(APPLE.state)return;APPLE.state='loading';
+  const done=ok=>{if(APPLE.state!=='loading')return;APPLE.state=ok?'ok':'off';const c=APPLE.cbs;APPLE.cbs=[];c.forEach(f=>{try{f(ok);}catch(e){console.error(e);}});};
+  const tok=()=>fetch(API('/api/mapkit-token'),{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  tok().then(j=>{if(!j||!j.token)return done(false);let first=j.token;
+    const sc=document.createElement('script');sc.src='https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js';sc.crossOrigin='anonymous';sc.onerror=()=>done(false);
+    sc.onload=()=>{try{
+      mapkit.addEventListener('configuration-change',ev=>{if(ev.status==='Initialized'||ev.status==='Refreshed')done(true);});
+      mapkit.addEventListener('error',ev=>{console.warn('Apple Maps error',ev&&ev.status);if(APPLE.state==='loading')done(false);else if(APPLE.fail)APPLE.fail();});
+      mapkit.init({authorizationCallback:d=>{if(first){d(first);first=null;}else tok().then(t=>t&&t.token&&d(t.token));},language:'en'});
+      setTimeout(()=>done(false),9000);}catch(e){console.warn('Apple Maps',e);done(false);}};
+    document.head.appendChild(sc);});}
+const APPLE_PAD=96;
 const PAL={Colorful:{water:'#86C8EE',park:'#7FCB8F',air:'#D8D3C8',line:'rgba(255,255,255,.95)',boro:{Manhattan:'#FFE38F',Brooklyn:'#FFC09A',Queens:'#C4D0FF',Bronx:'#FFB5C9','Staten Island':'#D6C6F4'}},
  Minimal:{water:'#D3E4F0',park:'#CDE5C6',air:'#E6E2DA',line:'#E4DCCD',boro:{}}};
 const RC={'1':'#EE352E','2':'#EE352E','3':'#EE352E','4':'#00933C','5':'#00933C','6':'#00933C','7':'#B933AD','A':'#0039A6','C':'#0039A6','E':'#0039A6','B':'#FF6319','D':'#FF6319','F':'#FF6319','M':'#FF6319','G':'#6CBE45','J':'#996633','Z':'#996633','L':'#A7A9AC','N':'#FCCC0A','Q':'#FCCC0A','R':'#FCCC0A','W':'#FCCC0A','S':'#808183','SIR':'#0039A6'};
@@ -125,7 +141,7 @@ class Component extends DCLogic {
   takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;if(this._shareQ&&this._shareQ.length)setTimeout(()=>this.toast(this._shareQ.length+' More Shared '+(this._shareQ.length===1?'Link':'Links')+' Waiting'),900);
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link Added — Tap ✨ Fill From Link To Read It.'});else this.aiAuto(u,true);}},400);}
-  componentDidMount(){this._on=true;this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
+  componentDidMount(){this._on=true;APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
     window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
@@ -159,8 +175,27 @@ class Component extends DCLogic {
     this.drawBase(m);this.addStreets(m);this.buildSubway(m);if(this.state.showSubway)m.subway.addTo(map);
     m.layer=L.layerGroup().addTo(map);
     const fade=()=>{const z=map.getZoom();const P=n=>map.getPane(n).style;P('boroLab').opacity=z<12.5?1:0;P('hoodBig').opacity=z>=12.5&&z<15?1:0;P('hoodSmall').opacity=z>=14&&z<15?1:0;P('subway').opacity=z>=12.5?1:0;P('stBul').opacity=z>=13.5&&z<15?1:0;P('stLab').opacity=z>=15?1:0;};
-    map.on('zoomend',fade);fade();map.on('click',e=>this.onMapClick(e,kind));return m;}
-  drawBase(m){const L=window.L,d=window.NYC_MAP,pal=PAL[this.props.mapStyle]||PAL.Colorful;
+    map.on('zoomend',fade);fade();map.on('click',e=>this.onMapClick(e,kind));appleMaps(ok=>{if(ok&&this._on)this.attachApple(m);});return m;}
+  // Put Apple's map under this Leaflet map and keep it in step. Leaflet's own base (borough colors, labels,
+  // streets) is cleared; Leaflet stops snapping zoom so pinches stay smooth and lined up.
+  // On the main map the bottom APPLE_PAD pixels sit under the tab bar, so Apple's logo and Legal link are
+  // padded up above it (MapKit fits the rect we give it inside its padding).
+  attachApple(m){if(m.apple||!window.mapkit)return;const map=m.map,pad=m.kind==='main'?APPLE_PAD:0;
+    const div=document.createElement('div');div.className='apple-base';div.style.cssText='position:absolute;inset:0;z-index:100;pointer-events:none';
+    let ak;try{ak=new mapkit.Map(div,{isScrollEnabled:false,isZoomEnabled:false,isRotationEnabled:false,showsCompass:mapkit.FeatureVisibility.Hidden,
+      showsScale:mapkit.FeatureVisibility.Hidden,showsZoomControl:false,showsMapTypeControl:false,showsUserLocationControl:false,showsPointsOfInterest:true,
+      colorScheme:mapkit.Map.ColorSchemes.Light,padding:new mapkit.Padding(0,0,pad,0)});}catch(e){console.warn('Apple Maps map',e);return;}
+    m.el.insertBefore(div,m.el.firstChild);m.apple=ak;m.appleDiv=div;m.appleOpt={snap:map.options.zoomSnap,anim:map.options.zoomAnimation,za:map._zoomAnimated};
+    m.base.clearLayers();m.labels.clearLayers();if(m.streets){map.removeLayer(m.streets);m.streets=null;}m.el.style.background='#F2EFE9';
+    map.options.zoomSnap=0;map.options.zoomAnimation=false;map._zoomAnimated=false;
+    m.appleSync=()=>{const sz=map.getSize();if(!sz.x||!sz.y||!m.apple)return;const b=map.getPixelBounds(),sc=map.options.crs.scale(map.getZoom());
+      try{m.apple.setVisibleMapRectAnimated(new mapkit.MapRect(b.min.x/sc,b.min.y/sc,(b.max.x-b.min.x)/sc,Math.max(1,b.max.y-b.min.y-pad)/sc),false);}catch(e){}};
+    map.on('move zoom resize viewreset',m.appleSync);m.appleSync();setTimeout(m.appleSync,50);}
+  dropApple(m){if(!m.apple)return;const map=m.map;map.off('move zoom resize viewreset',m.appleSync);try{m.apple.destroy();}catch(e){}
+    m.appleDiv&&m.appleDiv.remove();m.apple=null;m.appleDiv=null;const o=m.appleOpt;map.options.zoomSnap=o.snap;map.options.zoomAnimation=o.anim;map._zoomAnimated=o.za;
+    this.drawBase(m);this.addStreets(m);}
+
+  drawBase(m){const L=window.L,d=window.NYC_MAP,pal=PAL[this.props.mapStyle]||PAL.Colorful;if(m.apple)return;
     m.el.style.background=pal.water;m.base.clearLayers();m.labels.clearLayers();
     d.hoods.forEach(h=>{L.polygon(h.p,{fillColor:h.t==='park'?pal.park:h.t==='air'?pal.air:(pal.boro[h.b]||'#FBF6EC'),fillOpacity:1,color:pal.line,weight:.8,interactive:false}).addTo(m.base);
       if(h.t==='air')return;const park=h.t==='park';
@@ -169,7 +204,7 @@ class Component extends DCLogic {
     d.boros.forEach(b=>{L.polygon(b.p,{fill:false,color:C.navy,weight:2.2,opacity:.9,interactive:false}).addTo(m.base);
       L.marker(b.c,{pane:'boroLab',interactive:false,keyboard:false,icon:L.divIcon({className:'',iconSize:[0,0],
         html:`<div style="transform:translate(-50%,-50%);white-space:nowrap;font-family:Archivo,sans-serif;font-weight:900;font-style:italic;font-stretch:100%;font-size:16px;color:#10183F;text-shadow:0 0 4px #fff,0 0 4px #fff">${b.b}</div>`})}).addTo(m.labels);});}
-  addStreets(m){const L=window.L;if(!streetIndex()){setTimeout(()=>this.addStreets(m),400);return;}
+  addStreets(m){const L=window.L;if(m.apple||m.streets)return;if(!streetIndex()){setTimeout(()=>this.addStreets(m),400);return;}
     const Layer=L.GridLayer.extend({createTile(co){const t=document.createElement('canvas'),sz=this.getTileSize(),dpr=Math.min(2,window.devicePixelRatio||1);
       t.width=sz.x*dpr;t.height=sz.y*dpr;t.style.width=sz.x+'px';t.style.height=sz.y+'px';const ctx=t.getContext('2d');ctx.scale(dpr,dpr);
       const z=co.z,SI=streetIndex(),b=this._tileCoordsToBounds(co),nw=co.scaleBy(sz),G=SI.G,map=this._map;

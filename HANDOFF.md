@@ -147,7 +147,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 
 ### Maps, routing and offline
 - **Subway routing:** an *estimate* from station coordinates and shared lines, not live. Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v18`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v19`).
 
 ### Server functions (`/api`)
 Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files starting with `_` are helpers, not endpoints.
@@ -251,3 +251,7 @@ The App Store version is the same website wrapped with Capacitor 8 in `native/`.
 - Saving a shared link **in the background** from the iPhone share sheet without opening the app. This would need a server endpoint that writes to Supabase with the service-role key plus a personal token for the Shortcut.
 - Directly downloading audio from Instagram or TikTok links (blocked by the platforms; 🎬 upload is used instead).
 - Live updates without the 20-second refresh (Supabase Realtime), and per-person notes or votes on a list's spots.
+
+### Apple Maps
+- The maps use **Apple Maps (MapKit JS)** as their base when it's set up. `appleMaps()` in `logic.js` fetches a token from `/api/mapkit-token`, loads MapKit from Apple's CDN and calls `attachApple(m)` for each map. Apple's map is drawn underneath Leaflet and follows every move (`m.appleSync`). Pins, subway, routes and taps all stay on Leaflet. On the main map MapKit is padded `APPLE_PAD` px at the bottom, so Apple's logo and Legal link sit above the tab bar.
+- Vercel env: `MAPKIT_TEAM_ID`, `MAPKIT_KEY_ID`, `MAPKIT_PRIVATE_KEY` (the .p8 text). Without them, or if MapKit fails, the app keeps the colorful map. Tokens only go to the live site, `nyc-*-kotis1.vercel.app` previews and the iPhone app.
