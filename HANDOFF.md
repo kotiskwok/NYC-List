@@ -144,7 +144,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 
 ### Maps, routing and offline
 - **Subway routing:** an *estimate* from station coordinates and shared lines, not live. Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v12`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v13`).
 
 ### Server functions (`/api`)
 Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files starting with `_` are helpers, not endpoints.
