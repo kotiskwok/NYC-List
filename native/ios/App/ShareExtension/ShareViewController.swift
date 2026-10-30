@@ -2,7 +2,7 @@ import UIKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// "Share → NYC List" from TikTok, Instagram, Threads, Google Maps or Safari.
+/// "Share → Spotted In" from TikTok, Instagram, Threads, Google Maps or Safari.
 /// Saves the link to the app group's inbox; the app reads it the next time it opens
 /// and fills in the spot with AI for you to check.
 class ShareViewController: UIViewController {
@@ -84,12 +84,12 @@ private struct ShareCard: View {
         ZStack {
             Color.black.opacity(0.35).ignoresSafeArea().onTapGesture { done() }
             VStack(spacing: 12) {
-                Text(saved ? "Saved To NYC List ✓" : "No Link Found")
+                Text(saved ? "Saved To Spotted In ✓" : "No Link Found")
                     .font(.system(size: 26, weight: .black))
                     .italic()
                     .foregroundColor(blue)
                     .multilineTextAlignment(.center)
-                Text(saved ? "Open NYC List And It’ll Fill In The Spot For You To Check."
+                Text(saved ? "Open Spotted In And It’ll Fill In The Spot For You To Check."
                            : "Share A TikTok, Instagram, Threads Or Google Maps Post That Has A Link.")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(navy.opacity(0.8))

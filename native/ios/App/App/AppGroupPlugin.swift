@@ -1,7 +1,7 @@
 import Foundation
 import Capacitor
 
-/// Hands links saved by the Share extension ("Share → NYC List") to the web app.
+/// Hands links saved by the Share extension ("Share → Spotted In") to the web app.
 /// Both live in the app group below, so they can see the same UserDefaults.
 @objc(AppGroupPlugin)
 public class AppGroupPlugin: CAPPlugin, CAPBridgedPlugin {

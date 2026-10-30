@@ -6,7 +6,7 @@ Everything to paste into App Store Connect (appstoreconnect.apple.com â†’ Apps â
 | Field | Value |
 |---|---|
 | Platform | iOS |
-| Name | **My NYC List** (if taken: *My NYC List: Spot Saver*) |
+| Name | **Spotted In** (if taken: *Spotted In NYC*) |
 | Primary language | English (U.S.) |
 | Bundle ID | `com.kotiskwok.nyclist` (appears after Xcode registers it on the first build) |
 | SKU | `nyclist-001` |
