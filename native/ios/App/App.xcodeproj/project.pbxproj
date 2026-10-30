@@ -381,6 +381,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
+				DEVELOPMENT_TEAM = KQ79GMTSY2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kotiskwok.nyclist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
@@ -403,6 +404,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				DEVELOPMENT_TEAM = KQ79GMTSY2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kotiskwok.nyclist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -424,6 +426,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				DEVELOPMENT_TEAM = KQ79GMTSY2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kotiskwok.nyclist.share;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -450,6 +453,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				DEVELOPMENT_TEAM = KQ79GMTSY2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kotiskwok.nyclist.share;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
