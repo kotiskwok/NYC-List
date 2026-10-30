@@ -41,6 +41,7 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - A list is a collection of spots for a visit or a big day out, separate from the Route plan. **+ New List** takes a name, optional number of days and an optional first date.
 - **+ From My Map** picks spots from your map. **+ New Spot** opens Add A Spot for the list only: the spot goes on the list and not on your map. A place card on the Map tab also has **+ Add To A List**.
 - Optional days: spots start under "Not On A Day Yet" and move with the Day dropdown. Each day gets its own pin color, a dotted path on the map and a **Route ↗** link that opens all of that day's stops in Google Maps. Add a day with **+ Add Day N**; remove the last day with ✕.
+- **Edit** (next to the list's title): name (owner only), number of days and first date. Lowering the days moves spots from removed days back to "Not On A Day Yet".
 - **Share & Invite** (owner only): pick what invitees get: **Just This List** (they can add, sort and remove spots), **Just My Map** (a view-only look at all your saved spots, without your home) or **Both**. The invite link is `/?join=<code>`. **Make A New Link** retires the old one. The sheet also lists who has joined (with Remove) and renames the list.
 - Invitees open the link, see "Kotis Invited You" on the sign-in screen, make an account (with a name) and land on the list. With the map shared they get a **This List / Kotis's Map** toggle; tapping a pin there offers **+ Add To This List** and **Save To My Map**. Any spot on a list can be saved to your own map.
 - Changes sync between everyone about a second after each edit, and the open list refreshes every 20 seconds and when the app comes back to the front.
@@ -143,7 +144,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 
 ### Maps, routing and offline
 - **Subway routing:** an *estimate* from station coordinates and shared lines, not live. Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v11`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v12`).
 
 ### Server functions (`/api`)
 Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files starting with `_` are helpers, not endpoints.

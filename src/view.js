@@ -336,7 +336,7 @@ function ListsScreen(v) {
   const t = v.trip;
   return html`
   <div data-screen-label="Lists" style=${S(`position:absolute;inset:0;display:${v.listsDisplay};background:#FFF3DF`)}>
-    <div ref=${v.tripMapRef} style=${S(`position:absolute;top:0;left:0;right:0;height:${v.tripMapH};visibility:${t ? 'visible' : 'hidden'}`)}></div>
+    <div ref=${v.tripMapRef} style=${S(`position:absolute;top:0;left:0;right:0;height:${v.tripMapH};z-index:0;isolation:isolate;visibility:${t ? 'visible' : 'hidden'}`)}></div>
     ${v.listsIndex ? html`
     <div class="noscroll" style=${S(`position:absolute;inset:0;z-index:5;background:#FFF3DF;overflow-y:auto;padding:${T(62)} 18px ${B(120)};display:flex;flex-direction:column;gap:14px`)}>
       <div>
@@ -379,9 +379,12 @@ function ListsScreen(v) {
       </div>`}
     </div>
     ${t.showList && html`
-    <div class="noscroll" style=${S(`position:absolute;top:240px;left:0;right:0;bottom:0;z-index:5;overflow-y:auto;background:#FFF3DF;border-radius:28px 28px 0 0;box-shadow:0 -8px 24px rgba(16,24,63,.12);padding:20px 18px ${B(120)};display:flex;flex-direction:column;gap:16px`)}>
+    <div class="noscroll trip-fade" style=${S(`position:absolute;top:calc(var(--st) + 170px);left:0;right:0;bottom:0;z-index:5;overflow-y:auto;background:linear-gradient(to bottom, rgba(255,243,223,0) 0px, rgba(255,243,223,.75) 60px, #FFF3DF 110px);padding:96px 18px ${B(120)};display:flex;flex-direction:column;gap:16px`)}>
       <div>
-        <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:34px;line-height:.98;letter-spacing:-.02em;color:#1B3DB8;text-wrap:pretty')}>${t.name}</div>
+        <div style=${S('display:flex;align-items:flex-start;justify-content:space-between;gap:10px')}>
+          <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:34px;line-height:.98;letter-spacing:-.02em;color:#1B3DB8;text-wrap:pretty;min-width:0')}>${t.name}</div>
+          ${t.canEdit && html`<button onClick=${t.openEdit} aria-label="Edit list details" style=${S('flex:none;margin-top:2px;height:34px;padding:0 13px;border-radius:999px;border:2px solid #10183F;background:#fff;color:#10183F;font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px')}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg>Edit</button>`}
+        </div>
         <div style=${S('margin-top:6px;font-size:14px;font-weight:600;color:#3C4466')}>${t.sub}</div>
         ${t.syncNote && html`<div role="status" style=${S('margin-top:4px;font-size:12px;font-weight:700;color:#7A809C')}>${t.syncNote}</div>`}
       </div>
@@ -500,11 +503,35 @@ function TripShareSheet(v) {
           <button onClick=${p.onRemove} style=${S('height:30px;padding:0 12px;border-radius:999px;border:0;background:#FFE2DF;color:#E8242C;font-weight:800;font-size:12px;cursor:pointer')}>Remove</button>
         </div>`)}
       </div>
-    </div>`}
+    </div>`}`);
+}
+
+function EditTripSheet(v) {
+  const e = v.tripEdit;
+  const inp = S('height:50px;border-radius:16px;border:2px solid #10183F;background:#fff;padding:0 14px;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none');
+  const step = S('width:46px;height:46px;border-radius:14px;border:2px solid #10183F;background:#fff;color:#10183F;font-weight:900;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center');
+  return Sheet('Edit List', e.close, html`
     <div style=${S('display:flex;flex-direction:column;gap:8px')}>
-      <label for="trip-name" style=${S('font-weight:800;font-size:15px')}>List Name</label>
-      <input id="trip-name" value=${sh.nameVal} onChange=${sh.onName} onBlur=${sh.saveName} onKeyDown=${e => e.key === 'Enter' && e.target.blur()} style=${S('height:48px;border-radius:16px;border:2px solid #10183F;background:#fff;padding:0 14px;font-family:inherit;font-size:15px;font-weight:600;color:#10183F;outline:none')} />
-    </div>`);
+      <label for="te-name" style=${S('font-weight:800;font-size:15px')}>List Name</label>
+      ${e.canRename ? html`<input id="te-name" value=${e.name} onChange=${e.onName} placeholder="E.g. Sonia’s Visit" style=${inp} />`
+        : html`<div style=${S('font-weight:800;font-size:16px')}>${e.name}</div><div style=${S('font-size:12px;color:#5A6080')}>Only ${e.ownerName} Can Rename This List.</div>`}
+    </div>
+    <div style=${S('display:flex;flex-direction:column;gap:8px')}>
+      <span style=${S('font-weight:800;font-size:15px')}>Days</span>
+      <div style=${S('display:flex;align-items:center;gap:12px')}>
+        <button onClick=${e.less} aria-label="One less day" style=${step}>−</button>
+        <span style=${S('min-width:90px;text-align:center;font-weight:900;font-style:italic;font-size:22px;color:#1B3DB8')}>${e.daysLabel}</span>
+        <button onClick=${e.more} aria-label="One more day" style=${step}>+</button>
+      </div>
+      ${e.dropNote && html`<div style=${S('font-size:12px;font-weight:700;color:#E8242C')}>${e.dropNote}</div>`}
+    </div>
+    ${e.days > 0 && html`
+    <div style=${S('display:flex;flex-direction:column;gap:8px')}>
+      <label for="te-start" style=${S('font-weight:800;font-size:15px')}>First Day</label>
+      <input id="te-start" type="date" value=${e.start} onChange=${e.onStart} style=${inp} />
+      <div style=${S('font-size:12px;color:#5A6080')}>${e.range}</div>
+    </div>`}
+    <button onClick=${e.save} style=${S(`flex:none;margin-top:4px;height:50px;border-radius:999px;border:0;background:${e.saveBg};color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;cursor:pointer;box-shadow:0 5px 0 #10183F`)}>Save Changes</button>`, 'Cancel', 1080);
 }
 
 const CheckRow = r => html`
@@ -795,6 +822,7 @@ function App(v) {
         ${TabBar(v)}
         ${v.acctOpen && AccountSheet(v)}
         ${v.tripShare && TripShareSheet(v)}
+        ${v.tripEdit && EditTripSheet(v)}
         ${v.tripPick && TripPicker(v)}
         ${v.listChoose && ListChooser(v)}
         ${v.newTrip && NewTripSheet(v)}

@@ -264,7 +264,7 @@ Object.assign(Component.prototype, {
     this.setState(st => ({ places: [np, ...st.places], ...(newCats ? { cats: newCats } : {}) })); this.toast('Saved To Your Map!');
   },
   openTrip(id) { const t = this.state.trips.find(x => x.id === id); const p = this.tripPerm(t);
-    this.setState({ tab: 'lists', tripId: id, tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, confirmTripDel: false });
+    this.setState({ tab: 'lists', tripId: id, tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, tripEditOpen: false, confirmTripDel: false });
     if (p.map) NYCLists.loadSharedMap(id); NYCLists.refresh(); },
   async createTrip() {
     const s = this.state, name = toTitle((s.newTripName || '').trim()); if (!name || s.newTripBusy) return;
@@ -318,7 +318,7 @@ Object.assign(Component.prototype, {
       L.marker(p.ll, { zIndexOffset: p.sel ? 1000 : p.label ? 500 : 0, icon: L.divIcon({ className: '', html: this.pinHtml(p.col, z, p.sel, p.faded && !p.sel, p.label, p.em), iconSize: [z, z], iconAnchor: [z / 2, z * 1.2] }) })
         .on('click', e => { L.DomEvent.stopPropagation(e); this.setState({ tripSel: { kind: p.kind, id: p.id }, confirmStopDel: false }); }).addTo(m.tl); });
     if (force || ids !== m.tids) { m.tids = ids; const pts = pins.map(p => p.ll);
-      if (pts.length) setTimeout(() => this.fit(m, pts, view === 'map' ? { paddingTopLeft: [40, 210], paddingBottomRight: [40, 120], maxZoom: 15 } : { paddingTopLeft: [40, 90], paddingBottomRight: [40, 40], maxZoom: 15 }), 30);
+      if (pts.length) setTimeout(() => this.fit(m, pts, view === 'map' ? { paddingTopLeft: [40, 210], paddingBottomRight: [40, 120], maxZoom: 15 } : { paddingTopLeft: [40, 110], paddingBottomRight: [40, 150], maxZoom: 15 }), 30);
       else m.map.setView([40.722, -73.97], 12); }
   },
 
@@ -366,6 +366,7 @@ Object.assign(Component.prototype, {
         sections, empty: perm.list && !d.stops.length, dateVal: d.start || '', onDate: e => NYCLists.edit(t.id, x => ({ ...x, start: e.target.value || '' })), hasDays: !!d.days,
         addDay: () => this.addDay(t.id), dayBtn: d.days ? '+ Add Day ' + (d.days + 1) : '+ Sort Into Days',
         openPick: () => this.setState({ tripPickOpen: true, tripPickQ: '' }), openAddNew: () => this.setState({ addOpen: true, addTarget: t.id, placing: false, form: blank(), selId: null, routeFor: null, tripSel: null, lookQ: '', lookResults: [], lookMsg: '', aiMsg: '', aiPlaces: [], aiFor: '', sugg: [], suggBusy: false, suggPicked: '', suggNone: '', webBusy: false, webMsg: '', webFor: '' }),
+        openEdit: () => this.setState({ tripEditOpen: true, tripEditName: t.name, tripEditDays: d.days || 0, tripEditStart: d.start || '', tripSel: null }),
         people, openShare: () => this.setState({ tripShareOpen: true, tripSel: null }), back: () => this.setState({ tripId: null, tripSel: null }),
         delLabel: perm.own ? (s.confirmTripDel ? 'Tap Again To Delete This List' : 'Delete List') : (s.confirmTripDel ? 'Tap Again To Leave' : 'Leave This List'),
         onDel: () => { if (!s.confirmTripDel) return this.setState({ confirmTripDel: true }); this.setState({ confirmTripDel: false }); perm.own ? NYCLists.remove(t.id) : NYCLists.leave(t.id); },
@@ -399,14 +400,36 @@ Object.assign(Component.prototype, {
     if (t && perm.own && s.tripShareOpen) {
       const mode = t.share_list && t.share_map ? 'both' : t.share_map ? 'map' : 'list';
       const opt = (m, title, sub) => ({ title, sub, on: mode === m, bg: mode === m ? C.blue : '#fff', fg: mode === m ? '#fff' : C.navy, subFg: mode === m ? '#DDE3FF' : '#4A5275', border: mode === m ? C.blue : 'rgba(16,24,63,.12)', onClick: () => this.setShare(t, m) });
-      share = { name: t.name, nameVal: s.tripNameEdit != null ? s.tripNameEdit : t.name, onName: e => this.setState({ tripNameEdit: e.target.value }),
-        saveName: () => { const v = toTitle((s.tripNameEdit || '').trim()); if (v && v !== t.name) NYCLists.meta(t.id, { name: v }); this.setState({ tripNameEdit: null }); },
+      share = { name: t.name,
         opts: [opt('list', 'Just This List', 'They Can Add, Sort And Remove Spots On It'), opt('map', 'Just My Map', 'They Can Look Around All Your Saved Spots — View Only'), opt('both', 'Both', 'The List To Plan Together, Plus A Look At Your Map')],
         link: this.inviteLink(t), share: () => this.shareInvite(t), copy: () => this.copyInvite(t), canNativeShare: !!navigator.share,
         newLink: () => { if (!s.confirmNewLink) return this.setState({ confirmNewLink: true }); this.setState({ confirmNewLink: false }); NYCLists.newCode(t.id).then(ok => ok && this.toast('New Link Made — The Old One No Longer Works')); },
         newLinkLabel: s.confirmNewLink ? 'Tap Again — The Old Link Will Stop Working' : 'Make A New Link',
         people: t.members.map(m => ({ key: m.user_id, name: m.name || 'Someone', onRemove: () => NYCLists.removeMember(t.id, m.user_id) })), hasPeople: !!t.members.length,
-        close: () => this.setState({ tripShareOpen: false, tripNameEdit: null, confirmNewLink: false }) };
+        close: () => this.setState({ tripShareOpen: false, confirmNewLink: false }) };
+    }
+
+    // Edit a list's name, number of days and first date.
+    let editSheet = null;
+    if (t && s.tripEditOpen) {
+      const days = s.tripEditDays || 0, start = s.tripEditStart || '';
+      const dropped = t.data.stops.filter(st => st.day > days).length;
+      const last = days && start ? dayDate(start, days) : '';
+      editSheet = { name: s.tripEditName || '', canRename: perm.own, ownerName: t.owner_name || 'The Owner', onName: e => this.setState({ tripEditName: e.target.value }),
+        days, daysLabel: days ? days + (days === 1 ? ' Day' : ' Days') : 'No Days',
+        less: () => this.setState({ tripEditDays: Math.max(0, days - 1) }), more: () => this.setState({ tripEditDays: Math.min(14, days + 1) }),
+        dropNote: dropped ? dropped + (dropped === 1 ? ' Spot Moves' : ' Spots Move') + ' Back To “Not On A Day Yet”.' : '',
+        start, onStart: e => this.setState({ tripEditStart: e.target.value }),
+        range: start ? dayDate(start, 1) + (days > 1 ? ' – ' + last : '') : 'Optional — Adds Dates To Each Day.',
+        saveBg: (!perm.own || (s.tripEditName || '').trim()) ? C.orange : '#A9ADC2',
+        save: () => {
+          const nm = toTitle((s.tripEditName || '').trim());
+          if (perm.own && !nm) { this.toast('Give The List A Name'); return; }
+          if (perm.own && nm !== t.name) NYCLists.meta(t.id, { name: nm });
+          NYCLists.edit(t.id, x => ({ ...x, days, start: days ? start : x.start, stops: x.stops.map(st => st.day > days ? { ...st, day: 0 } : st) }));
+          this.setState({ tripEditOpen: false }); this.toast('List Updated');
+        },
+        close: () => this.setState({ tripEditOpen: false }) };
     }
 
     // "+ From My Map" picker.
@@ -440,7 +463,7 @@ Object.assign(Component.prototype, {
       listsState: s.tripsState, listsMissing: s.tripsState === 'missing', listsLoading: s.tripsState === 'loading' && !s.trips.length, listsError: s.tripsState === 'error' && !s.trips.length,
       listCards: cards, listsEmpty: s.tripsState === 'ready' && !s.trips.length, retryLists: () => NYCLists.refresh(),
       openNewTrip: () => this.setState({ newTripOpen: true, newTripName: '', newTripDays: 0, newTripStart: '', newTripAddPid: null }),
-      trip: detail, tripMapRef: this.tripMapRef, tripMapH: detail && detail.showMap ? '100%' : '260px',
+      trip: detail, tripMapRef: this.tripMapRef, tripMapH: detail && detail.showMap ? '100%' : 'calc(var(--st) + 300px)', tripEdit: editSheet,
       hasTripSel: !!tsel && s.tab === 'lists' && !s.addOpen, tsel, tripShare: share, tripPick: pick, listChoose: choose, newTrip,
       goLists: () => { this.setState({ tab: 'lists', selId: null, placing: false, routeFor: null, tripSel: null }); NYCLists.refresh(); },
       tabListFg: s.tab === 'lists' ? C.yellow : '#C9D0F0', addToListSel: () => s.selId && this.setState({ listChoose: s.selId }),
