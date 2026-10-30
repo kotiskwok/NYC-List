@@ -14,10 +14,13 @@
 <meta name="description" content="Spotted In: save the NYC restaurants, cafes and cute shops you spot on TikTok and Instagram, and plan where to go.">
 <link rel="stylesheet" href="/vendor/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-/* Design tokens from the "NYC List v2" Claude Design file. Single deliberate look (no dark variant). */
-:root{--blue:#1B3DB8;--navy:#10183F;--orange:#FF6B1A;--yellow:#FFC425;--cream:#FFF3DF;--st:46px;--sb:0px;color-scheme:light}
+/* Design tokens: the "NYC List v2" colors in the glass look (frosted panels over the colorful map). Single deliberate look (no dark variant). */
+:root{--blue:#1B3DB8;--navy:#10183F;--orange:#FF6B1A;--yellow:#FFC425;--cream:#FFF3DF;--st:46px;--sb:0px;color-scheme:light;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  /* Soft borough-colored backdrop behind the non-map screens, so the glass has color to frost. */
+  --bgfx:radial-gradient(70% 38% at 0% 0%,rgba(255,227,143,.95),rgba(255,227,143,0) 70%),radial-gradient(60% 34% at 100% 22%,rgba(196,208,255,.95),rgba(196,208,255,0) 70%),radial-gradient(70% 40% at 100% 100%,rgba(255,181,201,.85),rgba(255,181,201,0) 70%),radial-gradient(60% 40% at 0% 82%,rgba(134,200,238,.7),rgba(134,200,238,0) 70%),#FFF3DF}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--blue);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;color:var(--navy)}
@@ -36,12 +39,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @keyframes aipulse{50%{opacity:.6}}
 .hov:hover{background:var(--cream)!important}
 #root{height:100%}
+.mono{font-family:var(--mono)}
 .emo{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;line-height:1;font-style:normal}
 
 /* Desktop: the app sits in the phone frame from the design. */
 .stage{min-height:100%;display:flex;align-items:center;justify-content:center;padding:28px 12px;background:var(--blue)}
 .device{position:relative;width:390px;max-width:100%;height:844px;border-radius:54px;background:var(--navy);padding:10px;box-shadow:0 30px 80px rgba(5,10,40,.5)}
-.screen{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--cream)}
+.screen{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--bgfx)}
 .statusbar{position:absolute;top:0;left:0;right:0;height:46px;z-index:1200;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0;font-weight:700;font-size:15px;color:var(--navy);pointer-events:none}
 
 /* Phone (or a short window): the app fills the screen, no frame or fake status bar. */

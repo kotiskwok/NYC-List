@@ -199,7 +199,9 @@ class Component extends DCLogic {
     if(s.routeFor){const d=s.places.find(p=>p.id===s.routeFor);main=d?[d]:main;}
     this.syncOne(this.maps.main,main,false);if(this.maps.ex)this.syncOne(this.maps.ex,l.ex,true);
     this.syncMe();this.syncRoute();if(this.maps.plan)this.syncPlan(false);if(this.maps.trip)this.syncTrip(false);}
-  pinHtml(col,z,sel,faded,label,em){return `<div style="width:${z}px;height:${z}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${col};border:3px solid ${sel?C.navy:'#fff'};box-shadow:0 4px 10px rgba(16,24,63,.35);display:flex;align-items:center;justify-content:center;opacity:${faded?.55:1}">${label?`<div style="transform:rotate(45deg);color:#fff;font:italic 900 15px Archivo,sans-serif">${label}</div>`:em?`<div style="transform:rotate(45deg);font-size:${Math.round(z*.48)}px;line-height:1">${em}</div>`:`<div style="width:${Math.round(z*.3)}px;height:${Math.round(z*.3)}px;border-radius:50%;background:${sel?C.navy:'#fff'}"></div>`}</div>`;}
+  // Glass pin: a frosted ring around a colored core with the emoji (or stop number), and a small tip
+  // dot underneath that marks the exact spot (the marker's anchor sits 0.2z below the ring).
+  pinHtml(col,z,sel,faded,label,em){const core=z-(sel?10:8),tip=sel?8:6;return `<div style="position:relative;width:${z}px;height:${z}px;opacity:${faded?.55:1}"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.95);box-shadow:0 6px 16px rgba(16,24,63,.3)${sel?',0 0 0 5px rgba(255,196,37,.55)':''};display:flex;align-items:center;justify-content:center"><div style="width:${core}px;height:${core}px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)">${label?`<span style="color:${fgFor(col)};font:italic 900 ${Math.round(core*.55)}px Archivo,sans-serif">${label}</span>`:em?`<span style="font-size:${Math.round(core*.55)}px;line-height:1">${em}</span>`:`<span style="width:${Math.round(core*.32)}px;height:${Math.round(core*.32)}px;border-radius:50%;background:#fff"></span>`}</div></div><div style="position:absolute;left:50%;top:${Math.round(z*1.2-(tip+4)/2)}px;width:${tip}px;height:${tip}px;margin-left:-${(tip+4)/2}px;border-radius:50%;background:${col};border:2px solid #fff;box-sizing:content-box;box-shadow:0 2px 5px rgba(16,24,63,.35)"></div></div>`;}
   syncOne(m,list,fit){const L=window.L,s=this.state,cat=Object.fromEntries(s.cats.map(c=>[c.id,c]));
     const sig=list.map(p=>p.id+p.cat+(p.visited?'v':'')+(p.id===s.selId||p.id===s.routeFor?'s':'')+p.lat+p.lng).join()+s.cats.map(c=>c.color+emo(c)).join();
     if(sig===m.sig)return;const ids=list.map(p=>p.id).join();const refit=fit&&ids!==m.ids;m.sig=sig;m.ids=ids;m.layer.clearLayers();
@@ -506,7 +508,7 @@ class Component extends DCLogic {
     let locTitle='',locSub='';if(s.here&&s.tab==='map'&&!s.placing&&!s.routeFor&&!s.selId){const hd=hoodAt(s.here);let nb=null;s.places.forEach(p=>{const d=km(s.here,[p.lat,p.lng]);if(!nb||d<nb.d)nb={p,d};});
       locTitle=(s.hereManual?'You Set Your Spot':'You\u2019re Here')+(hd?' · '+hd:'')+(s.hereAcc>60?' · ±'+Math.round(s.hereAcc*3.28)+' Ft':'');
       locSub=nb?(nb.d<60?'Closest Saved: '+nb.p.name+' · '+fmtMin(walkMin(s.here,[nb.p.lat,nb.p.lng]))+' Walk':'Your Saved Spots Are Back In NYC'):'';}
-    const fsrc=detect(f.url.trim()),hasPin=f.lat!=null,tabC=t=>s.tab===t?C.yellow:'#C9D0F0',tabD=t=>s.tab===t?C.yellow:'transparent';
+    const fsrc=detect(f.url.trim()),hasPin=f.lat!=null,tabC=t=>s.tab===t?C.blue:'#3A4470',tabD=t=>s.tab===t?C.yellow:'transparent';
     return {
       mapDisplay:s.tab==='map'?'block':'none',exDisplay:s.tab==='explore'?'block':'none',planDisplay:s.tab==='plan'?'block':'none',
       exPickDisplay:s.exStage==='pick'?'block':'none',exResDisplay:s.exStage==='results'?'flex':'none',exListDisplay:s.exView==='list'?'flex':'none',exMapVis:s.exView==='map'?'visible':'hidden',
@@ -524,7 +526,7 @@ class Component extends DCLogic {
       showResults:()=>n&&this.setState({exStage:'results',selId:null}),backToPick:()=>this.setState({exStage:'pick',selId:null}),
       addAllToPlan:()=>{this.setState(st=>({plan:{...st.plan,ids:[...st.plan.ids,...l.ex.map(p=>p.id).filter(id=>!st.plan.ids.includes(id))]}}));this.toast(n+' Spots In Your Plan');},
       exTitle,exSub:`${areaTxt} · ${n} ${n===1?'Place':'Places'}`,
-      listTabBg:s.exView==='list'?'#fff':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#fff':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
+      listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
       viewList:()=>this.setState({exView:'list'}),viewMap:()=>this.setState({exView:'map'}),resultCards,noResults:!n,
       hasSel:!!sp&&!s.placing&&!s.routeFor,sel,delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
       openSource:()=>sp&&window.open(sp.url,'_blank'),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),

@@ -359,7 +359,7 @@ Object.assign(Component.prototype, {
       const sm = s.sharedMaps[t.id];
       detail = { name: t.name, isOwner: perm.own, canEdit: perm.edit, showList: view === 'list', showMap: view === 'map',
         sub: perm.list ? `${d.stops.length} ${d.stops.length === 1 ? 'Spot' : 'Spots'}` + (d.days ? ` · ${d.days} ${d.days === 1 ? 'Day' : 'Days'}` : '') + (perm.own ? '' : ' · From ' + (t.owner_name || 'A Friend')) : 'A View-Only Look At ' + (t.owner_name || 'Their') + '’s Map',
-        hasToggle: perm.list && perm.map, listTabBg: view === 'list' ? '#fff' : 'transparent', listTabFg: view === 'list' ? C.blue : '#fff', mapTabBg: view === 'map' ? '#fff' : 'transparent', mapTabFg: view === 'map' ? C.blue : '#fff',
+        hasToggle: perm.list && perm.map, listTabBg: view === 'list' ? '#FFFFFF' : 'transparent', listTabFg: view === 'list' ? C.blue : '#fff', mapTabBg: view === 'map' ? '#FFFFFF' : 'transparent', mapTabFg: view === 'map' ? C.blue : '#fff',
         mapTabLabel: (t.owner_name ? t.owner_name.split(' ')[0] + '’s' : 'Their') + ' Map',
         viewList: () => this.setState({ tripView: 'list', tripSel: null }), viewMap: () => { this.setState({ tripView: 'map', tripSel: null }); NYCLists.loadSharedMap(t.id); },
         mapNote: !sm ? 'Loading The Map…' : sm.off ? 'This Map Isn’t Shared Anymore.' : sm.places.length ? `${sm.places.length} Spots · Tap A Pin To Add It${perm.list ? ' To The List' : ''} Or Save It` : 'No Spots On This Map Yet.',
@@ -466,7 +466,7 @@ Object.assign(Component.prototype, {
       trip: detail, tripMapRef: this.tripMapRef, tripMapH: detail && detail.showMap ? '100%' : 'calc(var(--st) + 300px)', tripEdit: editSheet,
       hasTripSel: !!tsel && s.tab === 'lists' && !s.addOpen, tsel, tripShare: share, tripPick: pick, listChoose: choose, newTrip,
       goLists: () => { this.setState({ tab: 'lists', selId: null, placing: false, routeFor: null, tripSel: null }); NYCLists.refresh(); },
-      tabListFg: s.tab === 'lists' ? C.yellow : '#C9D0F0', addToListSel: () => s.selId && this.setState({ listChoose: s.selId }),
+      tabListFg: s.tab === 'lists' ? C.blue : '#3A4470', addToListSel: () => s.selId && this.setState({ listChoose: s.selId }),
       hasJoin: !!ji && s.auth === 'signedOut', joinTitle: ji ? (ji.owner_name || 'A Friend') + ' Invited You' : '', joinSub: ji ? (ji.share_list ? 'To Plan “' + ji.name + '” Together' : 'To See Their NYC Map') + ' — Make An Account To Join.' : '',
       authName: s.authName || '', onAuthName: e => this.setState({ authName: e.target.value })
     };
