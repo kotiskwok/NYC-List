@@ -16,11 +16,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-/* Design tokens: the "NYC List v2" colors in the glass look (frosted panels over the colorful map). Single deliberate look (no dark variant). */
+/* Design tokens: the "NYC List v2" colors in the V5 glass look (deep frosted panels over Apple Maps and soft cream glows). Single deliberate look (no dark variant). */
 :root{--blue:#1B3DB8;--navy:#10183F;--orange:#FF6B1A;--yellow:#FFC425;--cream:#FFF3DF;--st:46px;--sb:0px;color-scheme:light;
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  /* Soft borough-colored backdrop behind the non-map screens, so the glass has color to frost. */
-  --bgfx:radial-gradient(70% 38% at 0% 0%,rgba(255,227,143,.95),rgba(255,227,143,0) 70%),radial-gradient(60% 34% at 100% 22%,rgba(196,208,255,.95),rgba(196,208,255,0) 70%),radial-gradient(70% 40% at 100% 100%,rgba(255,181,201,.85),rgba(255,181,201,0) 70%),radial-gradient(60% 40% at 0% 82%,rgba(134,200,238,.7),rgba(134,200,238,0) 70%),#FFF3DF}
+  /* Soft cream backdrop with faint orange, pink, blue and yellow glows behind the non-map screens, so the glass has color to frost. */
+  --bgfx:radial-gradient(60% 34% at 0% 0%,rgba(255,107,26,.2),rgba(255,107,26,0) 70%),radial-gradient(60% 34% at 100% 30%,rgba(244,95,160,.18),rgba(244,95,160,0) 70%),radial-gradient(70% 40% at 0% 72%,rgba(27,61,184,.14),rgba(27,61,184,0) 70%),radial-gradient(60% 34% at 100% 100%,rgba(255,196,37,.22),rgba(255,196,37,0) 70%),#FFF3DF}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--blue);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;color:var(--navy)}

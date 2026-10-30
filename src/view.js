@@ -20,10 +20,13 @@ const T = n => `calc(var(--st) + ${n - 46}px)`;
 const B = n => `calc(var(--sb) + ${n}px)`;
 
 // Glass: frosted panels over the map. GL for floating controls, GL2 for cards and sheets.
-const GL = 'background:rgba(255,255,255,.46);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.8);box-shadow:0 10px 30px rgba(16,24,63,.16),inset 0 1px 0 rgba(255,255,255,.95)';
-const GL2 = 'background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(35px) saturate(190%);backdrop-filter:blur(35px) saturate(190%);border:1px solid rgba(255,255,255,.85);box-shadow:0 -10px 40px rgba(16,24,63,.18),inset 0 1px 0 #fff';
-const TILE = 'background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9)';
-const ROW = 'background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.95)';
+const GL = 'background:linear-gradient(150deg,rgba(255,255,255,.78),rgba(255,255,255,.36) 50%,rgba(255,255,255,.58));-webkit-backdrop-filter:blur(32px) saturate(210%) brightness(1.04);backdrop-filter:blur(32px) saturate(210%) brightness(1.04);border:1px solid rgba(255,255,255,.9);box-shadow:inset 0 2px 1px rgba(255,255,255,1),inset 0 -1px 1px rgba(255,255,255,.5),0 16px 36px rgba(16,24,63,.14),0 2px 6px rgba(16,24,63,.06)';
+const GL2 = 'background:linear-gradient(170deg,rgba(255,255,255,.86),rgba(255,243,223,.66));-webkit-backdrop-filter:blur(36px) saturate(210%);backdrop-filter:blur(36px) saturate(210%);border:1px solid rgba(255,255,255,.95);box-shadow:0 -10px 40px rgba(16,24,63,.16),inset 0 2px 1px #fff';
+// Tab bar: the clear deep glass from the design's Round 2, and its light glass + button.
+const GLX = 'background:linear-gradient(150deg,rgba(255,255,255,.42),rgba(255,255,255,.12) 55%,rgba(255,255,255,.26));-webkit-backdrop-filter:blur(30px) saturate(220%) brightness(1.08);backdrop-filter:blur(30px) saturate(220%) brightness(1.08);border:1px solid rgba(255,255,255,.55);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.8),inset 0 -1px 1px rgba(255,255,255,.2),inset 1px 0 0 rgba(255,255,255,.3),0 18px 40px rgba(16,24,63,.22)';
+const GLX_LIGHT = 'background:linear-gradient(150deg,rgba(255,255,255,.95),rgba(255,255,255,.7));-webkit-backdrop-filter:blur(30px) saturate(200%);backdrop-filter:blur(30px) saturate(200%);border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 1.5px 0 #fff,0 18px 40px rgba(16,24,63,.25)';
+const TILE = 'background:linear-gradient(150deg,rgba(255,255,255,.78),rgba(255,255,255,.4) 55%,rgba(255,255,255,.6));border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 2px 1px #fff,0 8px 20px rgba(16,24,63,.08)';
+const ROW = 'background:linear-gradient(150deg,rgba(255,255,255,.84),rgba(255,255,255,.5) 55%,rgba(255,255,255,.7));border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 2px 1px #fff,0 10px 24px rgba(16,24,63,.08)';
 // A category's line icon (see CAT_ICON in logic.js), or its emoji when it has none.
 const CatIcon = (em, px, col) => CAT_ICON[em]
   ? html`<svg width=${px} height=${px} viewBox="0 0 24 24" fill="none" stroke=${col} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${CAT_ICON[em]}></path></svg>`
@@ -79,8 +82,8 @@ function MapScreen(v) {
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
         ${Logo(false)}
         <button class="lg" onClick=${v.openAcct} aria-label=${v.syncOn ? 'Your Account: ' + v.syncLabel : v.statsText} style=${S(`${GL};display:flex;align-items:center;gap:8px;height:46px;padding:0 14px;border-radius:999px;color:#10183F;white-space:nowrap;pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>
-          <span style=${S('font-family:var(--mono);font-size:15px;font-weight:700')}>${v.spotCount}</span>
-          <span style=${S('font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:#3A4470')}>${v.spotCount === 1 ? 'SPOT' : 'SPOTS'}</span>
+          <span style=${S('font-size:28px;font-weight:200;letter-spacing:-1px;line-height:1')}>${v.spotCount}</span>
+          <span style=${S('font-size:12px;font-weight:800;font-style:italic;color:#10183F')}>${v.spotCount === 1 ? 'Spot' : 'Spots'}</span>
           ${v.syncOn && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${v.syncDot};box-shadow:0 0 0 3px ${v.syncDot}40`)}></span>`}
         </button>
       </div>
@@ -120,7 +123,7 @@ function ExploreScreen(v) {
   return html`
   <div data-screen-label="Explore" style=${S(`position:absolute;inset:0;display:${v.exDisplay}`)}>
     <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:${T(62)} 20px ${B(200)};display:${v.exPickDisplay}`)}>
-      <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:42px;line-height:.92;letter-spacing:-.02em;color:#1B3DB8')}>Where To<br/><span style=${S('color:#FF6B1A')}>Today?</span></div>
+      <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:46px;line-height:.9;letter-spacing:-.03em;color:#10183F')}>Where To<br/><span style=${S('font-weight:200;font-style:normal;letter-spacing:-.03em')}>Today?</span></div>
       <p style=${S('margin:10px 0 0;font-size:15px;font-weight:500;color:#3C4466')}>Pick A Vibe, Pick A Neighborhood, Go.</p>
       ${H3('What Kind Of Place?', v.clearCats, v.clearCatsLabel, '28px 0 12px')}
       <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:10px')}>
@@ -208,7 +211,7 @@ function PlanScreen(v) {
     </div>
     <div style=${S(`padding:4px 18px ${B(130)};display:flex;flex-direction:column;gap:16px`)}>
       <div>
-        <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:38px;line-height:.95;letter-spacing:-.02em;color:#1B3DB8')}>Plan A <span style=${S('color:#FF6B1A')}>Day</span></div>
+        <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:44px;line-height:.9;letter-spacing:-.03em;color:#10183F')}>Plan A<br/><span style=${S('font-weight:200;font-style:normal;letter-spacing:-.03em')}>Day</span></div>
         <div style=${S('margin-top:6px;font-size:14px;font-weight:600;color:#3C4466')}>${v.planSummary}</div>
       </div>
       <div style=${S('display:flex;flex-direction:column;gap:8px')}>
@@ -256,7 +259,7 @@ function PlanScreen(v) {
 function PlaceCard(v) {
   const sel = v.sel, onMap = v.onMapTab;
   const mono = (t, col) => html`<span style=${S(`font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.2px;color:${col || '#3A4470'}`)}>${t}</span>`;
-  const tile = 'border-radius:20px;padding:12px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9);display:flex;flex-direction:column;gap:6px;min-width:0';
+  const tile = `border-radius:20px;padding:12px;${TILE};display:flex;flex-direction:column;gap:6px;min-width:0`;
   const act = (go, label, d, col, on) => html`
     <button onClick=${go} style=${S(`height:64px;min-width:0;border-radius:18px;${on ? `border:1px solid rgba(255,255,255,.5);background:${on.bg};color:${on.fg}` : TILE + ';color:#10183F'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:800;cursor:pointer;padding:0 4px`)}>${Ico(d, 20, on ? 'currentColor' : col, 2.4)}<span style=${S('max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${label}</span></button>`;
   const twoTiles = sel.hasStation;
@@ -408,7 +411,7 @@ function ListsScreen(v) {
     ${v.listsIndex ? html`
     <div class="noscroll" style=${S(`position:absolute;inset:0;z-index:5;background:var(--bgfx);overflow-y:auto;padding:${T(62)} 18px ${B(130)};display:flex;flex-direction:column;gap:14px`)}>
       <div>
-        <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:42px;line-height:.92;letter-spacing:-.02em;color:#1B3DB8')}>My <span style=${S('color:#FF6B1A')}>Lists</span></div>
+        <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:46px;line-height:.9;letter-spacing:-.03em;color:#10183F')}>My<br/><span style=${S('font-weight:200;font-style:normal;letter-spacing:-.03em')}>Lists</span></div>
         <p style=${S('margin:10px 0 0;font-size:15px;font-weight:500;color:#3C4466')}>Gather Spots For A Visit Or A Big Day Out, Then Plan It Together.</p>
       </div>
       ${v.listsSignedIn && !v.listsMissing && html`<button onClick=${v.openNewTrip} style=${S('height:48px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>+ New List</button>`}
@@ -671,19 +674,20 @@ function NewTripSheet(v) {
 }
 
 function TabBar(v) {
+  // Round 2 deep glass: a clear frosted pill with the tabs, and a separate light glass + button.
   const on = fg => fg === '#1B3DB8';
-  const tab = (go, fg, label, icon) => html`
-    <button onClick=${go} aria-current=${on(fg) ? 'page' : null} style=${S(`height:58px;min-width:0;border:none;border-radius:22px;background:${on(fg) ? 'rgba(27,61,184,.12)' : 'transparent'};color:${fg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;font-weight:${on(fg) ? 800 : 700};cursor:pointer;padding:0`)}>${icon}<span>${label}</span></button>`;
+  const tab = (go, fg, label, icon) => on(fg) ? html`
+    <button onClick=${go} aria-current="page" aria-label=${label} style=${S('height:48px;min-width:0;padding:0 16px;border:none;border-radius:999px;background:#FFFFFF;color:#10183F;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,24,63,.14),inset 0 1px 0 #fff;flex:none')}>${icon}<span>${label}</span></button>` : html`
+    <button onClick=${go} aria-label=${label} style=${S('width:48px;height:48px;flex:none;border:none;border-radius:50%;background:transparent;color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0')}>${icon}</button>`;
+  const show = v.hasSel && v.onMapTab ? 'none' : 'flex';
   return html`
-  <nav aria-label="Tabs" style=${S(`position:absolute;left:16px;right:16px;bottom:${B(18)};height:72px;z-index:950;${GL};border-radius:28px;display:${v.hasSel && v.onMapTab ? 'none' : 'grid'};grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;padding:0 6px`)}>
-    ${tab(v.goMap, v.tabMapFg, 'Map', Ico('M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14', 22))}
-    ${tab(v.goExplore, v.tabExFg, 'Explore', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>`)}
-    <div style=${S('display:flex;justify-content:center')}>
-      <button onClick=${v.openAdd} aria-label="Add A Spot" class="press94" style=${S('width:58px;height:58px;border-radius:20px;border:1px solid rgba(255,255,255,.6);background:#FF6B1A;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(255,107,26,.55),inset 0 1px 0 rgba(255,255,255,.5)')}>${Ico('M12 5v14M5 12h14', 26, 'currentColor', 2.8)}</button>
-    </div>
-    ${tab(v.goPlan, v.tabPlanFg, 'Route', html`<span style=${S('position:relative;display:flex')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"></path></svg>${v.planCount > 0 && html`<span style=${S('position:absolute;top:-6px;right:-12px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#FF6B1A;color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #FFFFFF')}>${v.planCount}</span>`}</span>`)}
-    ${tab(v.goLists, v.tabListFg, 'Lists', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"></path><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg>`)}
-  </nav>`;
+  <nav aria-label="Tabs" class="lg" style=${S(`position:absolute;left:16px;right:92px;bottom:${B(22)};height:64px;z-index:950;${GLX};border-radius:999px;display:${show};align-items:center;justify-content:space-between;padding:0 8px`)}>
+    ${tab(v.goMap, v.tabMapFg, 'Map', Ico('M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z M12 6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5', 20))}
+    ${tab(v.goExplore, v.tabExFg, 'Explore', html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>`)}
+    ${tab(v.goPlan, v.tabPlanFg, 'Route', html`<span style=${S(`position:relative;display:flex;margin-right:${v.planCount > 0 && on(v.tabPlanFg) ? 8 : 0}px`)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"></path></svg>${v.planCount > 0 && html`<span style=${S('position:absolute;top:-7px;right:-11px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#FF6B1A;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #FFFFFF')}>${v.planCount}</span>`}</span>`)}
+    ${tab(v.goLists, v.tabListFg, 'Lists', html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg>`)}
+  </nav>
+  <button onClick=${v.openAdd} aria-label="Add A Spot" class="lg" style=${S(`position:absolute;right:16px;bottom:${B(22)};z-index:950;width:64px;height:64px;border-radius:50%;${GLX_LIGHT};color:#FF6B1A;display:${show};align-items:center;justify-content:center;cursor:pointer;padding:0`)}>${Ico('M12 5v14M5 12h14', 26, 'currentColor', 2.8)}</button>`;
 }
 
 function AddSheet(v) {
