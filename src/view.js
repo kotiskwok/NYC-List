@@ -17,11 +17,13 @@ const S = str => {
 const T = n => `calc(var(--st) + ${n - 46}px)`;
 const B = n => `calc(var(--sb) + ${n}px)`;
 
-// The Spotted In wordmark: a yellow "Spotted" pill with an orange "in NYC" tag, like the app icon.
+// The Spotted In wordmark, poster style like the app icon: chunky yellow SPOTTED with a stacked
+// red-orange shadow and a yellow "in NYC" label. On the map it sits on a blue sign so it stays readable.
+const stackShadow = (n, step) => Array.from({ length: n }, (_, i) => `${(i + 1) * step}px ${(i + 1) * step}px 0 #E5402B`).join(',');
 const Logo = (big) => html`
-  <div aria-label="Spotted In NYC" role="img" style=${S(`display:flex;align-items:flex-end;flex:none;pointer-events:auto;transform:rotate(${big ? -3 : -2}deg)`)}>
-    <span style=${S(`background:#FFC425;color:#10183F;padding:${big ? '9px 20px 11px' : '6px 15px 8px'};border-radius:999px;font-weight:900;font-stretch:100%;font-style:italic;font-size:${big ? 30 : 20}px;letter-spacing:-.02em;line-height:1;white-space:nowrap;box-shadow:0 ${big ? 5 : 4}px 0 #10183F`)}>Spotted</span>
-    <span style=${S(`margin:0 0 ${big ? -10 : -8}px ${big ? -12 : -9}px;background:#FF6B1A;color:#fff;padding:${big ? '5px 11px 6px' : '4px 8px 5px'};border-radius:999px;font-weight:900;font-style:italic;font-size:${big ? 15 : 11.5}px;line-height:1;white-space:nowrap;box-shadow:0 3px 0 #10183F;transform:rotate(6deg)`)}>in NYC</span>
+  <div aria-label="Spotted In NYC" role="img" style=${S(`display:flex;flex-direction:column;align-items:center;flex:none;pointer-events:auto;${big ? '' : 'background:#1B3DB8;border:2px solid #10183F;border-radius:16px;padding:6px 13px 8px;box-shadow:0 4px 0 #10183F'}`)}>
+    <span style=${S(`color:#FFC425;font-weight:900;font-stretch:72%;font-size:${big ? 54 : 25}px;line-height:.9;letter-spacing:-.005em;white-space:nowrap;text-shadow:${stackShadow(big ? 5 : 3, big ? 1.2 : .8)}`)}>SPOTTED</span>
+    <span style=${S(`margin-top:${big ? 8 : 4}px;background:#FFC425;color:#1B3DB8;border-radius:${big ? 7 : 4}px;padding:${big ? '3px 12px 4px' : '1px 7px 2px'};font-weight:900;font-style:italic;font-stretch:90%;font-size:${big ? 20 : 11}px;line-height:1.05;white-space:nowrap`)}>in NYC</span>
   </div>`;
 
 const Bul = (b, i) => html`<span key=${i} style=${S(`width:20px;height:20px;border-radius:50%;background:${b.bg};color:${b.fg};font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center`)}>${b.t}</span>`;

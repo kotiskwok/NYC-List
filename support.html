@@ -11,8 +11,9 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--cream);color:var(--navy);font:16px/1.6 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
 main{max-width:720px;margin:0 auto;padding:40px 16px 64px}
-.tag{display:inline-block;background:var(--orange);color:#fff;font-size:13px;padding:2px 8px 3px;border-radius:999px;vertical-align:middle;transform:rotate(6deg);margin-left:2px}
-.pill{display:inline-block;background:var(--yellow);color:var(--navy);padding:6px 16px 8px;border-radius:999px;font-weight:900;font-style:italic;font-size:20px;box-shadow:0 4px 0 var(--navy);transform:rotate(-2deg);text-decoration:none}
+.pill{display:inline-flex;flex-direction:column;align-items:center;background:var(--blue);border:2px solid var(--navy);border-radius:14px;padding:6px 14px 8px;box-shadow:0 4px 0 var(--navy);text-decoration:none}
+.word{color:var(--yellow);font-weight:900;font-size:24px;line-height:.95;letter-spacing:-.01em;font-stretch:condensed;text-shadow:1px 1px 0 #E5402B,2px 2px 0 #E5402B,3px 3px 0 #E5402B}
+.tag{margin-top:4px;background:var(--yellow);color:var(--blue);border-radius:4px;padding:1px 8px 2px;font-size:12px;font-weight:900;font-style:italic;line-height:1.1}
 h1{margin:28px 0 4px;font-size:clamp(30px,8vw,44px);line-height:1;font-weight:900;font-style:italic;color:var(--blue);letter-spacing:-.02em}
 h2{margin:28px 0 4px;font-size:18px;font-weight:800}
 p{margin:4px 0;color:#2E3557}
@@ -23,7 +24,7 @@ a{color:var(--blue);font-weight:700}
 </head>
 <body>
 <main>
-  <a class="pill" href="/">Spotted <span class="tag">in</span></a>
+  <a class="pill" href="/"><span class="word">SPOTTED</span><span class="tag">in</span></a>
   <h1>Help &amp; Support</h1>
   <p>Questions, a bug, or an idea? Send an email and you'll hear back within a couple of days.</p>
   <a class="btn" href="mailto:kwokshulum@gmail.com?subject=Spotted%20In">Email Support</a>
