@@ -20,13 +20,15 @@ It's a plain static site with no build step. Vercel serves the files as they are
 | `data/` | NYC neighborhoods, streets and subway stations |
 | `vendor/` | React, htm, Leaflet and supabase-js, kept locally so the app works offline |
 | `supabase/schema.sql` | The database table and its security rules |
+| `supabase/lists.sql` | Tables and rules for shared lists (the Lists tab) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Home-screen install and offline support |
 
 ## One-time setup
 
 ### 1. Supabase (the database)
 1. Create a free project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor → New query**, paste everything from `supabase/schema.sql`, and click **Run**.
+2. Open **SQL Editor → New query**, paste everything from `supabase/schema.sql`, and click **Run**. Do the same with `supabase/lists.sql` for the Lists tab.
+   - To let friends join a shared list, **Authentication → Sign In / Providers → Allow new users to sign up** must be on.
 3. Go to **Project Settings → API** (or click **Connect**). Copy the **Project URL** and the **publishable** key into `config.js` (already done for this project). This key is safe to commit, because the security rules only let each signed-in person see their own list.
 4. After the Vercel site is live, go to **Authentication → URL Configuration**. Set **Site URL** to your Vercel address so the confirmation email links back to the app.
 

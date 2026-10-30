@@ -61,10 +61,11 @@ const NYCSync = (() => {
     const u = (session && session.user) || null;
     if (u && user && u.id === user.id) return;
     user = u;
-    if (!user) { base = null; set({ auth: 'signedOut', syncEmail: '', syncState: '' }); return; }
+    if (!user) { base = null; set({ auth: 'signedOut', syncEmail: '', syncState: '' }); window.NYCLists && NYCLists.onUser(null); return; }
     base = loadBase();
     set({ auth: 'signedIn', syncEmail: user.email || '', syncState: 'syncing', authPass: '', authMsg: '' });
     await sync();
+    window.NYCLists && NYCLists.onUser(user);
   }
 
   async function sync() {
@@ -114,7 +115,7 @@ const NYCSync = (() => {
     if (/invalid login/i.test(m)) return 'That Email And Password Don’t Match. Try Again.';
     if (/not confirmed/i.test(m)) return 'Confirm Your Email First — Check Your Inbox For The Link.';
     if (/already registered|already exists/i.test(m)) return 'You Already Have An Account. Sign In Instead.';
-    if (/signups not allowed|signup is disabled/i.test(m)) return 'New Accounts Are Turned Off For This App.';
+    if (/signups not allowed|signup is disabled/i.test(m)) return 'New Accounts Are Turned Off For This App Right Now. Ask The Person Who Invited You To Turn Them On.';
     if (/fetch|network/i.test(m)) return 'Can’t Reach The Server. Check Your Connection.';
     return m;
   };
@@ -126,8 +127,9 @@ const NYCSync = (() => {
     if (s.authMode === 'up' && password.length < 6) { set({ authMsg: 'Use At Least 6 Characters For Your Password.' }); return; }
     set({ authBusy: true, authMsg: '' });
     try {
+      const join = window.NYCLists ? NYCLists.pendingCode() : '', name = (s.authName || '').trim();
       const r = s.authMode === 'up'
-        ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin } })
+        ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + (join ? '/?join=' + encodeURIComponent(join) : ''), data: name ? { name } : undefined } })
         : await sb.auth.signInWithPassword({ email, password });
       if (r.error) { set({ authBusy: false, authMsg: friendly(r.error.message) }); return; }
       if (s.authMode === 'up' && !r.data.session) {
@@ -151,6 +153,14 @@ const NYCSync = (() => {
     try { const { data } = await sb.auth.getSession(); return (data.session && data.session.access_token) || null; } catch (e) { return null; }
   }
 
-  return { enabled, attach, queue, submit, signOut, getToken, syncNow: () => sync() };
+  // Used by lists.js (shared lists live in their own tables).
+  const displayName = () => (user && user.user_metadata && user.user_metadata.name) || '';
+  async function setName(name) {
+    if (!sb || !user) return false;
+    try { const r = await sb.auth.updateUser({ data: { name } }); if (r.error) return false; if (r.data && r.data.user) user = r.data.user; return true; } catch (e) { return false; }
+  }
+
+  return { enabled, attach, queue, submit, signOut, getToken, syncNow: () => sync(),
+    client: () => sb, currentUser: () => user, displayName, setName, mergeList, same };
 })();
 window.NYCSync = NYCSync;

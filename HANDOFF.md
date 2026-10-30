@@ -37,6 +37,14 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - Start from the first stop, Home or My Location. Each leg shows an estimated travel time; tap a leg to open it in Google Maps.
 - **Auto-Order Route** (shortest-trip order), up/down reordering, removing stops, and **+ Add Spots**.
 
+**Lists tab (shared lists, e.g. "Sonia's Visit")**
+- A list is a collection of spots for a visit or a big day out, separate from the Route plan. **+ New List** takes a name, optional number of days and an optional first date.
+- **+ From My Map** picks spots from your map. **+ New Spot** opens Add A Spot for the list only: the spot goes on the list and not on your map. A place card on the Map tab also has **+ Add To A List**.
+- Optional days: spots start under "Not On A Day Yet" and move with the Day dropdown. Each day gets its own pin color, a dotted path on the map and a **Route ↗** link that opens all of that day's stops in Google Maps. Add a day with **+ Add Day N**; remove the last day with ✕.
+- **Share & Invite** (owner only): pick what invitees get: **Just This List** (they can add, sort and remove spots), **Just My Map** (a view-only look at all your saved spots, without your home) or **Both**. The invite link is `/?join=<code>`. **Make A New Link** retires the old one. The sheet also lists who has joined (with Remove) and renames the list.
+- Invitees open the link, see "Kotis Invited You" on the sign-in screen, make an account (with a name) and land on the list. With the map shared they get a **This List / Kotis's Map** toggle; tapping a pin there offers **+ Add To This List** and **Save To My Map**. Any spot on a list can be saved to your own map.
+- Changes sync between everyone about a second after each edit, and the open list refreshes every 20 seconds and when the app comes back to the front.
+
 **Add A Spot (the + button)**
 - **Paste A Link:** TikTok, Instagram, Threads or Google Maps. A badge shows which kind of link was detected.
   - **✨ Fill From Link** runs on its own after a social or Google Maps link is pasted.
@@ -101,7 +109,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 | `OPENAI_API_KEY` | ☐ Not set yet | 🎬 From A Video |
 
 - **Optional overrides:** `ANTHROPIC_MODEL`, `OPENAI_TRANSCRIBE_MODEL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
-- **Supabase:** Authentication → URL Configuration → **Site URL** is the Vercel address. Turning off "Allow new users to sign up" (Authentication → Sign In / Providers) keeps the app private to Kotis's account.
+- **Supabase:** Authentication → URL Configuration → **Site URL** is the Vercel address. "Allow new users to sign up" (Authentication → Sign In / Providers) must stay **on** for friends to join shared lists. A new account only sees its own empty map plus the lists it was invited to; the AI features cost a little per use for any signed-in account.
 - **Quick check of which keys are live:** a `POST` with no sign-in to `/api/extract`, `/api/places` or `/api/transcribe` answers **401** when that service's key is set and **503** when it isn't.
 
 ---
@@ -124,11 +132,17 @@ New accounts start with an empty list. The 14 example spots only appear when no 
   - **Category:** `{id, name, color, emoji}`
   - **Plan:** `{ids: [...], start: 'first'|'home'|'here'}`
   - **Home:** `{lat, lng, area}`
+- **Shared lists** (`src/lists.js`, tables from `supabase/lists.sql`):
+  - `nyc_trips`: one row per list: `owner`, `owner_name`, `name`, `share_list`, `share_map`, `invite_code`, `rev`, and `data` = `{stops, days, start, cats}`.
+  - **Stop:** `{id, pid, by, byName, day, p: {name, cat, area, lat, lng, url, source, address, note, price}}`. `pid` is the adder's own map place id (null for spots added straight to the list); `day` 0 means no day yet. When you edit a place on your map, its copy on your lists updates.
+  - `nyc_trip_members`: who joined through the invite link. Joining goes through the `nyc_join_trip(code, name)` function; `nyc_trip_preview(code)` shows the invite on the sign-in screen; `nyc_shared_map(trip)` returns the owner's places and categories (never home) when the map is shared.
+  - Row-level security: owner and members can read; the owner and members of a list-shared list can edit `data`; a trigger keeps the name, sharing settings and invite code owner-only.
+  - **Sync:** same three-way merge as the main list, with an optimistic `rev` check (update `where rev = <read rev>`, retry on a clash) so two people editing at once don't overwrite each other. A local copy sits in `localStorage['nycList.trips.<userId>']`; an invite code waiting for sign-up sits in `localStorage['nycList.join']`.
 - **Neighborhoods:** worked out from the app's own polygons (`hoodAt` in `logic.js`, data in `data/nyc-map-data.js`).
 
 ### Maps, routing and offline
 - **Subway routing:** an *estimate* from station coordinates and shared lines, not live. Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v8`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v9`).
 
 ### Server functions (`/api`)
 Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files starting with `_` are helpers, not endpoints.
@@ -174,6 +188,7 @@ How `extract.js` reads each kind of link:
 | `src/logic.js` | **All behavior**: colors `C`, categories `CATS0`, emojis, example `SEED` spots, link detection `detect` / `SRC` badges, map drawing (Leaflet panes, streets, subway, labels), filters, routing estimate, plan auto-order, add/edit/save, AI fill (`aiAuto`, `aiFill`, `aiVideo`, `aiApply`, `aiAddAll`), name suggestions and web search, shared links, sync hooks (`snapshot`, `applyRemote`, `resetLocal`), and `renderVals()` | change how anything works, or add new state/values for the view |
 | `src/view.js` | **All screens**: `MapScreen`, `ExploreScreen`, `PlanScreen`, `PlaceCard`, `RouteSheet`, `Picker`, `TabBar`, `AddSheet`, `AccountSheet`, `AuthScreen`, `App`. Uses the helper `S('css string')` for inline styles; `T(n)` / `B(n)` offset for the status bar and safe areas. | change layout, text or look |
 | `src/runtime.js` | `DCLogic` base class, `window.open` fallback, `APP_PROPS` (`?style=Minimal`, `?tab=Explore`) | rarely |
+| `src/lists.js` | Shared lists: Supabase reads/writes, merge and invite joining (`NYCLists`), plus the Lists tab behaviour mixed into `Component` (`listVals()` feeds the view) | change how lists, sharing or invites work |
 | `src/sync.js` | Supabase client, sign-in/up/out, three-way merge sync, `getToken()` | sync or sign-in behavior |
 | `src/video.js` | On-device audio extraction (WAV pieces) and frame capture | video upload limits or quality |
 | `api/extract.js` | Server: reads posts and links, calls Claude, returns places | AI prompt, platforms, model |
@@ -184,6 +199,7 @@ How `extract.js` reads each kind of link:
 | `api/_shared.js` | Server helpers: `send`, `requireUser` (Supabase token check), body readers | — |
 | `config.js` | Supabase URL and publishable key | switching Supabase projects |
 | `supabase/schema.sql` | Table `nyc_list` and row-level security | database changes |
+| `supabase/lists.sql` | Shared-list tables, security rules and the join / preview / shared-map functions. Run once (safe to re-run). | shared-list database changes |
 | `sw.js` | Offline cache (bump `CACHE` whenever `src/` changes) | — |
 | `manifest.webmanifest`, `icons/` | Home-screen name and icon (yellow "NYC" pill on blue), Android `share_target` | app name, icon, sharing |
 | `vercel.json` | Function time limits and cache headers (use `/path/:path*` patterns; grouped regex patterns fail to deploy) | — |
@@ -215,4 +231,4 @@ How `extract.js` reads each kind of link:
 ### Ideas not built yet
 - Saving a shared link **in the background** from the iPhone share sheet without opening the app. This would need a server endpoint that writes to Supabase with the service-role key plus a personal token for the Shortcut.
 - Directly downloading audio from Instagram or TikTok links (blocked by the platforms; 🎬 upload is used instead).
-- Sharing a list with someone else, or separate lists per person.
+- Live updates without the 20-second refresh (Supabase Realtime), and per-person notes or votes on a list's spots.

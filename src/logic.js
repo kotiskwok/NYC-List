@@ -89,13 +89,15 @@ const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const r
 const placeQ=p=>p.address?`${p.name}, ${p.address}, New York`:`${p.name}, ${p.area}, New York`;
 
 class Component extends DCLogic {
-  mainMapRef=React.createRef(); exMapRef=React.createRef(); planMapRef=React.createRef();
+  mainMapRef=React.createRef(); exMapRef=React.createRef(); planMapRef=React.createRef(); tripMapRef=React.createRef();
   state=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LS))}catch(e){}
     return {places:s?.places||SEED,cats:s?.cats||CATS0,home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:true,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
-      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''};})();
+      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
+      trips:[],tripsState:'',tripsSync:'',tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
+      newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripNameEdit:null,joinInfo:null,addTarget:null,authName:''};})();
 
   // ---- cloud sync hooks (used by sync.js) ----
   snapshot(){const s=this.state;return {places:s.places,cats:s.cats,home:s.home,plan:s.plan};}
@@ -110,7 +112,7 @@ class Component extends DCLogic {
   takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link Added — Tap ✨ Fill From Link To Read It.'});else this.aiAuto(u,true);}},400);}
-  componentDidMount(){this._on=true;this._share=SHARED_LINK;setTimeout(()=>this.takeShared(),0);window.NYCSync&&NYCSync.attach(this);const go=()=>{if(!this._on)return;
+  componentDidMount(){this._on=true;this._share=SHARED_LINK;setTimeout(()=>this.takeShared(),0);window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
       const names=new Set(areas().map(a=>a.name));
@@ -120,20 +122,22 @@ class Component extends DCLogic {
   componentDidUpdate(){const s=this.state;if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan){this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;
       try{localStorage.setItem(LS,JSON.stringify({places:s.places,cats:s.cats,home:s.home,plan:s.plan}))}catch(e){}
-      window.NYCSync&&NYCSync.queue(this.snapshot());}
+      window.NYCSync&&NYCSync.queue(this.snapshot());
+      clearTimeout(this._tpt);this._tpt=setTimeout(()=>window.NYCLists&&NYCLists.touchPlaces(this.state.places),1500);}
     if(this.maps&&this._ms!==this.props.mapStyle){const first=this._ms===undefined;this._ms=this.props.mapStyle;if(!first)this.allMaps().forEach(m=>this.drawBase(m));}
     if(this.maps&&this._ss!==s.showSubway){const first=this._ss===undefined;this._ss=s.showSubway;STON=s.showSubway;this.allMaps().forEach(m=>{s.showSubway?m.subway.addTo(m.map):m.subway.remove();if(!first&&m.streets)m.streets.redraw();});}
     this.syncMaps();
-    const vk=s.tab+s.exView+s.exStage+s.placing+(s.routeFor||'');
+    const vk=s.tab+s.exView+s.exStage+s.placing+(s.routeFor||'')+(s.tripId||'')+this.tripViewEff(this.tripCur());
     if(this.maps&&vk!==this._vk){this._vk=vk;setTimeout(()=>this.refreshVisible(),60);setTimeout(()=>this.refreshVisible(),300);}}
-  allMaps(){return this.maps?[this.maps.main,this.maps.ex,this.maps.plan].filter(Boolean):[];}
+  allMaps(){return this.maps?[this.maps.main,this.maps.ex,this.maps.plan,this.maps.trip].filter(Boolean):[];}
   refreshVisible(){if(!this.maps)return;const s=this.state;
     const kick=m=>{const sz=m.map.getSize();m.map.invalidateSize({pan:false});const n=m.map.getSize();if(sz.x!==n.x||sz.y!==n.y||!m._drawn){m._drawn=true;m.map.fire('moveend');}};
     if(s.tab==='map'){kick(this.maps.main);this.maps.main.rsig=null;this.syncRoute();}
     if(s.tab==='explore'&&s.exStage==='results'&&s.exView==='map'){
       if(!this.maps.ex){this.maps.ex=this.makeMap(this.exMapRef.current,'ex');this.syncMaps();}else kick(this.maps.ex);
       const l=this.lists().ex;if(l.length)this.fit(this.maps.ex,l);}
-    if(s.tab==='plan'){if(!this.maps.plan){this.maps.plan=this.makeMap(this.planMapRef.current,'plan');}else kick(this.maps.plan);this.maps.plan.psig=null;this.syncPlan(true);}}
+    if(s.tab==='plan'){if(!this.maps.plan){this.maps.plan=this.makeMap(this.planMapRef.current,'plan');}else kick(this.maps.plan);this.maps.plan.psig=null;this.syncPlan(true);}
+    if(s.tab==='lists'&&s.tripId&&this.tripMapRef.current){if(!this.maps.trip){this.maps.trip=this.makeMap(this.tripMapRef.current,'trip');}else kick(this.maps.trip);this.syncTrip(true);}}
   makeMap(el,kind){const L=window.L;
     const map=L.map(el,{zoomControl:false,attributionControl:false,minZoom:10,maxZoom:18,zoomSnap:.5,maxBounds:[[40.42,-74.35],[40.98,-73.6]],maxBoundsViscosity:.8,preferCanvas:true}).setView([40.722,-73.97],12);
     [['streets',410],['boroLab',450],['hoodBig',450],['hoodSmall',450],['subway',455],['stBul',456],['stLab',457],['route',470]].forEach(([n,z])=>{const p=map.createPane(n);p.style.zIndex=z;if(n!=='subway'&&n!=='route')p.style.pointerEvents='none';p.style.transition='opacity .35s';});
@@ -181,6 +185,7 @@ class Component extends DCLogic {
       if(s.placing==='here'){const ret=s.placingReturn;this.setState({placing:false,here:ll,hereAcc:0,hereManual:true,hereFailed:false,locFail:null,...(ret==='plan'?{tab:'plan'}:{}),...(ret&&ret.startsWith('route:')?{routeFor:ret.slice(6),routeMode:'here'}:{})});this.toast('Got It — You\u2019re In '+(a||'NYC'));return;}
       if(s.placing==='home'){const ret=s.placingReturn;this.setState({placing:false,home:{lat:ll[0],lng:ll[1],area:a},routeMode:'home',...(ret==='plan'?{tab:'plan'}:{}),...(ret&&ret.startsWith('route:')?{routeFor:ret.slice(6)}:{})});this.toast('Home Saved In '+(a||'NYC'));return;}
       this.setState(st=>({placing:false,addOpen:true,form:{...st.form,lat:ll[0],lng:ll[1],area:a||st.form.area}}));return;}
+    if(kind==='trip'){if(s.tripSel)this.setState({tripSel:null,confirmStopDel:false});return;}
     if(kind!=='plan')this.setState({selId:null,confirmDel:false});}
   fit(m,l,opt){const pts=l.map(p=>Array.isArray(p)?p:[p.lat,p.lng]).filter(p=>p&&isFinite(p[0])&&isFinite(p[1]));if(!pts.length)return;
     try{m.map.fitBounds(window.L.latLngBounds(pts),opt||{padding:[60,60],maxZoom:15});}catch(e){console.log('fit fail',m.kind,JSON.stringify(l).slice(0,200));}}
@@ -192,7 +197,7 @@ class Component extends DCLogic {
     if(s.placing==='spot'&&f.lat!=null)main=[...main,{id:'_draft',cat:f.cat,lat:f.lat,lng:f.lng,draft:true}];
     if(s.routeFor){const d=s.places.find(p=>p.id===s.routeFor);main=d?[d]:main;}
     this.syncOne(this.maps.main,main,false);if(this.maps.ex)this.syncOne(this.maps.ex,l.ex,true);
-    this.syncMe();this.syncRoute();if(this.maps.plan)this.syncPlan(false);}
+    this.syncMe();this.syncRoute();if(this.maps.plan)this.syncPlan(false);if(this.maps.trip)this.syncTrip(false);}
   pinHtml(col,z,sel,faded,label,em){return `<div style="width:${z}px;height:${z}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${col};border:3px solid ${sel?C.navy:'#fff'};box-shadow:0 4px 10px rgba(16,24,63,.35);display:flex;align-items:center;justify-content:center;opacity:${faded?.55:1}">${label?`<div style="transform:rotate(45deg);color:#fff;font:italic 900 15px Archivo,sans-serif">${label}</div>`:em?`<div style="transform:rotate(45deg);font-size:${Math.round(z*.48)}px;line-height:1">${em}</div>`:`<div style="width:${Math.round(z*.3)}px;height:${Math.round(z*.3)}px;border-radius:50%;background:${sel?C.navy:'#fff'}"></div>`}</div>`;}
   syncOne(m,list,fit){const L=window.L,s=this.state,cat=Object.fromEntries(s.cats.map(c=>[c.id,c]));
     const sig=list.map(p=>p.id+p.cat+(p.visited?'v':'')+(p.id===s.selId||p.id===s.routeFor?'s':'')+p.lat+p.lng).join()+s.cats.map(c=>c.color+emo(c)).join();
@@ -280,6 +285,7 @@ class Component extends DCLogic {
       this.setState({saving:false});if(!ll){this.toast('Couldn’t Find It — Drop A Pin Or Pick A Neighborhood');return;}}
     const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
     const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
+    if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false);this.setState({addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added To The List!');return;}
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?p:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
     this.toast(orig?'Changes Saved':'Pinned To Your Map!');}
@@ -427,6 +433,8 @@ class Component extends DCLogic {
       if(!ll){skipped++;continue;}
       const cat=p.category_id&&this.state.cats.some(c=>c.id===p.category_id)?p.category_id:(this.state.cats[0]||{}).id;
       made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
+    if(s.addTarget&&made.length){const tid=s.addTarget;this.addStopsTo(tid,made,false);this.setState({aiAdding:false,addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});
+      this.toast(`Added ${made.length} ${made.length===1?'Spot':'Spots'} To The List`+(skipped?` · ${skipped} Couldn’t Be Found`:''));return;}
     this.setState(st=>({aiAdding:false,addOpen:!made.length,tab:made.length?'map':st.tab,mapCats:[],selId:null,places:[...made,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps&&made.length){this.maps.main.map.invalidateSize();this.fit(this.maps.main,made,{padding:[70,70],maxZoom:15});}},120));
     this.toast(made.length?`Added ${made.length} ${made.length===1?'Spot':'Spots'}`+(skipped?` · ${skipped} Couldn’t Be Found`:''):'Couldn’t Find These On The Map — Add Them One By One');}
@@ -527,9 +535,9 @@ class Component extends DCLogic {
       planEmpty:!stops.length,planHas:!!stops.length,planRows,clearPlan:()=>this.setState(st=>({plan:{...st.plan,ids:[]}})),planCount:s.plan.ids.length,
       pickerOpen:s.pickerOpen,pickerRows:s.places.map(p=>{const c=catOf(p.cat),ip=inPlan(p.id);return {name:p.name,catName:c.name,catBg:c.color,emoji:emo(c),area:p.area,chk:ip?'✓':'',chkBg:ip?C.orange:'#fff',ring:ip?C.orange:'transparent',
         onClick:()=>this.setState(st=>({plan:{...st.plan,ids:ip?st.plan.ids.filter(x=>x!==p.id):[...st.plan.ids,p.id]}}))};}),
-      goMap:()=>this.setState({tab:'map',selId:null,placing:false,routeFor:null}),goExplore:()=>this.setState({tab:'explore',selId:null,placing:false,routeFor:null}),goPlan:()=>this.setState({tab:'plan',selId:null,placing:false,routeFor:null}),
+      goMap:()=>this.setState({tab:'map',selId:null,placing:false,routeFor:null,tripSel:null}),goExplore:()=>this.setState({tab:'explore',selId:null,placing:false,routeFor:null,tripSel:null}),goPlan:()=>this.setState({tab:'plan',selId:null,placing:false,routeFor:null,tripSel:null}),
       tabMapFg:tabC('map'),tabMapDot:tabD('map'),tabExFg:tabC('explore'),tabExDot:tabD('explore'),tabPlanFg:tabC('plan'),tabPlanDot:tabD('plan'),
-      openAdd:()=>this.setState({addOpen:true,placing:false,form:blank(),selId:null,routeFor:null,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''}),closeAdd:()=>this.setState({addOpen:false,sugg:[]}),
+      openAdd:()=>this.setState({addOpen:true,addTarget:null,tripSel:null,placing:false,form:blank(),selId:null,routeFor:null,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''}),closeAdd:()=>this.setState({addOpen:false,sugg:[],...(s.addTarget?{addTarget:null,tab:'lists'}:{})}),
       hasSugg:!!s.sugg.length&&!f.id,suggRows:s.sugg.map(g=>{const c=s.cats.find(x=>x.id===g.cat);return {name:g.name,sub:[g.street,g.hood].filter(Boolean).join(' · ')||'NYC',emoji:c?emo(c):'📍',bg:c?c.color:'#E9E4DA',onPick:()=>this.pickSugg(g)};}),
       suggBusy:s.suggBusy&&!s.sugg.length&&!f.id,closeSugg:()=>this.setState({sugg:[],suggPicked:f.name.trim()}),
       suggWeb:!!s.sugg.length&&s.sugg[0].web,suggGoogle:!!s.sugg.length&&!!s.sugg[0].gid,suggTitle:s.sugg.length&&s.sugg[0].web?'Found On The Web':'Is It One Of These?',
@@ -538,9 +546,9 @@ class Component extends DCLogic {
       webBusy:s.webBusy,webHasMsg:!!s.webMsg&&!s.webBusy,webMsg:s.webMsg,
       aiShow:!f.id&&!!f.url.trim(),aiVidShow:!f.id,onVideo:e=>{const fl=e.target.files&&e.target.files[0];e.target.value='';this.aiVideo(fl);},aiBtn:s.aiBusy?(s.aiStage||'✨ Reading The Post…'):s.aiFor&&s.aiFor===f.url.trim()?'✨ Read It Again':'✨ Fill From Link',aiBusy:s.aiBusy,
       aiRun:()=>this.aiFill(),aiHasMsg:!!s.aiMsg&&!s.aiBusy,aiMsg:s.aiMsg,aiMulti:s.aiPlaces.length>1&&!s.aiBusy,aiCount:s.aiPlaces.length,
-      aiAddAllLabel:s.aiAdding?'Adding…':`Add All ${s.aiPlaces.length} To My Map`,aiAddAll:()=>this.aiAddAll(),
+      aiAddAllLabel:s.aiAdding?'Adding…':`Add All ${s.aiPlaces.length} To ${s.addTarget?'The List':'My Map'}`,aiAddAll:()=>this.aiAddAll(),
       aiRows:s.aiPlaces.map((p,i)=>{const c=cat[p.category_id];return {name:p.name,emoji:c?emo(c):'📍',bg:c?c.color:'#A9ADC2',sub:[c&&c.name,p.neighborhood].filter(Boolean).join(' · ')||'NYC',on:p.name===f.name,onPick:()=>this.aiApply(p)};}),
-      addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':'Add A Spot',form:f,
+      addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':s.addTarget?'Add To The List':'Add A Spot',formFor:s.addTarget?((s.trips.find(t=>t.id===s.addTarget)||{}).name||''):'',form:f,
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
       onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
       onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),
@@ -552,7 +560,7 @@ class Component extends DCLogic {
       emojiChoices:EMOJIS.map(e=>({e,bg:f.newCatEmoji===e?'#FFF3DF':'#fff',ring:f.newCatEmoji===e?C.navy:'rgba(16,24,63,.12)',onClick:()=>this.setForm({newCatEmoji:e})})),
       addCat:()=>{const nm=toTitle(f.newCatName.trim());if(!nm)return;const id='c'+Date.now();this.setState(st=>({cats:[...st.cats,{id,name:nm,color:st.form.newCatColor,emoji:st.form.newCatEmoji||'⭐'}],form:{...st.form,cat:id,newCatOpen:false,newCatName:''}}));},
       areaGroups:BOROUGHS.map(b=>({b,areas:A.filter(a=>a.b===b)})),
-      save:()=>this.save(),saveBg:(f.name.trim()&&f.cat)?C.orange:'#A9ADC2',saveLabel:s.saving?'Looking It Up…':f.id?'Save Changes':'Pin It To My Map',
+      save:()=>this.save(),saveBg:(f.name.trim()&&f.cat)?C.orange:'#A9ADC2',saveLabel:s.saving?'Looking It Up…':f.id?'Save Changes':s.addTarget?'Add It To The List':'Pin It To My Map',
       lookQ:s.lookQ||'',onLookQ:e=>this.setState({lookQ:e.target.value}),onLookKey:e=>{if(e.key==='Enter')this.runLookup();},runLookup:()=>this.runLookup(),lookBtn:s.lookBusy?'…':'Find',
       lookHasMsg:!!s.lookMsg,lookMsg:s.lookMsg||'',lookHasResults:!!(s.lookResults&&s.lookResults.length),
       lookResults:(s.lookResults||[]).map(r=>{const a=r.address||{};const title=r.name||[a.house_number,a.road].filter(Boolean).join(' ')||r.display_name.split(',')[0];
@@ -570,6 +578,7 @@ class Component extends DCLogic {
       showPrice:!!f.cat&&this.priced(f.cat),priceHint:f.price?PRICE_HINT[f.price-1]+' · Tap Again To Clear':'How Pricey Is It? Optional.',
       priceChips:PRICES.map((lb,i)=>{const on=f.price===i+1;return {label:lb,bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.14)',onClick:()=>this.setForm({price:on?0:i+1})};}),
       exShowPrice:!s.exCats.length||s.exCats.some(id=>this.priced(id)),clearPrices:()=>this.setState({exPrices:[]}),clearPricesLabel:s.exPrices.length?'Clear':'',
-      exPriceChips:PRICES.map((lb,i)=>{const on=s.exPrices.includes(i+1),n=s.places.filter(p=>this.priced(p.cat)&&p.price===i+1).length;return {label:lb,count:n+(n===1?' Spot':' Spots'),bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.12)',onClick:()=>this.toggle('exPrices',i+1)};})};
+      exPriceChips:PRICES.map((lb,i)=>{const on=s.exPrices.includes(i+1),n=s.places.filter(p=>this.priced(p.cat)&&p.price===i+1).length;return {label:lb,count:n+(n===1?' Spot':' Spots'),bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.12)',onClick:()=>this.toggle('exPrices',i+1)};}),
+      ...this.listVals()};
   }
 }
