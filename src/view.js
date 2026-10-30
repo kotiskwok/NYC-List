@@ -20,9 +20,9 @@ const T = n => `calc(var(--st) + ${n - 46}px)`;
 const B = n => `calc(var(--sb) + ${n}px)`;
 
 // Glass: frosted panels over the map. GL for floating controls, GL2 for cards and sheets.
-const GL = 'background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.85);box-shadow:0 10px 30px rgba(16,24,63,.16),inset 0 1px 0 rgba(255,255,255,.95)';
-const GL2 = 'background:rgba(255,255,255,.66);-webkit-backdrop-filter:blur(34px) saturate(190%);backdrop-filter:blur(34px) saturate(190%);border:1px solid rgba(255,255,255,.9);box-shadow:0 -6px 40px rgba(16,24,63,.2),inset 0 1px 0 #fff';
-const TILE = 'background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.95)';
+const GL = 'background:rgba(255,255,255,.24);-webkit-backdrop-filter:blur(12px) saturate(210%) brightness(1.08);backdrop-filter:blur(12px) saturate(210%) brightness(1.08);border:0;box-shadow:0 12px 30px rgba(16,24,63,.18),0 2px 6px rgba(16,24,63,.08),inset 0 1px 1.5px rgba(255,255,255,.9),inset 0 -1.5px 2px rgba(255,255,255,.3)';
+const GL2 = 'background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(24px) saturate(210%) brightness(1.06);backdrop-filter:blur(24px) saturate(210%) brightness(1.06);border:0;box-shadow:0 -4px 40px rgba(16,24,63,.2),inset 0 1.5px 2px rgba(255,255,255,.95),inset 0 -1px 2px rgba(255,255,255,.35)';
+const TILE = 'background:linear-gradient(160deg,rgba(255,255,255,.75),rgba(255,255,255,.38));border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1px 1px #fff,0 4px 12px rgba(16,24,63,.06)';
 const MONO = 'font-family:var(--mono)';
 const Grab = () => html`<div aria-hidden="true" style=${S('align-self:center;width:40px;height:5px;border-radius:3px;background:rgba(16,24,63,.2);flex:none')}></div>`;
 
@@ -51,7 +51,7 @@ const Logo = (big) => big ? html`
     <span style=${S(`color:#FFC425;font-weight:900;font-stretch:72%;font-size:54px;line-height:.9;letter-spacing:-.005em;white-space:nowrap;text-shadow:${stackShadow(5, 1.2)}`)}>SPOTTED</span>
     <span style=${S('margin-top:8px;background:#FFC425;color:#1B3DB8;border-radius:7px;padding:3px 12px 4px;font-weight:900;font-style:italic;font-stretch:90%;font-size:20px;line-height:1.05;white-space:nowrap')}>in NYC</span>
   </div>` : html`
-  <div aria-label="Spotted In NYC" role="img" style=${S(`${GL};display:flex;align-items:center;flex:none;pointer-events:auto;border-radius:999px;padding:7px 7px 7px 14px`)}>
+  <div class="lg" aria-label="Spotted In NYC" role="img" style=${S(`${GL};display:flex;align-items:center;flex:none;pointer-events:auto;border-radius:999px;padding:7px 7px 7px 14px`)}>
     <span style=${S('display:flex;align-items:center;gap:6px;font-size:19.5px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-.4px;color:#10183F;white-space:nowrap')}>Spotted In<span style=${S('display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:999px;background:#FFC425;color:#10183F;font-size:15px;letter-spacing:.5px')}>NYC</span></span>
   </div>`;
 
@@ -69,25 +69,25 @@ function MapScreen(v) {
     <div style=${S(`position:absolute;top:${T(52)};left:14px;right:14px;z-index:500;display:flex;flex-direction:column;gap:10px;pointer-events:none`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
         ${Logo(false)}
-        <button onClick=${v.openAcct} aria-label=${v.syncOn ? 'Account and sync: ' + v.syncLabel : 'Your spots'} style=${S(`display:flex;align-items:center;gap:7px;border:0;${GL};color:#10183F;border-radius:999px;height:46px;padding:0 14px;font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.2px;white-space:nowrap;pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>${v.statsText}${v.syncOn && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${v.syncDot};flex:none`)}></span>`}</button>
+        <button class="lg" onClick=${v.openAcct} aria-label=${v.syncOn ? 'Account and sync: ' + v.syncLabel : 'Your spots'} style=${S(`display:flex;align-items:center;gap:7px;border:0;${GL};color:#10183F;border-radius:999px;height:46px;padding:0 14px;font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.2px;white-space:nowrap;pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>${v.statsText}${v.syncOn && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${v.syncDot};flex:none`)}></span>`}</button>
       </div>
       <div class="noscroll" style=${S('display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:2px 14px 6px;pointer-events:auto')}>
         ${v.mapChips.map((c, i) => html`
-        <button key=${i} onClick=${c.onClick} style=${S(`flex:none;display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;${c.bg === '#fff' ? GL : `border:1px solid ${c.border};background:${c.bg};box-shadow:0 6px 18px rgba(16,24,63,.2)`};color:${c.fg};font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap`)}><span class="emo" style=${S('font-size:15px')} aria-hidden="true">${c.emoji}</span>${c.label}<span style=${S('font-family:var(--mono);font-size:11px;font-weight:700;opacity:.7')}>${c.count}</span></button>`)}
+        <button key=${i} onClick=${c.onClick} style=${S(`flex:none;display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;${c.bg === '#fff' ? GL : `border:1px solid ${c.border};background:${c.bg};box-shadow:0 6px 18px rgba(16,24,63,.2)`};color:${c.fg};font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap`)}><span class="emo lg" style=${S('font-size:15px')} aria-hidden="true">${c.emoji}</span>${c.label}<span style=${S('font-family:var(--mono);font-size:11px;font-weight:700;opacity:.7')}>${c.count}</span></button>`)}
       </div>
       <div style=${S('display:flex;justify-content:flex-end;gap:8px;pointer-events:auto')}>
-        <button onClick=${v.toggleSubway} style=${S(`display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;${v.subBtnBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.subBtnBg + ';box-shadow:0 6px 18px rgba(16,24,63,.25)'};color:${v.subBtnFg};font-weight:800;font-size:13px;cursor:pointer`)}><span style=${S(`width:11px;height:11px;border-radius:50%;background:#FFFFFF;border:2.5px solid ${v.subBtnFg === '#fff' ? '#FFC425' : '#10183F'}`)}></span>Subway</button>
+        <button class="lg" onClick=${v.toggleSubway} style=${S(`display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;${v.subBtnBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.subBtnBg + ';box-shadow:0 6px 18px rgba(16,24,63,.25)'};color:${v.subBtnFg};font-weight:800;font-size:13px;cursor:pointer`)}><span style=${S(`width:11px;height:11px;border-radius:50%;background:#FFFFFF;border:2.5px solid ${v.subBtnFg === '#fff' ? '#FFC425' : '#10183F'}`)}></span>Subway</button>
       </div>
     </div>
-    <button onClick=${v.locateMe} aria-label="Show My Location" style=${S(`position:absolute;right:14px;bottom:${B(92)};z-index:600;width:50px;height:50px;border-radius:17px;${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 8px 22px rgba(16,24,63,.25)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>
+    <button class="lg" onClick=${v.locateMe} aria-label="Show My Location" style=${S(`position:absolute;right:14px;bottom:${B(92)};z-index:600;width:50px;height:50px;border-radius:17px;${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 8px 22px rgba(16,24,63,.25)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"></circle><circle cx="12" cy="12" r="2.4" fill="currentColor"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>
     </button>
     ${v.locLine && html`
-    <div style=${S(`position:absolute;left:14px;right:72px;bottom:${B(96)};z-index:600;${GL};border-radius:18px;padding:8px 12px;display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>
+    <div class="lg" style=${S(`position:absolute;left:14px;right:72px;bottom:${B(96)};z-index:600;${GL};border-radius:18px;padding:8px 12px;display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>
       <span style=${S('font-size:12px;font-weight:800;color:#1B3DB8')}>${v.locTitle}</span><span style=${S('font-size:12px;font-weight:600;color:#3C4466;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.locSub}</span>
     </div>`}
     ${v.locFailOpen && html`
-    <div style=${S(`position:absolute;left:12px;right:12px;bottom:${B(92)};z-index:960;${GL2};border-radius:28px;padding:16px;display:flex;flex-direction:column;gap:10px`)}>
+    <div class="lg" style=${S(`position:absolute;left:12px;right:12px;bottom:${B(92)};z-index:960;${GL2};border-radius:28px;padding:16px;display:flex;flex-direction:column;gap:10px`)}>
       <div style=${S('display:flex;justify-content:space-between;align-items:flex-start;gap:10px')}><div style=${S('font-weight:900;font-style:italic;font-size:20px;color:#1B3DB8;line-height:1.1')}>Can't Find You Yet</div>
         <button onClick=${v.closeLocFail} aria-label="Close" style=${S('flex:none;width:30px;height:30px;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:800;cursor:pointer')}>✕</button></div>
       <div style=${S('font-size:13px;line-height:1.4;color:#3C4466')}>${v.locFailMsg}</div>
@@ -247,7 +247,7 @@ function PlaceCard(v) {
     <button onClick=${on} style=${S(`height:62px;min-width:0;border-radius:18px;${TILE};color:#10183F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:800;font-size:11.5px;cursor:pointer;padding:0 4px;${extra || ''}`)}>${icon}<span style=${S('white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%')}>${label}</span></button>`;
   const ic = (d, col) => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke=${col} stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   return html`
-  <div style=${S(`position:absolute;left:8px;right:8px;bottom:${B(88)};z-index:900;${GL2};border-radius:34px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;max-height:calc(100% - var(--st) - 120px);overflow-y:auto`)} class="noscroll">
+  <div style=${S(`position:absolute;left:8px;right:8px;bottom:${B(88)};z-index:900;${GL2};border-radius:34px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;max-height:calc(100% - var(--st) - 120px);overflow-y:auto`)} class="noscroll lg">
     <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:8px')}>
       <div style=${S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0')}>
         <span style=${S(`font-size:12px;font-weight:800;background:${sel.catBg};color:${sel.catFg};padding:5px 11px;border-radius:999px`)}>${sel.catName}</span>
@@ -265,8 +265,8 @@ function PlaceCard(v) {
     </div>`}
     ${sel.hasNote && Note(sel.note, 'padding:12px 14px;border-radius:18px;background:rgba(255,196,37,.22);border:1px dashed rgba(16,24,63,.25);font-size:14px;line-height:1.4;font-weight:500;color:#10183F')}
     <div style=${S(`display:grid;grid-template-columns:${sel.hasUrl ? '1fr 1fr' : '1fr'};gap:8px`)}>
-      <button onClick=${v.openRoute} style=${S('height:52px;border-radius:18px;border:0;background:#1B3DB8;color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 8px 22px rgba(27,61,184,.42),inset 0 1px 0 rgba(255,255,255,.35)')}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg>Get There</button>
-      ${sel.hasUrl && html`<button onClick=${v.openSource} style=${S(`height:52px;border-radius:18px;border:0;background:${sel.srcBg};color:#fff;font-weight:800;font-size:13.5px;cursor:pointer;box-shadow:0 8px 20px rgba(16,24,63,.22)`)}>${sel.openLabel} ↗</button>`}
+      <button class="lg" onClick=${v.openRoute} style=${S('height:52px;border-radius:999px;border:0;background:linear-gradient(180deg,#3558D6,#1B3DB8 60%,#1633A0);color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 8px 22px rgba(27,61,184,.42),inset 0 1px 0 rgba(255,255,255,.35)')}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg>Get There</button>
+      ${sel.hasUrl && html`<button class="lg" onClick=${v.openSource} style=${S(`height:52px;border-radius:999px;border:0;background:${sel.srcBg};color:#fff;font-weight:800;font-size:13.5px;cursor:pointer;box-shadow:0 8px 20px rgba(16,24,63,.22)`)}>${sel.openLabel} ↗</button>`}
     </div>
     <div style=${S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
       ${act(v.togglePlanSel, sel.planLabel.replace(/^\+\s*/, ''), ic(html`<path d="M12 5v14M5 12h14"></path>`, '#FF6B1A'), sel.planBg !== '#fff' ? `background:${sel.planBg};color:${sel.planFg}` : '')}
@@ -282,7 +282,7 @@ function PlaceCard(v) {
 
 function RouteSheet(v) {
   return html`
-  <div data-screen-label="Get There" style=${S(`position:absolute;left:0;right:0;bottom:0;z-index:980;max-height:60%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
+  <div class="lg" data-screen-label="Get There" style=${S(`position:absolute;left:0;right:0;bottom:0;z-index:980;max-height:60%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
     ${Grab()}
     <div style=${S('flex:none;padding:10px 18px 10px;display:flex;flex-direction:column;gap:10px')}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
@@ -332,7 +332,7 @@ function RouteSheet(v) {
 function Picker(v) {
   return html`
   <div style=${S('position:absolute;inset:0;z-index:1050;background:rgba(16,24,63,.26);display:flex;flex-direction:column;justify-content:flex-end')}>
-    <div style=${S(`max-height:78%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
+    <div class="lg" style=${S(`max-height:78%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
       ${Grab()}
       <div style=${S('flex:none;padding:10px 18px 10px;display:flex;align-items:center;justify-content:space-between')}>
         <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:24px;color:#1B3DB8')}>Add To Plan</div>
@@ -354,7 +354,7 @@ function Picker(v) {
 const PEN = 'height:44px;border-radius:14px;font-weight:800;font-size:13.5px;cursor:pointer';
 const Sheet = (title, close, body, closeLabel, z) => html`
   <div onClick=${close} style=${S(`position:absolute;inset:0;z-index:${z || 1050};background:rgba(16,24,63,.26);display:flex;flex-direction:column;justify-content:flex-end`)}>
-    <div onClick=${e => e.stopPropagation()} style=${S(`max-height:86%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
+    <div class="lg" onClick=${e => e.stopPropagation()} style=${S(`max-height:86%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
       ${Grab()}
       <div style=${S('flex:none;padding:10px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px')}>
         <div style=${S('min-width:0;font-weight:900;font-stretch:100%;font-style:italic;font-size:24px;line-height:1.05;color:#1B3DB8')}>${title}</div>
@@ -488,7 +488,7 @@ function ListsScreen(v) {
 function TripSelCard(v) {
   const p = v.tsel;
   return html`
-  <div style=${S(`position:absolute;left:12px;right:12px;bottom:${B(88)};z-index:900;${GL2};border-radius:34px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px`)}>
+  <div class="lg" style=${S(`position:absolute;left:12px;right:12px;bottom:${B(88)};z-index:900;${GL2};border-radius:34px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px`)}>
     <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:8px')}>
       <div style=${S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0')}>
         <span style=${S(`font-size:12px;font-weight:800;background:${p.catBg};color:${p.catFg};padding:5px 10px;border-radius:999px`)}>${p.catName}</span>
@@ -626,12 +626,12 @@ function NewTripSheet(v) {
 
 function TabBar(v) {
   const tab = (on, fg, label, icon, extra) => html`
-    <button onClick=${on} aria-current=${fg === '#1B3DB8' ? 'page' : null} style=${S(`height:56px;min-width:0;border:0;border-radius:22px;background:${fg === '#1B3DB8' ? 'rgba(27,61,184,.12)' : 'transparent'};color:${fg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-weight:800;font-size:11px;padding:0`)}>${icon}<span>${label}</span></button>`;
+    <button onClick=${on} aria-current=${fg === '#1B3DB8' ? 'page' : null} style=${S(`height:56px;min-width:0;border:0;border-radius:999px;background:${fg === '#1B3DB8' ? 'linear-gradient(160deg,rgba(255,255,255,.85),rgba(255,255,255,.45))' : 'transparent'};box-shadow:${fg === '#1B3DB8' ? 'inset 0 1px 1px #fff,inset 0 -1px 2px rgba(27,61,184,.12),0 4px 12px rgba(16,24,63,.12)' : 'none'};transition:background .3s,box-shadow .3s;color:${fg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-weight:800;font-size:11px;padding:0`)}>${icon}<span>${label}</span></button>`;
   return html`
-  <nav style=${S(`position:absolute;left:16px;right:16px;bottom:${B(14)};height:70px;z-index:950;${GL};background:rgba(255,255,255,.72);border-radius:28px;display:grid;grid-template-columns:1fr 1fr 66px 1fr 1fr;align-items:center;gap:2px;padding:0 6px`)}>
+  <nav class="lg" style=${S(`position:absolute;left:16px;right:16px;bottom:${B(14)};height:70px;z-index:950;${GL};background:rgba(255,255,255,.36);border-radius:999px;display:grid;grid-template-columns:1fr 1fr 66px 1fr 1fr;align-items:center;gap:2px;padding:0 6px`)}>
     ${tab(v.goMap, v.tabMapFg, 'Map', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg>`)}
     ${tab(v.goExplore, v.tabExFg, 'Explore', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor"></path></svg>`)}
-    <div style=${S('display:flex;justify-content:center')}><button onClick=${v.openAdd} aria-label="Add A Spot" class="press94" style=${S('width:56px;height:56px;border-radius:20px;border:1px solid rgba(255,255,255,.55);background:#FF6B1A;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(255,107,26,.55),inset 0 1px 0 rgba(255,255,255,.5)')}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button></div>
+    <div style=${S('display:flex;justify-content:center')}><button onClick=${v.openAdd} aria-label="Add A Spot" class="press94 lg" style=${S('width:58px;height:58px;border-radius:999px;border:0;background:linear-gradient(180deg,#FF9152,#FF6B1A 55%,#F05A0C);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(255,107,26,.55),inset 0 1px 0 rgba(255,255,255,.5)')}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button></div>
     ${tab(v.goPlan, v.tabPlanFg, 'Route', html`<span style=${S('position:relative;display:flex')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5" stroke-dasharray="2 3"></path></svg><span style=${S('position:absolute;top:-5px;right:-11px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#FF6B1A;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #FFFFFF')}>${v.planCount}</span></span>`)}
     ${tab(v.goLists, v.tabListFg, 'Lists', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"></path><path d="M4 5.5l.9.9L6.6 4.6M4 11.5l.9.9 1.7-1.8M4 17.5l.9.9 1.7-1.8"></path></svg>`)}
   </nav>`;
@@ -781,7 +781,7 @@ function AddSheet(v) {
 function AccountSheet(v) {
   return html`
   <div onClick=${v.closeAcct} style=${S('position:absolute;inset:0;z-index:1050;background:rgba(16,24,63,.26);display:flex;flex-direction:column;justify-content:flex-end')}>
-    <div onClick=${e => e.stopPropagation()} style=${S(`${GL2};border-bottom:0;border-radius:34px 34px 0 0;padding:20px 18px ${B(28)};display:flex;flex-direction:column;gap:14px`)}>
+    <div class="lg" onClick=${e => e.stopPropagation()} style=${S(`${GL2};border-bottom:0;border-radius:34px 34px 0 0;padding:20px 18px ${B(28)};display:flex;flex-direction:column;gap:14px`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
         <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:24px;color:#1B3DB8')}>Your Account</div>
         <button onClick=${v.closeAcct} style=${S('height:38px;padding:0 16px;border-radius:999px;border:0;background:#10183F;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>Done</button>

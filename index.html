@@ -40,6 +40,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .hov:hover{background:var(--cream)!important}
 #root{height:100%}
 .mono{font-family:var(--mono)}
+/* Liquid glass: a light sheen across the surface and a bright rim that catches the light on the top-left and
+   bottom-right edges. Pair with the GL / GL2 styles in view.js. Pressing a glass button squishes it a little. */
+.lg{position:relative;isolation:isolate;transition:transform .45s cubic-bezier(.3,1.5,.5,1)}
+.lg::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:linear-gradient(135deg,rgba(255,255,255,.5) 0%,rgba(255,255,255,.12) 30%,rgba(255,255,255,0) 55%,rgba(255,255,255,.14) 100%)}
+.lg::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1.2px;
+  background:linear-gradient(140deg,rgba(255,255,255,.98),rgba(255,255,255,.25) 28%,rgba(255,255,255,.05) 55%,rgba(255,255,255,.35) 80%,rgba(255,255,255,.85));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+button.lg:active{transform:scale(.95)}
 .emo{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;line-height:1;font-style:normal}
 
 /* Desktop: the app sits in the phone frame from the design. */
