@@ -20,9 +20,16 @@ const T = n => `calc(var(--st) + ${n - 46}px)`;
 const B = n => `calc(var(--sb) + ${n}px)`;
 
 // Glass: frosted panels over the map. GL for floating controls, GL2 for cards and sheets.
-const GL = 'background:rgba(255,255,255,.24);-webkit-backdrop-filter:blur(12px) saturate(210%) brightness(1.08);backdrop-filter:blur(12px) saturate(210%) brightness(1.08);border:0;box-shadow:0 12px 30px rgba(16,24,63,.18),0 2px 6px rgba(16,24,63,.08),inset 0 1px 1.5px rgba(255,255,255,.9),inset 0 -1.5px 2px rgba(255,255,255,.3)';
-const GL2 = 'background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(24px) saturate(210%) brightness(1.06);backdrop-filter:blur(24px) saturate(210%) brightness(1.06);border:0;box-shadow:0 -4px 40px rgba(16,24,63,.2),inset 0 1.5px 2px rgba(255,255,255,.95),inset 0 -1px 2px rgba(255,255,255,.35)';
-const TILE = 'background:linear-gradient(160deg,rgba(255,255,255,.75),rgba(255,255,255,.38));border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1px 1px #fff,0 4px 12px rgba(16,24,63,.06)';
+const GL = 'background:rgba(255,255,255,.46);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.8);box-shadow:0 10px 30px rgba(16,24,63,.16),inset 0 1px 0 rgba(255,255,255,.95)';
+const GL2 = 'background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(35px) saturate(190%);backdrop-filter:blur(35px) saturate(190%);border:1px solid rgba(255,255,255,.85);box-shadow:0 -10px 40px rgba(16,24,63,.18),inset 0 1px 0 #fff';
+const TILE = 'background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9)';
+const ROW = 'background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.95)';
+// A category's line icon (see CAT_ICON in logic.js), or its emoji when it has none.
+const CatIcon = (em, px, col) => CAT_ICON[em]
+  ? html`<svg width=${px} height=${px} viewBox="0 0 24 24" fill="none" stroke=${col} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${CAT_ICON[em]}></path></svg>`
+  : html`<span class="emo" aria-hidden="true" style=${S(`font-size:${Math.round(px * .95)}px`)}>${em}</span>`;
+const Ico = (d, px, col, sw) => html`<svg width=${px || 20} height=${px || 20} viewBox="0 0 24 24" fill="none" stroke=${col || 'currentColor'} stroke-width=${sw || 2.2} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${d}></path></svg>`;
+const BACK = 'M15 5l-7 7 7 7', ARROW_NE = 'M7 17L17 7M9 7h8v8';
 const MONO = 'font-family:var(--mono)';
 const Grab = () => html`<div aria-hidden="true" style=${S('align-self:center;width:40px;height:5px;border-radius:3px;background:rgba(16,24,63,.2);flex:none')}></div>`;
 
@@ -63,31 +70,36 @@ const H3 = (title, onClear, clearLabel, mt) => html`
   </div>`;
 
 function MapScreen(v) {
+  const sideBtn = 'width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;cursor:pointer';
+  const hide = v.hasSel ? 'none' : 'flex';
   return html`
   <div data-screen-label="Map" style=${S(`position:absolute;inset:0;display:${v.mapDisplay}`)}>
     <div ref=${v.mainMapRef} style=${S('position:absolute;inset:0')}></div>
-    <div style=${S(`position:absolute;top:${T(52)};left:14px;right:14px;z-index:500;display:flex;flex-direction:column;gap:10px;pointer-events:none`)}>
+    <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:500;display:${hide};flex-direction:column;gap:16px;pointer-events:none`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
         ${Logo(false)}
-        <button class="lg" onClick=${v.openAcct} aria-label=${v.syncOn ? 'Account and sync: ' + v.syncLabel : 'Your spots'} style=${S(`display:flex;align-items:center;gap:7px;border:0;${GL};color:#10183F;border-radius:999px;height:46px;padding:0 14px;font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.2px;white-space:nowrap;pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>${v.statsText}${v.syncOn && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${v.syncDot};flex:none`)}></span>`}</button>
+        <button class="lg" onClick=${v.openAcct} aria-label=${v.syncOn ? 'Your Account: ' + v.syncLabel : v.statsText} style=${S(`${GL};display:flex;align-items:center;gap:8px;height:46px;padding:0 14px;border-radius:999px;color:#10183F;white-space:nowrap;pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>
+          <span style=${S('font-family:var(--mono);font-size:15px;font-weight:700')}>${v.spotCount}</span>
+          <span style=${S('font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:#3A4470')}>${v.spotCount === 1 ? 'SPOT' : 'SPOTS'}</span>
+          ${v.syncOn && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${v.syncDot};box-shadow:0 0 0 3px ${v.syncDot}40`)}></span>`}
+        </button>
       </div>
-      <div class="noscroll" style=${S('display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:2px 14px 6px;pointer-events:auto')}>
-        ${v.mapChips.map((c, i) => html`
-        <button key=${i} onClick=${c.onClick} style=${S(`flex:none;display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;${c.bg === '#fff' ? GL : `border:1px solid ${c.border};background:${c.bg};box-shadow:0 6px 18px rgba(16,24,63,.2)`};color:${c.fg};font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap`)}><span class="emo lg" style=${S('font-size:15px')} aria-hidden="true">${c.emoji}</span>${c.label}<span style=${S('font-family:var(--mono);font-size:11px;font-weight:700;opacity:.7')}>${c.count}</span></button>`)}
-      </div>
-      <div style=${S('display:flex;justify-content:flex-end;gap:8px;pointer-events:auto')}>
-        <button class="lg" onClick=${v.toggleSubway} style=${S(`display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;${v.subBtnBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.subBtnBg + ';box-shadow:0 6px 18px rgba(16,24,63,.25)'};color:${v.subBtnFg};font-weight:800;font-size:13px;cursor:pointer`)}><span style=${S(`width:11px;height:11px;border-radius:50%;background:#FFFFFF;border:2.5px solid ${v.subBtnFg === '#fff' ? '#FFC425' : '#10183F'}`)}></span>Subway</button>
-      </div>
+      <nav aria-label="Categories" class="noscroll" style=${S('display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;pointer-events:auto')}>
+        ${v.mapChips.map((c, i) => c.bg === '#fff' ? html`
+        <button key=${i} class="lg" onClick=${c.onClick} style=${S(`${GL};flex:none;display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;color:#10183F;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap`)}>${i > 0 && html`<span style=${S(`width:9px;height:9px;border-radius:50%;background:${c.dot}`)}></span>`}${i ? c.label : 'All Spots'}</button>` : html`
+        <button key=${i} onClick=${c.onClick} style=${S(`flex:none;display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;border:none;background:${c.bg};color:${c.fg};font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;box-shadow:0 6px 16px rgba(16,24,63,.2)`)}>${i > 0 && html`<span style=${S(`width:9px;height:9px;border-radius:50%;background:${c.dot}`)}></span>`}${i ? c.label : 'All Spots'}</button>`)}
+      </nav>
     </div>
-    <button class="lg" onClick=${v.locateMe} aria-label="Show My Location" style=${S(`position:absolute;right:14px;bottom:${B(92)};z-index:600;width:50px;height:50px;border-radius:17px;${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 8px 22px rgba(16,24,63,.25)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"></circle><circle cx="12" cy="12" r="2.4" fill="currentColor"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>
-    </button>
+    <div style=${S(`position:absolute;right:16px;bottom:${B(112)};z-index:600;display:${hide};flex-direction:column;gap:10px`)}>
+      <button class="lg" onClick=${v.toggleSubway} aria-label="Subway Layer" aria-pressed=${v.subBtnBg !== '#fff'} style=${S(`${sideBtn};${v.subBtnBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:#10183F;box-shadow:0 10px 26px rgba(16,24,63,.3)'};color:${v.subBtnBg === '#fff' ? '#10183F' : '#FFC425'}`)}>${Ico('M12 3l9 5-9 5-9-5z M3 13l9 5 9-5', 22)}</button>
+      <button class="lg" onClick=${v.locateMe} aria-label="My Location" style=${S(`${sideBtn};${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 10px 26px rgba(16,24,63,.3)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg}`)}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg></button>
+    </div>
     ${v.locLine && html`
-    <div class="lg" style=${S(`position:absolute;left:14px;right:72px;bottom:${B(96)};z-index:600;${GL};border-radius:18px;padding:8px 12px;display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>
+    <div class="lg" style=${S(`position:absolute;left:16px;right:76px;bottom:${B(116)};z-index:600;${GL};border-radius:18px;padding:8px 12px;display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>
       <span style=${S('font-size:12px;font-weight:800;color:#1B3DB8')}>${v.locTitle}</span><span style=${S('font-size:12px;font-weight:600;color:#3C4466;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.locSub}</span>
     </div>`}
     ${v.locFailOpen && html`
-    <div class="lg" style=${S(`position:absolute;left:12px;right:12px;bottom:${B(92)};z-index:960;${GL2};border-radius:28px;padding:16px;display:flex;flex-direction:column;gap:10px`)}>
+    <div class="lg" style=${S(`position:absolute;left:8px;right:8px;bottom:${B(108)};z-index:960;${GL2};border-radius:28px;padding:16px;display:flex;flex-direction:column;gap:10px`)}>
       <div style=${S('display:flex;justify-content:space-between;align-items:flex-start;gap:10px')}><div style=${S('font-weight:900;font-style:italic;font-size:20px;color:#1B3DB8;line-height:1.1')}>Can't Find You Yet</div>
         <button onClick=${v.closeLocFail} aria-label="Close" style=${S('flex:none;width:30px;height:30px;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:800;cursor:pointer')}>✕</button></div>
       <div style=${S('font-size:13px;line-height:1.4;color:#3C4466')}>${v.locFailMsg}</div>
@@ -114,7 +126,7 @@ function ExploreScreen(v) {
       <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:10px')}>
         ${v.exTiles.map((t, i) => html`
         <button key=${i} class="press" onClick=${t.onClick} style=${S(`position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:16px;min-height:100px;padding:14px;border-radius:22px;border:2.5px solid ${t.border};background:${t.bg};color:${t.fg};text-align:left;cursor:pointer`)}>
-          <span style=${S('display:flex;justify-content:space-between;align-items:center')}><span class="emo" style=${S('font-size:24px')} aria-hidden="true">${t.emoji}</span><span style=${S('font-weight:900;font-size:15px')}>${t.check}</span></span>
+          <span style=${S('display:flex;justify-content:space-between;align-items:center')}><span style=${S(`width:38px;height:38px;border-radius:13px;background:${t.check ? 'rgba(255,255,255,.25)' : t.dot};display:flex;align-items:center;justify-content:center`)}>${CatIcon(t.emoji, 20, t.check ? t.fg : (t.dot === '#FFC425' ? '#10183F' : '#fff'))}</span><span style=${S('font-weight:900;font-size:15px')}>${t.check}</span></span>
           <span style=${S('display:flex;flex-direction:column;gap:3px')}><span style=${S('font-weight:800;font-size:15px;line-height:1.15;text-wrap:pretty')}>${t.name}</span><span style=${S('font-size:12px;font-weight:600;opacity:.8')}>${t.countLabel}</span></span>
         </button>`)}
       </div>
@@ -142,7 +154,7 @@ function ExploreScreen(v) {
         <span style=${S(`width:48px;height:28px;border-radius:999px;background:${v.hvTrack};padding:3px;display:flex;transition:background .2s`)}><span style=${S(`width:22px;height:22px;border-radius:50%;background:#FFFFFF;transform:translateX(${v.hvKnob});transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)`)}></span></span>
       </button>
     </div>
-    <div style=${S(`position:absolute;left:16px;right:16px;bottom:${B(92)};z-index:20;display:${v.exPickDisplay}`)}>
+    <div style=${S(`position:absolute;left:16px;right:16px;bottom:${B(104)};z-index:20;display:${v.exPickDisplay}`)}>
       <button onClick=${v.showResults} style=${S(`width:100%;height:46px;border-radius:999px;border:0;background:${v.showBtnBg};color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>${v.showBtnLabel}</button>
     </div>
     <div style=${S(`position:absolute;inset:0;display:${v.exResDisplay};flex-direction:column`)}>
@@ -159,7 +171,7 @@ function ExploreScreen(v) {
         </div>
       </div>
       <div style=${S('position:relative;flex:1;min-height:0;margin-top:-30px')}>
-        <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:44px 16px ${B(110)};display:${v.exListDisplay};flex-direction:column;gap:10px`)}>
+        <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:44px 16px ${B(124)};display:${v.exListDisplay};flex-direction:column;gap:10px`)}>
           ${v.resultCards.map((r, i) => html`
           <div key=${i} onClick=${r.onClick} style=${S(`flex:none;display:flex;gap:14px;align-items:stretch;width:100%;background:#fff;border:2px solid ${r.ring};border-radius:24px;padding:12px;cursor:pointer;box-shadow:0 2px 8px rgba(16,24,63,.06)`)}>
             <div style=${S(`width:62px;flex:none;border-radius:16px;background:${r.catBg};color:${r.catFg};display:flex;align-items:center;justify-content:center;font-weight:900;font-stretch:100%;font-style:italic;font-size:30px`)}>${r.initial}</div>
@@ -194,7 +206,7 @@ function PlanScreen(v) {
       <div ref=${v.planMapRef} style=${S('position:absolute;inset:0')}></div>
       <div style=${S('position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(rgba(255,243,223,0),rgba(255,243,223,.85));z-index:500;pointer-events:none')}></div>
     </div>
-    <div style=${S(`padding:4px 18px ${B(120)};display:flex;flex-direction:column;gap:16px`)}>
+    <div style=${S(`padding:4px 18px ${B(130)};display:flex;flex-direction:column;gap:16px`)}>
       <div>
         <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:38px;line-height:.95;letter-spacing:-.02em;color:#1B3DB8')}>Plan A <span style=${S('color:#FF6B1A')}>Day</span></div>
         <div style=${S('margin-top:6px;font-size:14px;font-weight:600;color:#3C4466')}>${v.planSummary}</div>
@@ -242,42 +254,60 @@ function PlanScreen(v) {
 }
 
 function PlaceCard(v) {
-  const sel = v.sel;
-  const act = (on, label, icon, extra) => html`
-    <button onClick=${on} style=${S(`height:62px;min-width:0;border-radius:18px;${TILE};color:#10183F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:800;font-size:11.5px;cursor:pointer;padding:0 4px;${extra || ''}`)}>${icon}<span style=${S('white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%')}>${label}</span></button>`;
-  const ic = (d, col) => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke=${col} stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const sel = v.sel, onMap = v.onMapTab;
+  const mono = (t, col) => html`<span style=${S(`font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.2px;color:${col || '#3A4470'}`)}>${t}</span>`;
+  const tile = 'border-radius:20px;padding:12px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9);display:flex;flex-direction:column;gap:6px;min-width:0';
+  const act = (go, label, d, col, on) => html`
+    <button onClick=${go} style=${S(`height:64px;min-width:0;border-radius:18px;${on ? `border:1px solid rgba(255,255,255,.5);background:${on.bg};color:${on.fg}` : TILE + ';color:#10183F'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:800;cursor:pointer;padding:0 4px`)}>${Ico(d, 20, on ? 'currentColor' : col, 2.4)}<span style=${S('max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${label}</span></button>`;
+  const twoTiles = sel.hasStation;
   return html`
-  <div style=${S(`position:absolute;left:8px;right:8px;bottom:${B(88)};z-index:900;${GL2};border-radius:34px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;max-height:calc(100% - var(--st) - 120px);overflow-y:auto`)} class="noscroll lg">
-    <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:8px')}>
-      <div style=${S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0')}>
-        <span style=${S(`font-size:12px;font-weight:800;background:${sel.catBg};color:${sel.catFg};padding:5px 11px;border-radius:999px`)}>${sel.catName}</span>
-        <span style=${S('font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.8px;color:#3A4470;text-transform:uppercase')}>${sel.area}${sel.hasPrice ? ' · ' + sel.price : ''}</span>
+  ${onMap && html`<button class="lg" onClick=${v.closeSel} aria-label="Back To Map" style=${S(`position:absolute;top:${T(56)};left:16px;z-index:900;width:46px;height:46px;border-radius:50%;${GL};color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico(BACK, 20, 'currentColor', 2.4)}</button>`}
+  <section aria-label=${sel.name} class="noscroll" style=${S(`position:absolute;left:8px;right:8px;bottom:${onMap ? B(8) : B(102)};z-index:900;${GL2};border-radius:38px;padding:12px 20px 22px;display:flex;flex-direction:column;gap:16px;max-height:calc(100% - var(--st) - ${onMap ? 70 : 150}px);overflow-y:auto`)}>
+    ${Grab()}
+    <div style=${S('display:flex;flex-direction:column;gap:8px')}>
+      <div style=${S('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
+        <span style=${S(`display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:${sel.catBg};color:${sel.catFg};font-size:12px;font-weight:800`)}>${sel.catName}</span>
+        <span style=${S('font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;color:#3A4470;text-transform:uppercase')}>${sel.area}${sel.hasPrice ? ' · ' + sel.price : ''}</span>
+        <span style=${S('flex:1')}></span>
+        ${sel.srcBadge && html`<span style=${S(`display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:${sel.srcBg};color:#fff;font-size:11px;font-weight:800`)}>${sel.srcBadge}</span>`}
+        ${!onMap && html`<button onClick=${v.closeSel} aria-label="Close" style=${S('flex:none;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.6);color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>✕</button>`}
       </div>
-      <button onClick=${v.closeSel} aria-label="Close" style=${S('flex:none;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.7);color:#10183F;font-weight:800;font-size:15px;cursor:pointer')}>✕</button>
+      <h1 style=${S('margin:0;font-size:34px;line-height:1;font-weight:900;font-style:italic;font-stretch:100%;letter-spacing:-.8px')}>${sel.name}</h1>
     </div>
-    <div style=${S('font-weight:900;font-style:italic;font-stretch:100%;font-size:30px;line-height:1;letter-spacing:-.02em')}>${sel.name}</div>
-    ${sel.hasStation && html`
-    <div style=${S(`display:flex;align-items:center;gap:8px;flex-wrap:wrap;${TILE};border-radius:18px;padding:10px 12px`)}>
-      <span style=${S('font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:#3A4470')}>NEAREST SUBWAY</span>
-      <span style=${S('display:flex;gap:3px')}>${sel.stRoutes.map(Bul)}</span>
-      <span style=${S('font-size:14px;font-weight:800')}>${sel.stName}</span>
-      <span style=${S('font-family:var(--mono);font-size:11.5px;font-weight:700;color:#1B3DB8;text-transform:uppercase')}>${sel.stWalk}</span>
-    </div>`}
-    ${sel.hasNote && Note(sel.note, 'padding:12px 14px;border-radius:18px;background:rgba(255,196,37,.22);border:1px dashed rgba(16,24,63,.25);font-size:14px;line-height:1.4;font-weight:500;color:#10183F')}
-    <div style=${S(`display:grid;grid-template-columns:${sel.hasUrl ? '1fr 1fr' : '1fr'};gap:8px`)}>
-      <button class="lg" onClick=${v.openRoute} style=${S('height:52px;border-radius:999px;border:0;background:linear-gradient(180deg,#3558D6,#1B3DB8 60%,#1633A0);color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 8px 22px rgba(27,61,184,.42),inset 0 1px 0 rgba(255,255,255,.35)')}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg>Get There</button>
-      ${sel.hasUrl && html`<button class="lg" onClick=${v.openSource} style=${S(`height:52px;border-radius:999px;border:0;background:${sel.srcBg};color:#fff;font-weight:800;font-size:13.5px;cursor:pointer;box-shadow:0 8px 20px rgba(16,24,63,.22)`)}>${sel.openLabel} ↗</button>`}
+    <div style=${S(`display:grid;grid-template-columns:${twoTiles ? 'repeat(2,minmax(0,1fr))' : '1fr'};gap:10px`)}>
+      ${sel.hasStation && html`
+      <div style=${S(tile)}>
+        ${mono('NEAREST SUBWAY')}
+        <div style=${S('display:flex;align-items:center;gap:6px;min-width:0')}>
+          <span style=${S('display:flex;gap:3px;flex:none')}>${sel.stRoutes.slice(0, 3).map(Bul)}</span>
+          <span style=${S('font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${sel.stName}</span>
+        </div>
+        <span style=${S('font-family:var(--mono);font-size:12px;font-weight:700;color:#1B3DB8;text-transform:uppercase')}>${sel.stWalk}</span>
+      </div>`}
+      ${sel.homeMin ? html`
+      <div style=${S(tile)}>
+        ${mono('FROM HOME')}
+        <span style=${S('font-size:26px;font-weight:900;font-style:italic;line-height:1')}>${sel.homeMin > 99 ? Math.round(sel.homeMin / 60) : sel.homeMin}<span style=${S('font-size:13px;font-style:normal;font-weight:800')}>${sel.homeMin > 99 ? ' hr' : ' min'}</span></span>
+        <span style=${S('font-family:var(--mono);font-size:12px;font-weight:700;color:#1F9D6B;text-transform:uppercase')}>${sel.homeHow}</span>
+      </div>` : html`
+      <button onClick=${v.openRoute} style=${S(`${tile};cursor:pointer;text-align:left;color:#10183F;font-family:inherit`)}>
+        ${mono('FROM HOME')}
+        <span style=${S('font-size:15px;font-weight:800')}>Set Your Home</span>
+        <span style=${S('font-family:var(--mono);font-size:12px;font-weight:700;color:#1B3DB8')}>SEE TRAVEL TIMES</span>
+      </button>`}
+    </div>
+    ${sel.hasNote && Note(sel.note, 'padding:12px 14px;border-radius:18px;background:rgba(255,196,37,.22);border:1px dashed rgba(16,24,63,.25);font-size:14px;line-height:1.45;font-weight:500')}
+    <div style=${S('display:flex;gap:10px')}>
+      <button class="lg" onClick=${v.openRoute} style=${S('flex:1;height:54px;border-radius:18px;border:none;background:#1B3DB8;color:#fff;font-size:16px;font-weight:900;font-style:italic;font-stretch:100%;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 8px 22px rgba(27,61,184,.45),inset 0 1px 0 rgba(255,255,255,.35)')}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg>Get There</button>
+      ${sel.hasUrl && html`<button class="lg" onClick=${v.openSource} style=${S(`flex:1;height:54px;border-radius:18px;border:none;background:${sel.srcBg};color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer`)}>${Ico(ARROW_NE, 18, 'currentColor', 2.4)}${sel.openLabel}</button>`}
     </div>
     <div style=${S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
-      ${act(v.togglePlanSel, sel.planLabel.replace(/^\+\s*/, ''), ic(html`<path d="M12 5v14M5 12h14"></path>`, '#FF6B1A'), sel.planBg !== '#fff' ? `background:${sel.planBg};color:${sel.planFg}` : '')}
-      ${act(v.toggleVisited, sel.visLabel.replace(/^Mark\s+/, ''), ic(html`<path d="M5 12l5 5 9-10"></path>`, sel.visBg !== '#fff' ? '#fff' : '#1F9D6B'), sel.visBg !== '#fff' ? `background:${sel.visBg};color:${sel.visFg}` : '')}
-      ${act(v.addToListSel, 'To A List', ic(html`<path d="M8 6h13M8 12h13M8 18h13"></path><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path>`, '#F45FA0'))}
-      ${act(v.editSel, 'Edit', ic(html`<path d="M4 20h4L19 9l-4-4L4 16z"></path>`, '#1B3DB8'))}
+      ${act(v.togglePlanSel, sel.planBg === '#fff' ? 'Plan' : 'In Plan', 'M12 5v14M5 12h14', '#FF6B1A', sel.planBg !== '#fff' && { bg: sel.planBg, fg: sel.planFg })}
+      ${act(v.toggleVisited, 'Visited', 'M5 12l5 5 9-10', '#1F9D6B', sel.visBg !== '#fff' && { bg: sel.visBg, fg: sel.visFg })}
+      ${act(v.addToListSel, 'To List', 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01', '#7A4FD6')}
+      ${act(v.editSel, 'Edit', 'M4 20h4L19 9l-4-4L4 16z', '#1B3DB8')}
     </div>
-    <div style=${S('display:flex;justify-content:center')}>
-      <button onClick=${v.deleteSel} style=${S('border:0;background:none;color:#E8242C;font-weight:700;font-size:13px;cursor:pointer;padding:4px')}>${v.delLabel}</button>
-    </div>
-  </div>`;
+  </section>`;
 }
 
 function RouteSheet(v) {
@@ -341,7 +371,7 @@ function Picker(v) {
       <div class="noscroll" style=${S(`flex:1;min-height:0;overflow-y:auto;padding:0 16px ${B(30)};display:flex;flex-direction:column;gap:8px`)}>
         ${v.pickerRows.map((r, i) => html`
         <button key=${i} onClick=${r.onClick} style=${S(`display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:2px solid ${r.ring};border-radius:18px;padding:10px 12px;cursor:pointer;color:#10183F`)}>
-          <span class="emo" style=${S(`width:34px;height:34px;border-radius:12px;background:${r.catBg};flex:none;display:flex;align-items:center;justify-content:center;font-size:18px`)} aria-hidden="true">${r.emoji}</span>
+          <span style=${S(`width:34px;height:34px;border-radius:12px;background:${r.catBg};flex:none;display:flex;align-items:center;justify-content:center`)}>${CatIcon(r.emoji, 17, r.catBg === '#FFC425' ? '#10183F' : '#fff')}</span>
           <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-weight:800;font-size:15px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.catName} · ${r.area}</span></span>
           <span style=${S(`width:28px;height:28px;border-radius:50%;flex:none;background:${r.chkBg};color:#fff;border:1.5px solid rgba(16,24,63,.14);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px`)}>${r.chk}</span>
         </button>`)}
@@ -376,7 +406,7 @@ function ListsScreen(v) {
   <div data-screen-label="Lists" style=${S(`position:absolute;inset:0;display:${v.listsDisplay}`)}>
     <div ref=${v.tripMapRef} style=${S(`position:absolute;top:0;left:0;right:0;height:${v.tripMapH};z-index:0;isolation:isolate;visibility:${t ? 'visible' : 'hidden'}`)}></div>
     ${v.listsIndex ? html`
-    <div class="noscroll" style=${S(`position:absolute;inset:0;z-index:5;background:var(--bgfx);overflow-y:auto;padding:${T(62)} 18px ${B(120)};display:flex;flex-direction:column;gap:14px`)}>
+    <div class="noscroll" style=${S(`position:absolute;inset:0;z-index:5;background:var(--bgfx);overflow-y:auto;padding:${T(62)} 18px ${B(130)};display:flex;flex-direction:column;gap:14px`)}>
       <div>
         <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:42px;line-height:.92;letter-spacing:-.02em;color:#1B3DB8')}>My <span style=${S('color:#FF6B1A')}>Lists</span></div>
         <p style=${S('margin:10px 0 0;font-size:15px;font-weight:500;color:#3C4466')}>Gather Spots For A Visit Or A Big Day Out, Then Plan It Together.</p>
@@ -400,95 +430,111 @@ function ListsScreen(v) {
         </span>
       </button>`)}
     </div>` : html`
-    <div style=${S(`position:absolute;top:${T(52)};left:14px;right:14px;z-index:600;display:flex;flex-direction:column;gap:8px;pointer-events:none`)}>
-      <div style=${S('display:flex;justify-content:space-between;gap:8px')}>
-        <button onClick=${t.back} style=${S('pointer-events:auto;height:38px;padding:0 15px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:#fff;color:#10183F;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>← All Lists</button>
-        ${t.isOwner && html`<button onClick=${t.openShare} style=${S('pointer-events:auto;height:38px;padding:0 16px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:#FFC425;color:#10183F;font-weight:900;font-style:italic;font-size:14px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>Share & Invite</button>`}
+    <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:600;display:flex;flex-direction:column;gap:10px;pointer-events:none`)}>
+      <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:8px')}>
+        <button class="lg" onClick=${t.back} aria-label="All Lists" style=${S(`pointer-events:auto;width:46px;height:46px;border-radius:50%;${GL};color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico(BACK, 20, 'currentColor', 2.4)}</button>
+        ${(() => { const av = html`<span style=${S('display:flex')}>${t.avatars.map((a, i) => html`<span key=${a.key} style=${S(`width:32px;height:32px;${i ? 'margin-left:-10px;' : ''}border-radius:50%;background:${a.bg};color:#fff;border:2px solid #FFFFFF;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center`)}>${a.initial}</span>`)}</span>`;
+          return t.isOwner ? html`<button class="lg" onClick=${t.openShare} style=${S(`pointer-events:auto;display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 14px;border-radius:999px;${GL};color:#10183F;font-size:13px;font-weight:800;cursor:pointer`)}>Share & Invite${av}</button>`
+            : html`<div style=${S(`pointer-events:auto;display:flex;align-items:center;height:46px;padding:0 6px;border-radius:999px;${GL}`)}>${av}</div>`; })()}
       </div>
       ${t.hasToggle && html`
-      <div style=${S('pointer-events:auto;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#1B3DB8;border-radius:999px;box-shadow:0 4px 14px rgba(16,24,63,.25)')}>
-        <button onClick=${t.viewList} style=${S(`height:34px;border:0;border-radius:999px;background:${t.listTabBg};color:${t.listTabFg};font-weight:800;font-size:13.5px;cursor:pointer`)}>This List</button>
-        <button onClick=${t.viewMap} style=${S(`height:34px;border:0;border-radius:999px;background:${t.mapTabBg};color:${t.mapTabFg};font-weight:800;font-size:13.5px;cursor:pointer`)}>${t.mapTabLabel}</button>
+      <div role="tablist" style=${S(`pointer-events:auto;display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:16px;${GL}`)}>
+        <button role="tab" aria-selected=${t.showList} onClick=${t.viewList} style=${S(`height:36px;border:0;border-radius:12px;background:${t.showList ? '#FFFFFF' : 'transparent'};color:${t.showList ? '#10183F' : '#3A4470'};font-weight:${t.showList ? 800 : 700};font-size:13px;cursor:pointer;${t.showList ? 'box-shadow:0 2px 8px rgba(16,24,63,.12)' : ''}`)}>This List</button>
+        <button role="tab" aria-selected=${t.showMap} onClick=${t.viewMap} style=${S(`height:36px;border:0;border-radius:12px;background:${t.showMap ? '#FFFFFF' : 'transparent'};color:${t.showMap ? '#10183F' : '#3A4470'};font-weight:${t.showMap ? 800 : 700};font-size:13px;cursor:pointer;${t.showMap ? 'box-shadow:0 2px 8px rgba(16,24,63,.12)' : ''}`)}>${t.mapTabLabel}</button>
       </div>`}
       ${t.showMap && html`
-      <div style=${S('align-self:flex-start;pointer-events:auto;background:#fff;border:1.5px solid rgba(16,24,63,.14);border-radius:18px;padding:8px 12px;display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4);max-width:100%')}>
-        <span style=${S('font-weight:900;font-style:italic;font-size:16px;color:#1B3DB8')}>${t.name}</span>
-        <span style=${S('font-size:12px;font-weight:600;color:#3C4466')}>${t.mapNote}</span>
+      <div class="lg" style=${S(`align-self:flex-start;pointer-events:auto;${GL};border-radius:18px;padding:9px 13px;display:flex;flex-direction:column;gap:2px;max-width:100%`)}>
+        <span style=${S('font-weight:900;font-style:italic;font-size:16px')}>${t.name}</span>
+        <span style=${S('font-family:var(--mono);font-size:10.5px;font-weight:700;color:#3A4470;text-transform:uppercase')}>${t.mapNote}</span>
       </div>`}
     </div>
     ${t.showList && html`
-    <div class="noscroll trip-fade" style=${S(`position:absolute;top:calc(var(--st) + 170px);left:0;right:0;bottom:0;z-index:5;overflow-y:auto;background:linear-gradient(to bottom, rgba(255,247,235,0) 0px, rgba(255,247,235,.55) 60px, rgba(255,247,235,.78) 110px);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);padding:96px 18px ${B(120)};display:flex;flex-direction:column;gap:16px`)}>
-      <div>
-        <div style=${S('display:flex;align-items:flex-start;justify-content:space-between;gap:10px')}>
-          <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:34px;line-height:.98;letter-spacing:-.02em;color:#1B3DB8;text-wrap:pretty;min-width:0')}>${t.name}</div>
-          ${t.canEdit && html`<button onClick=${t.openEdit} aria-label="Edit list details" style=${S('flex:none;margin-top:2px;height:34px;padding:0 13px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:#fff;color:#10183F;font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px')}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg>Edit</button>`}
+    <section aria-label=${t.name} class="noscroll" style=${S(`position:absolute;left:8px;right:8px;top:calc(var(--st) + ${t.hasToggle ? 318 : 272}px);bottom:${B(102)};z-index:5;${GL2};border-radius:34px;overflow-y:auto;padding:18px 16px 20px`)}><div style=${S('display:flex;flex-direction:column;gap:14px')}>
+      <div style=${S('display:flex;align-items:flex-start;justify-content:space-between;gap:10px')}>
+        <div style=${S('display:flex;flex-direction:column;gap:4px;min-width:0')}>
+          <span style=${S('font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:#3A4470')}>${t.metaMono}</span>
+          <h1 style=${S('margin:0;font-size:30px;line-height:1.02;font-weight:900;font-style:italic;font-stretch:100%;letter-spacing:-.6px;text-wrap:pretty')}>${t.name}</h1>
+          ${t.syncNote && html`<span role="status" style=${S('font-family:var(--mono);font-size:10.5px;font-weight:700;color:#5A6080;text-transform:uppercase')}>${t.syncNote}</span>`}
         </div>
-        <div style=${S('margin-top:6px;font-size:14px;font-weight:600;color:#3C4466')}>${t.sub}</div>
-        ${t.syncNote && html`<div role="status" style=${S('margin-top:4px;font-size:12px;font-weight:700;color:#7A809C')}>${t.syncNote}</div>`}
+        <div style=${S('flex:none;display:flex;align-items:center;gap:6px')}>
+          ${t.canEdit && html`<button onClick=${t.openEdit} aria-label="Edit list details" style=${S(`width:36px;height:36px;border-radius:50%;${ROW};color:#1B3DB8;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0`)}>${Ico('M4 20h4L19 9l-4-4L4 16z', 15, 'currentColor', 2.4)}</button>`}
+          ${t.routeDirs && html`<button onClick=${t.routeDirs} aria-label="Open This Day's Route" style=${S('height:36px;padding:0 14px;border-radius:999px;border:none;background:#10183F;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px;cursor:pointer')}>Route${Ico(ARROW_NE, 14, 'currentColor', 2.6)}</button>`}
+        </div>
       </div>
-      ${t.canEdit && html`
-      <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
-        <button onClick=${t.openPick} style=${S('height:48px;border-radius:16px;border:0;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;cursor:pointer')}>+ From My Map</button>
-        <button onClick=${t.openAddNew} style=${S('height:48px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>+ New Spot</button>
-      </div>
-      <div style=${S('display:flex;gap:8px;align-items:center;flex-wrap:wrap')}>
-        <button onClick=${t.addDay} style=${S('height:38px;padding:0 14px;border-radius:999px;border:1.5px dashed rgba(16,24,63,.32);background:transparent;color:#10183F;font-weight:800;font-size:13px;cursor:pointer')}>${t.dayBtn}</button>
-        ${t.hasDays && html`
-        <label style=${S('display:flex;align-items:center;gap:8px;height:38px;padding:0 6px 0 14px;border-radius:999px;background:#fff;font-weight:700;font-size:13px;color:#10183F')}>Starts
-          <input type="date" value=${t.dateVal} onChange=${t.onDate} aria-label="First day's date" style=${S('height:30px;border:0;border-radius:999px;background:rgba(255,255,255,.6);padding:0 8px;font-family:inherit;font-size:13px;font-weight:700;color:#10183F')} /></label>`}
+      ${t.dayChips.length > 0 && html`
+      <div role="tablist" aria-label="Days" class="noscroll" style=${S('display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:0 16px 2px')}>
+        ${t.dayChips.map(c => html`<button key=${c.key} role="tab" aria-selected=${c.on} onClick=${c.onClick} style=${S(`flex:none;display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:999px;font-size:13px;cursor:pointer;${c.on ? `border:none;background:${c.col};color:#fff;font-weight:800` : c.dashed ? 'border:1px dashed rgba(16,24,63,.35);background:transparent;color:#3A4470;font-weight:700' : `${ROW};color:#10183F;font-weight:700`}`)}>${!c.on && c.key !== 'all' && !c.dashed && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${c.col}`)}></span>`}${c.label}</button>`)}
       </div>`}
       ${t.empty && Msg('Nothing On The List Yet', t.canEdit ? 'Pull Spots From Your Map, Or Add A Brand-New One You Saw Online.' : 'Spots Will Show Up Here As They’re Added.')}
       ${t.sections.map(sec => html`
-      <div key=${sec.key} style=${S('display:flex;flex-direction:column;gap:8px')}>
-        ${sec.hasTitle && html`
-        <div style=${S('display:flex;align-items:center;gap:8px;margin-top:4px')}>
-          <span style=${S(`width:12px;height:12px;border-radius:50%;background:${sec.col};border:1.5px solid rgba(16,24,63,.14);flex:none`)}></span>
-          <span style=${S(`font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;color:${sec.col === '#7A809C' ? '#4A5275' : sec.col}`)}>${sec.title}</span>
-          <span style=${S('font-size:12px;font-weight:700;color:#7A809C')}>${sec.count}</span>
+      <div key=${sec.key} style=${S('display:flex;flex-direction:column')}>
+        ${sec.hasTitle && (t.dayChips.length === 0 || t.sections.length > 1) && html`
+        <div style=${S('display:flex;align-items:center;gap:8px;margin:6px 0 8px')}>
+          <span style=${S(`width:10px;height:10px;border-radius:50%;background:${sec.col};flex:none`)}></span>
+          <span style=${S('font-weight:900;font-style:italic;font-size:17px')}>${sec.title}</span>
+          <span style=${S('font-family:var(--mono);font-size:10.5px;font-weight:700;color:#5A6080;text-transform:uppercase')}>${sec.count}</span>
           <span style=${S('flex:1')}></span>
           ${sec.hasDirs && html`<button onClick=${sec.onDirs} style=${S('border:0;background:none;color:#1B3DB8;font-weight:800;font-size:12px;cursor:pointer;padding:4px')}>Route ↗</button>`}
           ${sec.canRemove && html`<button onClick=${sec.onRemove} aria-label="Remove this day" style=${S('width:28px;height:28px;border-radius:9px;border:0;background:#FFE2DF;color:#E8242C;font-weight:900;font-size:12px;cursor:pointer')}>✕</button>`}
         </div>`}
-        ${sec.empty && html`<div style=${S('border:2px dashed rgba(16,24,63,.18);border-radius:18px;padding:14px;text-align:center;font-size:12.5px;font-weight:600;color:#7A809C')}>Pick This Day On A Spot To Move It Here</div>`}
+        ${!sec.hasTitle || (t.dayChips.length > 0 && t.sections.length === 1) ? html`
+        ${sec.canRemove && html`<div style=${S('display:flex;justify-content:flex-end;margin-bottom:8px')}><button onClick=${sec.onRemove} style=${S('border:0;background:none;color:#E8242C;font-weight:700;font-size:12px;cursor:pointer;padding:2px')}>Remove This Day</button></div>`}` : ''}
+        ${sec.empty && html`<div style=${S('border:1.5px dashed rgba(16,24,63,.18);border-radius:18px;padding:14px;text-align:center;font-size:12.5px;font-weight:600;color:#5A6080')}>Pick This Day On A Spot To Move It Here</div>`}
         ${sec.rows.map(r => html`
-        <div key=${r.key} onClick=${r.onClick} style=${S(`display:flex;gap:12px;align-items:center;background:#fff;border:2px solid ${r.ring};border-radius:22px;padding:10px;cursor:pointer;box-shadow:0 2px 8px rgba(16,24,63,.06)`)}>
-          <div class="emo" style=${S(`width:42px;height:42px;flex:none;border-radius:50%;background:${r.badge};color:${r.badgeFg};display:flex;align-items:center;justify-content:center;font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;border:2.5px solid #FFFFFF;box-shadow:0 3px 10px rgba(16,24,63,.2)`)}>${r.num || r.emoji}</div>
-          <div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
-            <span style=${S('font-weight:800;font-size:16px;line-height:1.2')}>${r.name}</span>
-            <span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span>
-            ${r.hasBy && html`<span style=${S('font-size:11.5px;font-weight:800;color:#F45FA0')}>${r.by}</span>`}
-            ${r.canEdit && r.hasDays && html`
-            <select value=${r.dayVal} onClick=${e => e.stopPropagation()} onChange=${r.onDay} aria-label="Move to day" style=${S('align-self:flex-start;margin-top:4px;height:28px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:#FFF3DF;padding:0 8px;font-family:inherit;font-size:12px;font-weight:800;color:#10183F')}>
-              ${r.dayOpts.map(o => html`<option key=${o.v} value=${String(o.v)}>${o.label}</option>`)}
-            </select>`}
-          </div>
-          ${r.canEdit && html`
-          <div style=${S('display:flex;flex-direction:column;gap:4px;flex:none')}>
-            <button onClick=${r.up} aria-label="Move up" style=${S(`width:30px;height:28px;border-radius:9px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:900;font-size:13px;cursor:pointer;opacity:${r.upOp}`)}>↑</button>
-            <button onClick=${r.down} aria-label="Move down" style=${S(`width:30px;height:28px;border-radius:9px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:900;font-size:13px;cursor:pointer;opacity:${r.downOp}`)}>↓</button>
+        <div key=${r.key} style=${S('display:flex;flex-direction:column')}>
+          ${r.leg && html`
+          <div style=${S(`display:flex;align-items:center;gap:8px;padding:6px 0 6px 26px;font-family:var(--mono);font-size:10.5px;font-weight:700;color:${r.leg.walk ? '#1F9D6B' : '#1B3DB8'}`)}>
+            <span style=${S(`width:2px;height:18px;background:repeating-linear-gradient(${r.leg.walk ? '#1F9D6B' : '#1B3DB8'} 0 3px,transparent 3px 6px)`)}></span>
+            ${r.leg.min} MIN${r.leg.walk ? ' WALK' : html` · <span style=${S('display:inline-flex;gap:2px')}>${r.leg.bullets.map((b, i) => html`<span key=${i} style=${S(`width:18px;height:18px;border-radius:50%;background:${b.bg};color:${b.fg};font-size:10px;display:inline-flex;align-items:center;justify-content:center`)}>${b.t}</span>`)}</span> TRAIN`}
           </div>`}
+          <div onClick=${r.onClick} style=${S(`display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:18px;${ROW};cursor:pointer;${r.ring !== 'transparent' ? 'box-shadow:0 0 0 2px #10183F' : ''}`)}>
+            <span style=${S(`width:30px;height:30px;flex:none;border-radius:10px;background:${r.badge};color:${r.badgeFg};font-family:var(--mono);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center`)}>${r.num || CatIcon(r.catEmoji, 16, r.badgeFg)}</span>
+            <div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
+              <span style=${S('font-size:15px;font-weight:800;line-height:1.2')}>${r.name}</span>
+              <span style=${S('font-family:var(--mono);font-size:10.5px;color:#3A4470;text-transform:uppercase')}>${r.sub}${r.hasBy ? ' · ' + r.by : ''}</span>
+            </div>
+            ${r.canEdit && html`
+            <div style=${S('display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none')}>
+              ${r.hasDays && html`<select value=${r.dayVal} onClick=${e => e.stopPropagation()} onChange=${r.onDay} aria-label="Move to day" style=${S('height:26px;border-radius:999px;border:1px solid rgba(16,24,63,.14);background:rgba(255,255,255,.7);padding:0 6px;font-family:var(--mono);font-size:10.5px;font-weight:700;color:#10183F')}>${r.dayOpts.map(o => html`<option key=${o.v} value=${String(o.v)}>${o.label}</option>`)}</select>`}
+              <div style=${S('display:flex;gap:4px')}>
+              <button onClick=${r.up} aria-label="Move up" style=${S(`width:30px;height:26px;border-radius:9px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:900;font-size:12px;cursor:pointer;opacity:${r.upOp}`)}>↑</button>
+              <button onClick=${r.down} aria-label="Move down" style=${S(`width:30px;height:26px;border-radius:9px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:900;font-size:12px;cursor:pointer;opacity:${r.downOp}`)}>↓</button>
+              </div>
+            </div>`}
+          </div>
         </div>`)}
       </div>`)}
+      ${t.canEdit && html`
+      <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px')}>
+        <button onClick=${t.openPick} style=${S('height:46px;border-radius:16px;border:0;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;cursor:pointer')}>+ From My Map</button>
+        <button onClick=${t.openAddNew} style=${S(`height:46px;border-radius:16px;${ROW};color:#10183F;font-weight:800;font-size:14px;cursor:pointer`)}>+ New Spot</button>
+      </div>
+      <div style=${S('display:flex;gap:8px;align-items:center;flex-wrap:wrap')}>
+        <button onClick=${t.addDay} style=${S('height:36px;padding:0 14px;border-radius:999px;border:1px dashed rgba(16,24,63,.35);background:transparent;color:#10183F;font-weight:800;font-size:13px;cursor:pointer')}>${t.dayBtn}</button>
+        ${t.hasDays && html`
+        <label style=${S(`display:flex;align-items:center;gap:8px;height:36px;padding:0 5px 0 14px;border-radius:999px;${ROW};font-weight:700;font-size:13px;color:#10183F`)}>Starts
+          <input type="date" value=${t.dateVal} onChange=${t.onDate} aria-label="First day's date" style=${S('height:28px;border:0;border-radius:999px;background:rgba(16,24,63,.06);padding:0 8px;font-family:inherit;font-size:13px;font-weight:700;color:#10183F')} /></label>`}
+      </div>`}
       <div style=${S('display:flex;flex-direction:column;gap:8px;margin-top:6px')}>
-        <div style=${S('font-weight:800;font-size:15px')}>On This List</div>
-        <div style=${S('background:#fff;border-radius:20px;padding:6px 14px')}>
+        <span style=${S('font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.2px;color:#3A4470')}>ON THIS LIST</span>
+        <div style=${S(`border-radius:18px;padding:4px 14px;${ROW}`)}>
           ${t.people.map((p, i) => html`
           <div key=${p.key} style=${S(`display:flex;align-items:center;gap:10px;padding:8px 0;${i ? 'border-top:1px solid rgba(16,24,63,.08)' : ''}`)}>
-            <span style=${S(`width:32px;height:32px;border-radius:50%;flex:none;background:${i ? '#F45FA0' : '#FFC425'};color:${i ? '#fff' : '#10183F'};display:flex;align-items:center;justify-content:center;font-weight:900;font-style:italic;font-size:15px;border:1.5px solid rgba(16,24,63,.14)`)}>${(p.name || '?')[0]}</span>
-            <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column')}><span style=${S('font-weight:800;font-size:14px')}>${p.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${p.role}</span></span>
+            <span style=${S(`width:30px;height:30px;border-radius:50%;flex:none;background:${[ '#1B3DB8', '#F45FA0', '#7A4FD6' ][i % 3]};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;border:2px solid #FFFFFF`)}>${(p.name || '?')[0]}</span>
+            <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column')}><span style=${S('font-weight:800;font-size:14px')}>${p.name}</span><span style=${S('font-family:var(--mono);font-size:10.5px;color:#3A4470;text-transform:uppercase')}>${p.role}</span></span>
           </div>`)}
         </div>
-        ${t.isOwner && html`<button onClick=${t.openShare} style=${S('height:46px;border-radius:14px;border:2px solid #1B3DB8;background:#fff;color:#1B3DB8;font-weight:800;font-size:14px;cursor:pointer')}>+ Invite Someone</button>`}
+        ${t.isOwner && html`<button onClick=${t.openShare} style=${S(`height:44px;border-radius:14px;${ROW};color:#1B3DB8;font-weight:800;font-size:14px;cursor:pointer`)}>+ Invite Someone</button>`}
       </div>
       <div style=${S('display:flex;justify-content:center')}><button onClick=${t.onDel} style=${S('border:0;background:none;color:#E8242C;font-weight:700;font-size:13px;cursor:pointer;padding:6px')}>${t.delLabel}</button></div>
-    </div>`}`}
+    </div></section>`}`}
   </div>`;
 }
 
 function TripSelCard(v) {
   const p = v.tsel;
   return html`
-  <div class="lg" style=${S(`position:absolute;left:12px;right:12px;bottom:${B(88)};z-index:900;${GL2};border-radius:34px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px`)}>
+  <div class="lg" style=${S(`position:absolute;left:12px;right:12px;bottom:${B(102)};z-index:900;${GL2};border-radius:34px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px`)}>
     <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:8px')}>
       <div style=${S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0')}>
         <span style=${S(`font-size:12px;font-weight:800;background:${p.catBg};color:${p.catFg};padding:5px 10px;border-radius:999px`)}>${p.catName}</span>
@@ -574,7 +620,7 @@ function EditTripSheet(v) {
 
 const CheckRow = r => html`
   <button key=${r.key} onClick=${r.onClick} style=${S(`display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:2px solid ${r.ring};border-radius:18px;padding:10px 12px;cursor:pointer;color:#10183F`)}>
-    ${r.emoji != null && html`<span class="emo" style=${S(`width:34px;height:34px;border-radius:12px;background:${r.catBg};flex:none;display:flex;align-items:center;justify-content:center;font-size:18px`)} aria-hidden="true">${r.emoji}</span>`}
+    ${r.emoji != null && html`<span style=${S(`width:34px;height:34px;border-radius:12px;background:${r.catBg};flex:none;display:flex;align-items:center;justify-content:center`)}>${CatIcon(r.emoji, 17, r.catBg === '#FFC425' ? '#10183F' : '#fff')}</span>`}
     <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-weight:800;font-size:15px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub || (r.catName + ' · ' + r.area)}</span></span>
     <span style=${S(`width:28px;height:28px;border-radius:50%;flex:none;background:${r.chkBg};color:#fff;border:1.5px solid rgba(16,24,63,.14);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px`)}>${r.chk}</span>
   </button>`;
@@ -625,156 +671,211 @@ function NewTripSheet(v) {
 }
 
 function TabBar(v) {
-  const tab = (on, fg, label, icon, extra) => html`
-    <button onClick=${on} aria-current=${fg === '#1B3DB8' ? 'page' : null} style=${S(`height:56px;min-width:0;border:0;border-radius:999px;background:${fg === '#1B3DB8' ? 'linear-gradient(160deg,rgba(255,255,255,.85),rgba(255,255,255,.45))' : 'transparent'};box-shadow:${fg === '#1B3DB8' ? 'inset 0 1px 1px #fff,inset 0 -1px 2px rgba(27,61,184,.12),0 4px 12px rgba(16,24,63,.12)' : 'none'};transition:background .3s,box-shadow .3s;color:${fg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-weight:800;font-size:11px;padding:0`)}>${icon}<span>${label}</span></button>`;
+  const on = fg => fg === '#1B3DB8';
+  const tab = (go, fg, label, icon) => html`
+    <button onClick=${go} aria-current=${on(fg) ? 'page' : null} style=${S(`height:58px;min-width:0;border:none;border-radius:22px;background:${on(fg) ? 'rgba(27,61,184,.12)' : 'transparent'};color:${fg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;font-weight:${on(fg) ? 800 : 700};cursor:pointer;padding:0`)}>${icon}<span>${label}</span></button>`;
   return html`
-  <nav class="lg" style=${S(`position:absolute;left:16px;right:16px;bottom:${B(14)};height:70px;z-index:950;${GL};background:rgba(255,255,255,.36);border-radius:999px;display:grid;grid-template-columns:1fr 1fr 66px 1fr 1fr;align-items:center;gap:2px;padding:0 6px`)}>
-    ${tab(v.goMap, v.tabMapFg, 'Map', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg>`)}
-    ${tab(v.goExplore, v.tabExFg, 'Explore', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor"></path></svg>`)}
-    <div style=${S('display:flex;justify-content:center')}><button onClick=${v.openAdd} aria-label="Add A Spot" class="press94 lg" style=${S('width:58px;height:58px;border-radius:999px;border:0;background:linear-gradient(180deg,#FF9152,#FF6B1A 55%,#F05A0C);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(255,107,26,.55),inset 0 1px 0 rgba(255,255,255,.5)')}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button></div>
-    ${tab(v.goPlan, v.tabPlanFg, 'Route', html`<span style=${S('position:relative;display:flex')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5" stroke-dasharray="2 3"></path></svg><span style=${S('position:absolute;top:-5px;right:-11px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#FF6B1A;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #FFFFFF')}>${v.planCount}</span></span>`)}
-    ${tab(v.goLists, v.tabListFg, 'Lists', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"></path><path d="M4 5.5l.9.9L6.6 4.6M4 11.5l.9.9 1.7-1.8M4 17.5l.9.9 1.7-1.8"></path></svg>`)}
+  <nav aria-label="Tabs" style=${S(`position:absolute;left:16px;right:16px;bottom:${B(18)};height:72px;z-index:950;${GL};border-radius:28px;display:${v.hasSel && v.onMapTab ? 'none' : 'grid'};grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;padding:0 6px`)}>
+    ${tab(v.goMap, v.tabMapFg, 'Map', Ico('M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14', 22))}
+    ${tab(v.goExplore, v.tabExFg, 'Explore', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>`)}
+    <div style=${S('display:flex;justify-content:center')}>
+      <button onClick=${v.openAdd} aria-label="Add A Spot" class="press94" style=${S('width:58px;height:58px;border-radius:20px;border:1px solid rgba(255,255,255,.6);background:#FF6B1A;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(255,107,26,.55),inset 0 1px 0 rgba(255,255,255,.5)')}>${Ico('M12 5v14M5 12h14', 26, 'currentColor', 2.8)}</button>
+    </div>
+    ${tab(v.goPlan, v.tabPlanFg, 'Route', html`<span style=${S('position:relative;display:flex')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"></path></svg>${v.planCount > 0 && html`<span style=${S('position:absolute;top:-6px;right:-12px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#FF6B1A;color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #FFFFFF')}>${v.planCount}</span>`}</span>`)}
+    ${tab(v.goLists, v.tabListFg, 'Lists', html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"></path><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg>`)}
   </nav>`;
 }
 
 function AddSheet(v) {
-  const f = v.form;
-  const inp = 'border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:0 14px;font-family:inherit;font-size:15px;color:#10183F;outline:none';
-  const lab = S('font-weight:800;font-size:15px');
-  const col8 = S('display:flex;flex-direction:column;gap:8px');
-  return html`
-  <div data-screen-label="Add Spot" aria-hidden=${v.addY !== '0%'} style=${S(`position:absolute;inset:0;z-index:1100;background:var(--bgfx);transform:translateY(${v.addY});transition:transform .38s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column`)}>
-    <div style=${S(`flex:none;padding:${T(56)} 20px 14px;display:flex;align-items:center;justify-content:space-between`)}>
-      <div style=${S('min-width:0')}><div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:32px;letter-spacing:-.02em;color:#1B3DB8')}>${v.formTitle}</div>
-        ${v.formFor && html`<div style=${S('font-size:13px;font-weight:700;color:#F45FA0;margin-top:2px')}>Just For “${v.formFor}”</div>`}</div>
-      <button onClick=${v.closeAdd} style=${S('border:0;background:#fff;color:#10183F;font-weight:700;font-size:14px;height:38px;padding:0 16px;border-radius:999px;cursor:pointer')}>Cancel</button>
+  const f = v.form, mode = v.addMode, open = v.addY === '0%';
+  const lab = S('font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.2px;color:#3A4470');
+  const inp = 'border-radius:16px;border:1.5px solid rgba(16,24,63,.12);background:rgba(255,255,255,.75);padding:0 14px;font-family:inherit;font-size:15px;color:#10183F;outline:none';
+  const col6 = S('display:flex;flex-direction:column;gap:6px');
+  const hint = t => html`<div style=${S('font-size:12px;line-height:1.4;color:#4A5275')}>${t}</div>`;
+  const status = t => html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${t}</div>`;
+  const plain = t => String(t || '').replace(/^[^A-Za-z0-9]+/, '').replace(/…$/, '');
+  const sparkle = html`<span style=${S('width:34px;height:34px;flex:none;border-radius:12px;background:#FFC425;color:#10183F;display:flex;align-items:center;justify-content:center')}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20 10l-5.8 1.7L12 18l-2.2-6.3L4 10l5.8-1.7zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"></path></svg></span>`;
+  const darkCard = 'border-radius:22px;padding:14px;background:#10183F;color:#fff;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(16,24,63,.3)';
+  const busyCard = reads => html`
+    <div role="status" style=${S(darkCard)}>
+      <div style=${S('display:flex;align-items:center;gap:10px')}>${sparkle}
+        <div style=${S('display:flex;flex-direction:column;gap:2px;min-width:0')}><span style=${S('font-size:15px;font-weight:900;font-style:italic')}>${plain(v.aiBtn)}</span><span style=${S('font-family:var(--mono);font-size:10.5px;font-weight:500;color:#C4D0FF')}>${reads}</span></div>
+      </div>
+      <div class="ai-bar" style=${S('height:6px;border-radius:3px;background:rgba(255,255,255,.15)')}></div>
+    </div>`;
+  const found = v.aiMulti && html`
+    <div style=${S('display:flex;align-items:baseline;justify-content:space-between;gap:8px')}>
+      <h2 style=${S('margin:0;font-size:18px;font-weight:900;font-style:italic')}>Found ${v.aiCount} Places</h2>
+      <span style=${S(`font-family:var(--mono);font-size:10.5px;font-weight:700;color:${v.aiConfHigh ? '#1F9D6B' : '#B4570B'}`)}>${v.aiConfHigh ? 'HIGH CONFIDENCE' : 'CHECK THE DETAILS'}</span>
     </div>
-    <div class="noscroll" style=${S(`flex:1;min-height:0;overflow-y:auto;padding:4px 20px ${B(120)};display:flex;flex-direction:column;gap:20px`)}>
-      <div style=${col8}>
-        <label for="f-url" style=${lab}>Paste A Link</label>
-        <div style=${S('display:flex;gap:8px')}>
-          <input id="f-url" value=${f.url} onChange=${v.onUrl} placeholder="TikTok, IG, Threads Or Maps Link" style=${S(`flex:1;min-width:0;height:52px;${inp}`)} />
-          <button onClick=${v.pasteUrl} style=${S('flex:none;height:52px;padding:0 16px;border-radius:16px;border:0;background:#FFC425;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Paste</button>
-        </div>
-        ${v.hasSrcBadge && html`<div style=${S('display:flex')}><span style=${S(`font-size:12px;font-weight:800;background:${v.srcBadgeBg};color:#fff;padding:5px 10px;border-radius:999px`)}>${v.srcBadge}</span></div>`}
-        ${v.aiBusy ? html`
-        <div role="status" class="ai-busy" style=${S('height:48px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#FFF3DF;color:#10183F;font-weight:900;font-style:italic;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(255,196,37,.55)')}>${v.aiBtn}</div>`
-        : v.aiVidShow && html`
-        <div style=${S(`display:grid;grid-template-columns:${v.aiShow ? '1fr 1fr' : '1fr'};gap:8px`)}>
-          ${v.aiShow && html`<button onClick=${v.aiRun} style=${S('height:48px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#10183F;color:#FFC425;font-weight:900;font-style:italic;font-size:15px;cursor:pointer;box-shadow:0 0 0 3px rgba(255,196,37,.55);padding:0 8px')}>${v.aiBtn}</button>`}
-          <label for="f-video" style=${S('height:48px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;color:#10183F;font-weight:900;font-style:italic;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4);padding:0 8px;text-align:center')}>🎬 ${v.aiShow ? 'From A Video' : 'Add From A Saved Video'}</label>
-          <input id="f-video" type="file" accept="video/*" onChange=${v.onVideo} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')} />
-        </div>`}
-        ${v.aiHasMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${v.aiMsg}</div>`}
-        ${v.aiMulti && html`
-        <div style=${S('background:#fff;border:1.5px solid rgba(16,24,63,.14);border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:8px')}>
-          <div style=${S('font-weight:900;font-style:italic;font-size:17px;color:#1B3DB8')}>This Post Mentions ${v.aiCount} Places</div>
-          <div style=${S('font-size:12px;font-weight:600;color:#4A5275;margin-top:-4px')}>Tap One To Fill The Form, Or Add Them All At Once.</div>
-          ${v.aiRows.map((r, i) => html`
-          <button key=${i} onClick=${r.onPick} style=${S(`display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border-radius:14px;border:2px solid ${r.on ? '#FF6B1A' : 'rgba(16,24,63,.1)'};background:${r.on ? '#FFF3DF' : '#fff'};cursor:pointer;color:#10183F`)}>
-            <span class="emo" aria-hidden="true" style=${S(`width:32px;height:32px;border-radius:10px;background:${r.bg};flex:none;display:flex;align-items:center;justify-content:center;font-size:17px`)}>${r.emoji}</span>
-            <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
-            ${r.on && html`<span style=${S('font-weight:900;color:#FF6B1A')}>✓</span>`}
-          </button>`)}
-          <button onClick=${v.aiAddAll} style=${S('height:44px;margin-top:2px;border-radius:14px;border:0;background:#FF6B1A;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${v.aiAddAllLabel}</button>
-        </div>`}
-        <div style=${S('font-size:12px;color:#5A6080')}>Paste A Post Or A Google Maps Link, Or Pick A Video Saved To Your Phone, And AI Fills In The Rest — Including What's Said Out Loud. Optional.</div>
+    <ul style=${S('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px')}>
+      ${v.aiRows.map((r, i) => html`
+      <li key=${i} style=${S(`display:flex;align-items:center;gap:6px;padding:4px 12px 4px 4px;border-radius:18px;${ROW};${r.on ? 'box-shadow:0 0 0 2px #FF6B1A' : ''}`)}>
+        <button onClick=${r.onPick} style=${S('flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:6px 8px;border:none;background:none;text-align:left;cursor:pointer;color:#10183F')}>
+          <span style=${S(`width:36px;height:36px;flex:none;border-radius:12px;background:${r.bg};display:flex;align-items:center;justify-content:center`)}>${CatIcon(r.emoji, 18, r.bg === '#FFC425' ? '#10183F' : '#fff')}</span>
+          <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:800')}>${r.name}</span><span style=${S('font-family:var(--mono);font-size:10.5px;color:#3A4470;text-transform:uppercase')}>${r.sub}</span></span>
+        </button>
+        <button onClick=${r.onCheck} role="checkbox" aria-checked=${r.checked} aria-label=${'Include ' + r.name} style=${S(`flex:none;width:26px;height:26px;border-radius:9px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;${r.checked ? 'border:none;background:#1B3DB8;color:#fff' : 'border:2px solid rgba(16,24,63,.3);background:transparent'}`)}>${r.checked && Ico('M5 12l5 5 9-10', 14, 'currentColor', 3)}</button>
+      </li>`)}
+    </ul>`;
+
+  const linkBlock = html`
+    <div style=${col6}>
+      <label for="f-url" style=${lab}>LINK</label>
+      <div class="fld" style=${S('display:flex;align-items:center;gap:8px;height:52px;padding:0 8px 0 14px;border-radius:16px;background:rgba(255,255,255,.75);border:1.5px solid rgba(16,24,63,.12)')}>
+        <input id="f-url" value=${f.url} onChange=${v.onUrl} placeholder="TikTok, IG, Threads Or Maps Link" style=${S('flex:1;min-width:0;border:none;background:transparent;font-family:var(--mono);font-size:13px;font-weight:500;color:#10183F;outline:none')} />
+        ${v.hasSrcBadge ? html`<span style=${S(`flex:none;height:28px;padding:0 10px;border-radius:10px;background:${v.srcBadgeBg};color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;display:flex;align-items:center`)}>${v.srcShort}</span>`
+          : html`<button onClick=${v.pasteUrl} style=${S('flex:none;height:34px;padding:0 12px;border-radius:10px;border:none;background:#FFC425;color:#10183F;font-weight:800;font-size:13px;cursor:pointer')}>Paste</button>`}
       </div>
-      <div style=${col8}>
-        <label for="f-name" style=${lab}>Place Name</label>
-        <input id="f-name" value=${f.name} onChange=${v.onName} autocomplete="off" placeholder="Start Typing, E.g. Devoción" style=${S(`height:52px;${inp};font-size:16px;font-weight:600`)} />
-        ${v.suggBusy && html`<div role="status" style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Looking It Up…</div>`}
-        ${v.hasSugg && html`
-        <div style=${S('display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid rgba(16,24,63,.14)')}>
-          <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;font-size:12px;font-weight:800;color:#4A5275')}>
-            <span>${v.suggTitle}</span>
-            <button onClick=${v.closeSugg} style=${S('border:0;background:transparent;color:#1B3DB8;font-weight:800;font-size:12px;cursor:pointer;padding:0')}>None Of These</button>
-          </div>
-          ${v.suggRows.map((r, i) => html`
-          <button key=${i} class="hov" onClick=${r.onPick} style=${S('display:flex;align-items:center;gap:10px;text-align:left;padding:9px 14px;border:0;border-top:1px solid rgba(16,24,63,.08);background:#fff;cursor:pointer;color:#10183F')}>
-            <span class="emo" aria-hidden="true" style=${S(`width:30px;height:30px;border-radius:10px;background:${r.bg};flex:none;display:flex;align-items:center;justify-content:center;font-size:16px`)}>${r.emoji}</span>
-            <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
-          </button>`)}
-          ${v.suggGoogle && html`<div style=${S('padding:6px 14px 8px;border-top:1px solid rgba(16,24,63,.08);font-size:11px;font-weight:700;color:#7A809C;text-align:right')}>Suggestions From Google</div>`}
-        </div>`}
-        ${v.webShow && html`<button onClick=${v.webFind} style=${S('height:44px;border-radius:14px;border:1.5px solid rgba(16,24,63,.14);background:#10183F;color:#FFC425;font-weight:900;font-style:italic;font-size:14px;cursor:pointer;padding:0 12px')}>${v.webLabel}</button>`}
-        ${v.webBusy && html`<div role="status" class="ai-busy" style=${S('height:44px;border-radius:14px;border:1.5px solid rgba(16,24,63,.14);background:#FFF3DF;color:#10183F;font-weight:900;font-style:italic;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(255,196,37,.55)')}>✨ Searching The Web…</div>`}
-        ${v.webHasMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${v.webMsg}</div>`}
-      </div>
-      <div style=${col8}>
-        <label for="f-look" style=${lab}>Location</label>
-        <div style=${S('display:flex;gap:8px')}>
-          <input id="f-look" value=${v.lookQ} onChange=${v.onLookQ} onKeyDown=${v.onLookKey} placeholder="Search An Address Or Place" style=${S(`flex:1;min-width:0;height:52px;${inp}`)} />
-          <button onClick=${v.runLookup} style=${S('flex:none;height:52px;padding:0 16px;border-radius:16px;border:0;background:#1B3DB8;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${v.lookBtn}</button>
+    </div>
+    ${v.aiBusy ? busyCard(v.aiReads) : v.aiShow && !v.aiMulti && html`
+    <button onClick=${v.aiRun} style=${S(`${darkCard};flex-direction:row;align-items:center;border:none;cursor:pointer;text-align:left`)}>${sparkle}<span style=${S('display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900;font-style:italic')}>${plain(v.aiBtn)}</span><span style=${S('font-family:var(--mono);font-size:10.5px;font-weight:500;color:#C4D0FF')}>${v.aiReads}</span></span></button>`}
+    ${v.aiHasMsg && status(v.aiMsg)}
+    ${found}
+    ${!f.url && hint('Paste A Post Or A Google Maps Link And AI Fills In The Rest — Including What’s Said Out Loud.')}`;
+
+  const videoBlock = html`
+    <div style=${col6}>
+      <span style=${lab}>VIDEO</span>
+      <label for="f-video" style=${S('min-height:120px;border-radius:20px;border:1.5px dashed rgba(16,24,63,.3);background:rgba(255,255,255,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#10183F;padding:16px;text-align:center')}>
+        <span style=${S('width:44px;height:44px;border-radius:14px;background:#10183F;color:#FFC425;display:flex;align-items:center;justify-content:center')}>${Ico('M4 6h12v12H4z M16 10l4-2v8l-4-2', 22)}</span>
+        <span style=${S('font-size:15px;font-weight:900;font-style:italic')}>Pick A Video From Your Phone</span>
+        <span style=${S('font-family:var(--mono);font-size:10.5px;font-weight:700;color:#3A4470')}>AUDIO + 3 FRAMES · UP TO 10 MIN</span>
+      </label>
+      <input id="f-video" type="file" accept="video/*" onChange=${v.onVideo} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')} />
+    </div>
+    ${v.aiBusy && busyCard('AUDIO · ON-SCREEN TEXT')}
+    ${v.aiHasMsg && status(v.aiMsg)}
+    ${found}
+    ${hint('The Video Stays On Your Phone — Only The Sound And Three Stills Are Sent So AI Can Find The Places.')}`;
+
+  const nameField = html`
+    <div style=${col6}>
+      <label for="f-name" style=${lab}>PLACE NAME</label>
+      <input id="f-name" value=${f.name} onChange=${v.onName} autocomplete="off" placeholder="Start Typing, E.g. Devoción" style=${S(`height:52px;${inp};font-size:16px;font-weight:600`)} />
+      ${v.suggBusy && html`<div role="status" style=${S('font-family:var(--mono);font-size:11px;font-weight:700;color:#3A4470')}>LOOKING IT UP…</div>`}
+      ${v.hasSugg && html`
+      <div style=${S(`display:flex;flex-direction:column;border-radius:18px;overflow:hidden;${ROW}`)}>
+        <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:9px 14px 6px')}>
+          <span style=${S('font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:#3A4470;text-transform:uppercase')}>${v.suggTitle}</span>
+          <button onClick=${v.closeSugg} style=${S('border:0;background:transparent;color:#1B3DB8;font-weight:800;font-size:12px;cursor:pointer;padding:0')}>None Of These</button>
         </div>
-        ${v.lookHasMsg && html`<div style=${S('font-size:12px;font-weight:600;color:#E8242C')}>${v.lookMsg}</div>`}
-        ${v.lookHasResults && html`
-        <div style=${S('display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid rgba(16,24,63,.14)')}>
-          ${v.lookResults.map((r, i) => html`
-          <button key=${i} class="hov" onClick=${r.onPick} style=${S('display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px;border:0;border-bottom:1px solid rgba(16,24,63,.08);background:#fff;cursor:pointer;color:#10183F')}>
-            <span style=${S('font-weight:800;font-size:14px')}>${r.title}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span>
-          </button>`)}
-        </div>`}
-        ${v.hasPin && html`
-        <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1F9D6B;color:#fff;border-radius:16px;padding:12px 14px')}>
-          <div style=${S('display:flex;flex-direction:column;gap:2px;min-width:0')}><span style=${S('font-weight:800;font-size:15px')}>Pin Dropped ✓</span><span style=${S('font-size:13px;font-weight:600')}>${v.pinLine}</span></div>
-          <button onClick=${v.startPlacing} style=${S('flex:none;height:36px;padding:0 14px;border:0;border-radius:999px;background:#FFFFFF;color:#1F9D6B;font-weight:800;font-size:13px;cursor:pointer')}>Move Pin</button>
-        </div>`}
-        ${v.noPin && html`
-          <button onClick=${v.startPlacing} style=${S('height:52px;border-radius:16px;border:2px dashed #1B3DB8;background:#fff;color:#1B3DB8;font-weight:800;font-size:15px;cursor:pointer')}>Drop A Pin On The Map</button>
-          <div style=${S('font-size:12px;color:#5A6080')}>Or Just Pick A Neighborhood Below And We'll Place It There.</div>`}
-      </div>
-      <div style=${S('display:flex;flex-direction:column;gap:10px')}>
-        <span style=${lab}>Category</span>
-        <div style=${S('display:flex;flex-wrap:wrap;gap:8px')}>
-          ${v.formCats.map((c, i) => html`
-          <button key=${i} onClick=${c.onClick} style=${S(`display:flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:999px;border:2px solid ${c.border};background:${c.bg};color:${c.fg};font-weight:700;font-size:13px;cursor:pointer`)}><span class="emo" style=${S('font-size:16px')} aria-hidden="true">${c.emoji}</span>${c.name}</button>`)}
-          <button onClick=${v.toggleNewCat} style=${S('height:40px;padding:0 14px;border-radius:999px;border:1.5px dashed rgba(16,24,63,.32);background:transparent;color:#10183F;font-weight:700;font-size:13px;cursor:pointer')}>+ New Category</button>
-        </div>
-        ${f.newCatOpen && html`
-        <div style=${S('background:#fff;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px')}>
-          <input id="f-newcat" value=${f.newCatName} onChange=${v.onNewCatName} placeholder="E.g. Matcha Spots" style=${S('height:46px;border-radius:14px;border:1.5px solid rgba(16,24,63,.14);padding:0 12px;font-family:inherit;font-size:15px;color:#10183F;outline:none')} />
-          <div style=${S('display:flex;flex-direction:column;gap:8px')}>
-            <span style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Pick An Emoji</span>
-            <div style=${S('display:flex;flex-wrap:wrap;gap:6px')}>
-              ${v.emojiChoices.map((m, i) => html`<button key=${i} onClick=${m.onClick} aria-label=${'Emoji ' + m.e} class="emo" style=${S(`width:38px;height:38px;border-radius:12px;background:${m.bg};border:2px solid ${m.ring};cursor:pointer;padding:0;font-size:19px;display:flex;align-items:center;justify-content:center`)}>${m.e}</button>`)}
-            </div>
-          </div>
-          <span style=${S('font-size:12px;font-weight:700;color:#4A5275;margin-bottom:-4px')}>Pin Color</span>
-          <div style=${S('display:flex;gap:10px;align-items:center')}>
-            ${v.swatches.map((w, i) => html`<button key=${i} onClick=${w.onClick} aria-label=${'Color ' + (i + 1)} style=${S(`width:30px;height:30px;border-radius:50%;background:${w.color};border:3px solid ${w.ring};cursor:pointer;padding:0`)}></button>`)}
-          </div>
-          <button onClick=${v.addCat} style=${S('height:44px;border-radius:14px;border:0;background:#10183F;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>Create Category</button>
-        </div>`}
-      </div>
-      ${v.showPrice && html`
-      <div style=${col8}>
-        <span style=${lab}>Price Range</span>
-        <div style=${S('display:grid;grid-template-columns:repeat(4,1fr);gap:8px')}>
-          ${v.priceChips.map((p, i) => html`
-          <button key=${i} onClick=${p.onClick} style=${S(`height:48px;border-radius:14px;border:2px solid ${p.border};background:${p.bg};color:${p.fg};font-weight:900;font-size:16px;letter-spacing:.02em;cursor:pointer`)}>${p.label}</button>`)}
-        </div>
-        <div style=${S('font-size:12px;color:#5A6080')}>${v.priceHint}</div>
+        ${v.suggRows.map((r, i) => html`
+        <button key=${i} onClick=${r.onPick} style=${S('display:flex;align-items:center;gap:10px;text-align:left;padding:9px 14px;border:0;border-top:1px solid rgba(16,24,63,.07);background:transparent;cursor:pointer;color:#10183F')}>
+          <span style=${S(`width:32px;height:32px;border-radius:11px;background:${r.bg};flex:none;display:flex;align-items:center;justify-content:center`)}>${CatIcon(r.emoji, 16, r.bg === '#FFC425' ? '#10183F' : '#fff')}</span>
+          <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.name}</span><span style=${S('font-family:var(--mono);font-size:10.5px;color:#3A4470')}>${r.sub}</span></span>
+        </button>`)}
+        ${v.suggGoogle && html`<div style=${S('padding:6px 14px 8px;border-top:1px solid rgba(16,24,63,.07);font-family:var(--mono);font-size:10px;font-weight:700;color:#5A6080;text-align:right')}>SUGGESTIONS FROM GOOGLE</div>`}
       </div>`}
-      <div style=${col8}>
-        <label for="f-area" style=${lab}>Neighborhood</label>
-        <select id="f-area" value=${f.area} onChange=${v.onArea} style=${S('height:52px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:0 12px;font-family:inherit;font-size:15px;font-weight:600;color:#10183F;outline:none')}>
-          <option value="auto">Auto-Detect From Pin</option>
-          ${v.areaGroups.map(g => html`<optgroup key=${g.b} label=${g.b}>${g.areas.map(a => html`<option key=${a.name} value=${a.name}>${a.name}</option>`)}</optgroup>`)}
-        </select>
+      ${v.webShow && html`<button onClick=${v.webFind} style=${S(`${darkCard};flex-direction:row;align-items:center;padding:10px 12px;border:none;cursor:pointer;text-align:left`)}>${sparkle}<span style=${S('font-size:14px;font-weight:900;font-style:italic')}>${plain(v.webLabel)}</span></button>`}
+      ${v.webBusy && html`<div role="status" style=${S(darkCard)}><div style=${S('display:flex;align-items:center;gap:10px')}>${sparkle}<span style=${S('font-size:15px;font-weight:900;font-style:italic')}>Searching The Web</span></div><div class="ai-bar" style=${S('height:6px;border-radius:3px;background:rgba(255,255,255,.15)')}></div></div>`}
+      ${v.webHasMsg && status(v.webMsg)}
+    </div>`;
+
+  const details = html`
+    <h2 style=${S('margin:6px 0 0;font-size:18px;font-weight:900;font-style:italic')}>${f.id ? 'Details' : mode === 'name' ? 'The Rest' : 'Details'}</h2>
+    ${mode !== 'name' && nameField}
+    <div style=${col6}>
+      <label for="f-look" style=${lab}>LOCATION</label>
+      <div style=${S('display:flex;gap:8px')}>
+        <input id="f-look" value=${v.lookQ} onChange=${v.onLookQ} onKeyDown=${v.onLookKey} placeholder="Search An Address Or Place" style=${S(`flex:1;min-width:0;height:52px;${inp}`)} />
+        <button onClick=${v.runLookup} style=${S('flex:none;height:52px;padding:0 16px;border-radius:16px;border:0;background:#1B3DB8;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${v.lookBtn}</button>
       </div>
-      <div style=${col8}>
-        <label for="f-addr" style=${lab}>Address Or Cross Streets</label>
-        <input id="f-addr" value=${f.address} onChange=${v.onAddress} placeholder="Optional — Helps Google Maps Find It" style=${S(`height:52px;${inp}`)} />
-      </div>
-      <div style=${col8}>
-        <label for="f-note" style=${lab}>Notes</label>
-        <textarea id="f-note" value=${f.note} onChange=${v.onNote} placeholder="What To Order, When To Go…" rows="3" style=${S('border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:12px 14px;font-family:inherit;font-size:15px;color:#10183F;outline:none;resize:none')}></textarea>
-      </div>
+      ${v.lookHasMsg && html`<div style=${S('font-size:12px;font-weight:600;color:#E8242C')}>${v.lookMsg}</div>`}
+      ${v.lookHasResults && html`
+      <div style=${S(`display:flex;flex-direction:column;border-radius:18px;overflow:hidden;${ROW}`)}>
+        ${v.lookResults.map((r, i) => html`
+        <button key=${i} onClick=${r.onPick} style=${S(`display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px;border:0;${i ? 'border-top:1px solid rgba(16,24,63,.07);' : ''}background:transparent;cursor:pointer;color:#10183F`)}>
+          <span style=${S('font-weight:800;font-size:14px')}>${r.title}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}</span>
+        </button>`)}
+      </div>`}
+      ${v.hasPin && html`
+      <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1F9D6B;color:#fff;border-radius:18px;padding:12px 14px')}>
+        <div style=${S('display:flex;flex-direction:column;gap:2px;min-width:0')}><span style=${S('font-weight:800;font-size:15px')}>Pin Dropped ✓</span><span style=${S('font-family:var(--mono);font-size:11px;font-weight:500')}>${v.pinLine}</span></div>
+        <button onClick=${v.startPlacing} style=${S('flex:none;height:36px;padding:0 14px;border:0;border-radius:999px;background:#FFFFFF;color:#1F9D6B;font-weight:800;font-size:13px;cursor:pointer')}>Move Pin</button>
+      </div>`}
+      ${v.noPin && html`
+        <button onClick=${v.startPlacing} style=${S('height:52px;border-radius:16px;border:1.5px dashed #1B3DB8;background:rgba(255,255,255,.5);color:#1B3DB8;font-weight:800;font-size:15px;cursor:pointer')}>Drop A Pin On The Map</button>
+        ${hint('Or Just Pick A Neighborhood Below And We’ll Place It There.')}`}
     </div>
-    <div style=${S(`position:absolute;left:16px;right:16px;bottom:${B(22)}`)}>
-      <button onClick=${v.save} style=${S(`width:100%;height:48px;border-radius:999px;border:0;background:${v.saveBg};color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:20px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>${v.saveLabel}</button>
+    <div style=${col6}>
+      <span style=${lab}>CATEGORY</span>
+      <div style=${S('display:flex;flex-wrap:wrap;gap:8px')}>
+        ${v.formCats.map((c, i) => html`
+        <button key=${i} onClick=${c.onClick} style=${S(`display:flex;align-items:center;gap:7px;height:38px;padding:0 13px;border-radius:999px;${c.bg === '#fff' ? ROW : `border:none;background:${c.bg};box-shadow:0 6px 16px rgba(16,24,63,.18)`};color:${c.fg};font-weight:${c.bg === '#fff' ? 700 : 800};font-size:13px;cursor:pointer`)}><span style=${S(`width:9px;height:9px;border-radius:50%;background:${c.dot}`)}></span>${c.name}</button>`)}
+        <button onClick=${v.toggleNewCat} style=${S('height:38px;padding:0 13px;border-radius:999px;border:1.5px dashed rgba(16,24,63,.32);background:transparent;color:#10183F;font-weight:700;font-size:13px;cursor:pointer')}>+ New Category</button>
+      </div>
+      ${f.newCatOpen && html`
+      <div style=${S(`border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px;${ROW}`)}>
+        <input id="f-newcat" value=${f.newCatName} onChange=${v.onNewCatName} placeholder="E.g. Matcha Spots" aria-label="New category name" style=${S(`height:46px;${inp}`)} />
+        <span style=${lab}>ICON</span>
+        <div style=${S('display:flex;flex-wrap:wrap;gap:6px')}>
+          ${v.emojiChoices.map((m, i) => html`<button key=${i} onClick=${m.onClick} aria-label=${'Icon ' + m.e} aria-pressed=${m.ring === '#10183F'} style=${S(`width:40px;height:40px;border-radius:12px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;${m.ring === '#10183F' ? 'border:none;background:#10183F;color:#FFC425' : 'border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.6);color:#10183F'}`)}>${CatIcon(m.e, 19, 'currentColor')}</button>`)}
+        </div>
+        <span style=${lab}>PIN COLOR</span>
+        <div style=${S('display:flex;gap:10px;align-items:center')}>
+          ${v.swatches.map((w, i) => html`<button key=${i} onClick=${w.onClick} aria-label=${'Color ' + (i + 1)} style=${S(`width:30px;height:30px;border-radius:50%;background:${w.color};border:3px solid ${w.ring === '#fff' ? '#FFFFFF' : w.ring};cursor:pointer;padding:0;box-shadow:0 2px 6px rgba(16,24,63,.2)`)}></button>`)}
+        </div>
+        <button onClick=${v.addCat} style=${S('height:44px;border-radius:14px;border:0;background:#10183F;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>Create Category</button>
+      </div>`}
     </div>
+    ${v.showPrice && html`
+    <div style=${col6}>
+      <span style=${lab}>PRICE RANGE</span>
+      <div style=${S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
+        ${v.priceChips.map((p, i) => html`
+        <button key=${i} onClick=${p.onClick} style=${S(`height:46px;border-radius:14px;${p.bg === '#fff' ? ROW : `border:none;background:${p.bg}`};color:${p.fg};font-family:var(--mono);font-weight:700;font-size:15px;cursor:pointer`)}>${p.label}</button>`)}
+      </div>
+      ${hint(v.priceHint)}
+    </div>`}
+    <div style=${col6}>
+      <label for="f-area" style=${lab}>NEIGHBORHOOD</label>
+      <select id="f-area" value=${f.area} onChange=${v.onArea} style=${S(`height:52px;${inp};padding:0 12px;font-weight:600`)}>
+        <option value="auto">Auto-Detect From Pin</option>
+        ${v.areaGroups.map(g => html`<optgroup key=${g.b} label=${g.b}>${g.areas.map(a => html`<option key=${a.name} value=${a.name}>${a.name}</option>`)}</optgroup>`)}
+      </select>
+    </div>
+    <div style=${col6}>
+      <label for="f-addr" style=${lab}>ADDRESS OR CROSS STREETS</label>
+      <input id="f-addr" value=${f.address} onChange=${v.onAddress} placeholder="Optional — Helps Google Maps Find It" style=${S(`height:52px;${inp}`)} />
+    </div>
+    <div style=${col6}>
+      <label for="f-note" style=${lab}>NOTES</label>
+      <textarea id="f-note" value=${f.note} onChange=${v.onNote} placeholder="What To Order, When To Go…" rows="3" style=${S(`${inp};padding:12px 14px;resize:none;line-height:1.45`)}></textarea>
+      ${hint('Each Sentence Shows On Its Own Line.')}
+    </div>
+    ${f.id && html`<div style=${S('display:flex;justify-content:center')}><button onClick=${() => { const sure = v.delLabel !== 'Delete'; v.deleteSel(); if (sure) v.closeAdd(); }} style=${S('border:0;background:none;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer;padding:8px')}>${v.delLabel === 'Delete' ? 'Delete This Spot' : v.delLabel}</button></div>`}`;
+
+  const seg = (m, label) => html`<button role="tab" aria-selected=${mode === m} onClick=${() => v.setAddMode(m)} style=${S(`height:38px;border:none;border-radius:12px;background:${mode === m ? '#FFFFFF' : 'transparent'};color:${mode === m ? '#10183F' : '#3A4470'};font-size:13px;font-weight:${mode === m ? 800 : 700};cursor:pointer;${mode === m ? 'box-shadow:0 2px 8px rgba(16,24,63,.12)' : ''}`)}>${label}</button>`;
+  const multiBtn = v.aiMulti && !f.id;
+  return html`
+  <div data-screen-label="Add Spot" aria-hidden=${!open} style=${S(`position:absolute;inset:0;z-index:1100;pointer-events:${open ? 'auto' : 'none'}`)}>
+    <div onClick=${v.closeAdd} style=${S(`position:absolute;inset:0;background:rgba(16,24,63,.18);opacity:${open ? 1 : 0};transition:opacity .3s`)}></div>
+    <section style=${S(`position:absolute;left:8px;right:8px;top:${T(54)};bottom:${B(8)};${GL2};border-radius:38px;display:flex;flex-direction:column;transform:translateY(${open ? '0' : 'calc(100% + 80px)'});transition:transform .38s cubic-bezier(.2,.8,.2,1)`)}>
+      <div style=${S('flex:none;padding:12px 18px 0;display:flex;flex-direction:column;gap:16px')}>
+        ${Grab()}
+        <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
+          <div style=${S('min-width:0')}>
+            <h1 style=${S('margin:0;font-size:30px;font-weight:900;font-style:italic;font-stretch:100%;letter-spacing:-.6px')}>${v.formTitle}</h1>
+            ${v.formFor && html`<div style=${S('font-size:13px;font-weight:700;color:#F45FA0;margin-top:2px')}>Just For “${v.formFor}”</div>`}
+          </div>
+          <button onClick=${v.closeAdd} aria-label="Close" style=${S('flex:none;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.6);color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${Ico('M6 6l12 12M18 6L6 18', 16, 'currentColor', 2.8)}</button>
+        </div>
+        ${!f.id && html`
+        <div role="tablist" aria-label="How To Add" style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:4px;border-radius:16px;background:rgba(16,24,63,.08)')}>
+          ${seg('link', 'Paste A Link')}${seg('video', 'From A Video')}${seg('name', 'By Name')}
+        </div>`}
+      </div>
+      <div class="noscroll" style=${S('flex:1;min-height:0;overflow-y:auto;padding:16px 18px 16px;display:flex;flex-direction:column;gap:16px')}>
+        ${!f.id && (mode === 'link' ? linkBlock : mode === 'video' ? videoBlock : nameField)}
+        ${f.id && nameField}
+        ${details}
+      </div>
+      <div style=${S('flex:none;padding:0 18px 20px')}>
+        ${multiBtn ? html`<button onClick=${v.aiAddAll} disabled=${!v.aiPickCount} style=${S(`width:100%;height:58px;border-radius:20px;border:none;background:${v.aiPickCount ? '#FF6B1A' : '#A9ADC2'};color:#fff;font-size:17px;font-weight:900;font-style:italic;font-stretch:100%;cursor:pointer;box-shadow:${v.aiPickCount ? '0 10px 26px rgba(255,107,26,.5),inset 0 1px 0 rgba(255,255,255,.45)' : 'none'}`)}>${v.aiAddAllLabel}</button>`
+          : html`<button onClick=${v.save} style=${S(`width:100%;height:58px;border-radius:20px;border:none;background:${v.saveBg};color:#fff;font-size:17px;font-weight:900;font-style:italic;font-stretch:100%;cursor:pointer;box-shadow:${v.saveBg === '#FF6B1A' ? '0 10px 26px rgba(255,107,26,.5),' : ''}inset 0 1px 0 rgba(255,255,255,.45)`)}>${v.saveLabel}</button>`}
+      </div>
+    </section>
   </div>`;
 }
 

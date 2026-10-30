@@ -264,7 +264,7 @@ Object.assign(Component.prototype, {
     this.setState(st => ({ places: [np, ...st.places], ...(newCats ? { cats: newCats } : {}) })); this.toast('Saved To Your Map!');
   },
   openTrip(id) { const t = this.state.trips.find(x => x.id === id); const p = this.tripPerm(t);
-    this.setState({ tab: 'lists', tripId: id, tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, tripEditOpen: false, confirmTripDel: false });
+    this.setState({ tab: 'lists', tripId: id, tripDay: 'all', tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, tripEditOpen: false, confirmTripDel: false });
     if (p.map) NYCLists.loadSharedMap(id); NYCLists.refresh(); },
   async createTrip() {
     const s = this.state, name = toTitle((s.newTripName || '').trim()); if (!name || s.newTripBusy) return;
@@ -314,8 +314,8 @@ Object.assign(Component.prototype, {
     const rend = L.svg({ pane: 'route' });
     lines.forEach(l => { L.polyline(l.pts, { renderer: rend, color: '#fff', weight: 7, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(m.tl);
       L.polyline(l.pts, { renderer: rend, color: l.col, weight: 3.5, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(m.tl); });
-    pins.forEach(p => { const z = p.sel ? 42 : p.label ? 34 : 30;
-      L.marker(p.ll, { zIndexOffset: p.sel ? 1000 : p.label ? 500 : 0, icon: L.divIcon({ className: '', html: this.pinHtml(p.col, z, p.sel, p.faded && !p.sel, p.label, p.em), iconSize: [z, z], iconAnchor: [z / 2, z * 1.2] }) })
+    pins.forEach(p => { const z = p.sel ? 56 : 40;
+      L.marker(p.ll, { zIndexOffset: p.sel ? 1000 : p.label ? 500 : 0, icon: L.divIcon({ className: '', html: this.pinHtml(p.col, z, p.sel, p.faded && !p.sel, p.label, p.em), iconSize: [z, z], iconAnchor: [z / 2, z / 2] }) })
         .on('click', e => { L.DomEvent.stopPropagation(e); this.setState({ tripSel: { kind: p.kind, id: p.id }, confirmStopDel: false }); }).addTo(m.tl); });
     if (force || ids !== m.tids) { m.tids = ids; const pts = pins.map(p => p.ll);
       if (pts.length) setTimeout(() => this.fit(m, pts, view === 'map' ? { paddingTopLeft: [40, 210], paddingBottomRight: [40, 120], maxZoom: 15 } : { paddingTopLeft: [40, 110], paddingBottomRight: [40, 150], maxZoom: 15 }), 30);
@@ -342,7 +342,12 @@ Object.assign(Component.prototype, {
       const sections = perm.list ? this.tripSections(t).map(sec => {
         const dayOpts = [{ v: 0, label: 'No Day' }, ...Array.from({ length: d.days || 0 }, (_, i) => ({ v: i + 1, label: 'Day ' + (i + 1) }))];
         const rows = sec.stops.map((st, i) => { const p = this.stopPlace(st), c = cats[p.cat] || { name: 'Spot', color: '#888' }, numbered = sec.flat || sec.day > 0;
-          return { key: st.id, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [c.name, p.area].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
+          let leg = null;
+          if (numbered && i > 0) { const q = this.stopPlace(sec.stops[i - 1]), a = [q.lat, q.lng], b = [p.lat, p.lng];
+            if (km(a, b) < 60) { const e = estimate(a, b), sub = e.subway;
+              leg = sub ? { min: Math.max(1, Math.round(sub.min)), walk: false, bullets: [...new Set(sub.legs.filter(x => x.k === 'ride').flatMap(x => x.r.slice(0, 1)))].slice(0, 2).map(bullet) }
+                : { min: Math.max(1, Math.round(e.walk.min)), walk: true, bullets: [] }; } }
+          return { key: st.id, leg, catEmoji: emo(c), catColor: c.color, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [c.name, p.area].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
             badge: numbered ? (sec.flat ? c.color : dayCol(sec.day)) : c.color, badgeFg: numbered && !sec.flat ? '#fff' : fgFor(c.color),
             by: st.by === me ? '' : 'Added By ' + (st.byName || 'A Friend'), hasBy: st.by !== me, ring: s.tripSel && s.tripSel.id === st.id ? C.navy : 'transparent',
             canEdit: perm.edit, hasDays: !!(d.days), dayVal: String(sec.day), dayOpts, onDay: e => this.setStopDay(t.id, st.id, +e.target.value),
@@ -350,22 +355,31 @@ Object.assign(Component.prototype, {
             upOp: i === 0 ? .3 : 1, downOp: i === sec.stops.length - 1 ? .3 : 1,
             onClick: () => { this.setState({ tripSel: { kind: 'stop', id: st.id }, confirmStopDel: false }); const m = this.maps && this.maps.trip; if (m) m.map.flyTo([p.lat, p.lng], 15, { duration: .6 }); } }; });
         const pl = sec.stops.map(st => this.stopPlace(st));
-        return { key: 'd' + sec.day, title: sec.flat ? '' : dayName(d.start, sec.day), hasTitle: !sec.flat, col: dayCol(sec.day), rows, empty: !rows.length,
+        return { key: 'd' + sec.day, day: sec.day, chip: sec.day ? 'Day ' + sec.day : 'Not On A Day', title: sec.flat ? '' : dayName(d.start, sec.day), hasTitle: !sec.flat, col: dayCol(sec.day), rows, empty: !rows.length,
           count: rows.length ? rows.length + (rows.length === 1 ? ' Spot' : ' Spots') : '',
           canRemove: perm.edit && sec.day > 0 && sec.day === d.days, onRemove: () => this.removeDay(t.id, sec.day),
           hasDirs: sec.day > 0 && pl.length > 1, onDirs: () => window.open('https://www.google.com/maps/dir/' + pl.slice(0, 10).map(p => encodeURIComponent(p.address ? `${p.name}, ${p.address}, New York` : `${p.name}, ${p.area}, New York`)).join('/'), '_blank') }; }) : [];
       const people = [{ name: ownerName, role: 'Made This List', isMe: t.owner === me, key: t.owner }, ...t.members.map(m => ({ name: m.user_id === me ? 'You' : (m.name || 'Someone'), role: perm.own ? (t.share_list ? 'Can Add & Sort' : 'Can See Your Map') : 'Invited', isMe: m.user_id === me, key: m.user_id,
         canRemove: perm.own, onRemove: () => NYCLists.removeMember(t.id, m.user_id) }))];
       const sm = s.sharedMaps[t.id];
+      // Day tabs: show every day, or just one.
+      const dayKey = sections.some(x => x.key === s.tripDay) ? s.tripDay : 'all';
+      const dayChips = sections.length > 1 && sections.some(x => x.hasTitle) ? [{ key: 'all', label: 'All', on: dayKey === 'all', col: C.navy },
+        ...[...sections].sort((x, y) => (x.day || 99) - (y.day || 99)).map(x => ({ key: x.key, label: x.chip, on: dayKey === x.key, col: x.col, dashed: !x.day }))].map(c => ({ ...c, onClick: () => this.setState({ tripDay: c.key }) })) : [];
+      const shown = dayKey === 'all' ? sections : sections.filter(x => x.key === dayKey);
+      const firstDate = dayDate(d.start, 1), nSp = d.stops.length;
+      const metaMono = (perm.list ? [d.days ? d.days + (d.days === 1 ? ' DAY' : ' DAYS') : '', nSp + (nSp === 1 ? ' SPOT' : ' SPOTS'), firstDate ? 'STARTS ' + (firstDate.split(', ')[1] || firstDate).toUpperCase() : '', perm.own ? '' : 'FROM ' + (t.owner_name || 'A FRIEND').toUpperCase()] : ['VIEW-ONLY MAP']).filter(Boolean).join(' · ');
+      const avatars = [t.owner_name || ownerName, ...t.members.map(m => m.name || 'Someone')].slice(0, 3).map((n, i) => ({ key: i, initial: (n || '?')[0].toUpperCase(), bg: [C.blue, C.pink, C.purple][i] }));
+      const routeSec = shown.length === 1 && shown[0].hasDirs ? shown[0] : null;
       detail = { name: t.name, isOwner: perm.own, canEdit: perm.edit, showList: view === 'list', showMap: view === 'map',
         sub: perm.list ? `${d.stops.length} ${d.stops.length === 1 ? 'Spot' : 'Spots'}` + (d.days ? ` · ${d.days} ${d.days === 1 ? 'Day' : 'Days'}` : '') + (perm.own ? '' : ' · From ' + (t.owner_name || 'A Friend')) : 'A View-Only Look At ' + (t.owner_name || 'Their') + '’s Map',
         hasToggle: perm.list && perm.map, listTabBg: view === 'list' ? '#FFFFFF' : 'transparent', listTabFg: view === 'list' ? C.blue : '#fff', mapTabBg: view === 'map' ? '#FFFFFF' : 'transparent', mapTabFg: view === 'map' ? C.blue : '#fff',
         mapTabLabel: (t.owner_name ? t.owner_name.split(' ')[0] + '’s' : 'Their') + ' Map',
         viewList: () => this.setState({ tripView: 'list', tripSel: null }), viewMap: () => { this.setState({ tripView: 'map', tripSel: null }); NYCLists.loadSharedMap(t.id); },
         mapNote: !sm ? 'Loading The Map…' : sm.off ? 'This Map Isn’t Shared Anymore.' : sm.places.length ? `${sm.places.length} Spots · Tap A Pin To Add It${perm.list ? ' To The List' : ''} Or Save It` : 'No Spots On This Map Yet.',
-        sections, empty: perm.list && !d.stops.length, dateVal: d.start || '', onDate: e => NYCLists.edit(t.id, x => ({ ...x, start: e.target.value || '' })), hasDays: !!d.days,
+        sections: shown, dayChips, metaMono, avatars, routeDirs: routeSec ? routeSec.onDirs : null, empty: perm.list && !d.stops.length, dateVal: d.start || '', onDate: e => NYCLists.edit(t.id, x => ({ ...x, start: e.target.value || '' })), hasDays: !!d.days,
         addDay: () => this.addDay(t.id), dayBtn: d.days ? '+ Add Day ' + (d.days + 1) : '+ Sort Into Days',
-        openPick: () => this.setState({ tripPickOpen: true, tripPickQ: '' }), openAddNew: () => this.setState({ addOpen: true, addTarget: t.id, placing: false, form: blank(), selId: null, routeFor: null, tripSel: null, lookQ: '', lookResults: [], lookMsg: '', aiMsg: '', aiPlaces: [], aiFor: '', sugg: [], suggBusy: false, suggPicked: '', suggNone: '', webBusy: false, webMsg: '', webFor: '' }),
+        openPick: () => this.setState({ tripPickOpen: true, tripPickQ: '' }), openAddNew: () => this.setState({ addOpen: true, addMode: 'link', addTarget: t.id, placing: false, form: blank(), selId: null, routeFor: null, tripSel: null, lookQ: '', lookResults: [], lookMsg: '', aiMsg: '', aiPlaces: [], aiFor: '', sugg: [], suggBusy: false, suggPicked: '', suggNone: '', webBusy: false, webMsg: '', webFor: '' }),
         openEdit: () => this.setState({ tripEditOpen: true, tripEditName: t.name, tripEditDays: d.days || 0, tripEditStart: d.start || '', tripSel: null }),
         people, openShare: () => this.setState({ tripShareOpen: true, tripSel: null }), back: () => this.setState({ tripId: null, tripSel: null }),
         delLabel: perm.own ? (s.confirmTripDel ? 'Tap Again To Delete This List' : 'Delete List') : (s.confirmTripDel ? 'Tap Again To Leave' : 'Leave This List'),
@@ -463,7 +477,7 @@ Object.assign(Component.prototype, {
       listsState: s.tripsState, listsMissing: s.tripsState === 'missing', listsLoading: s.tripsState === 'loading' && !s.trips.length, listsError: s.tripsState === 'error' && !s.trips.length,
       listCards: cards, listsEmpty: s.tripsState === 'ready' && !s.trips.length, retryLists: () => NYCLists.refresh(),
       openNewTrip: () => this.setState({ newTripOpen: true, newTripName: '', newTripDays: 0, newTripStart: '', newTripAddPid: null }),
-      trip: detail, tripMapRef: this.tripMapRef, tripMapH: detail && detail.showMap ? '100%' : 'calc(var(--st) + 300px)', tripEdit: editSheet,
+      trip: detail, tripMapRef: this.tripMapRef, tripMapH: detail && detail.showMap ? '100%' : 'calc(var(--st) + 330px)', tripEdit: editSheet,
       hasTripSel: !!tsel && s.tab === 'lists' && !s.addOpen, tsel, tripShare: share, tripPick: pick, listChoose: choose, newTrip,
       goLists: () => { this.setState({ tab: 'lists', selId: null, placing: false, routeFor: null, tripSel: null }); NYCLists.refresh(); },
       tabListFg: s.tab === 'lists' ? C.blue : '#3A4470', addToListSel: () => s.selId && this.setState({ listChoose: s.selId }),

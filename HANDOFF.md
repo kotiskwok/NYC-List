@@ -80,6 +80,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 - **Colors:** blue `#1B3DB8`, navy `#10183F`, orange `#FF6B1A`, yellow `#FFC425`, red `#E8242C`, pink `#F45FA0`, green `#1F9D6B`, purple `#7A4FD6`, cream background `#FFF3DF`.
 - **Look: glass.** Floating controls, the tab bar, place cards and sheets are frosted glass (`GL` / `GL2` / `TILE` in `view.js`) over the colorful map; the other screens sit on a soft borough-colored backdrop (`--bgfx` in `index.html`). Small data labels (counts, walk times, legs) use **JetBrains Mono** (`var(--mono)`). Plain `background:#fff` in a style turns frosted automatically (in `S()`); write `#FFFFFF` when solid white is needed.
 - **Notes** show one sentence per line (`noteLines` in `view.js`; abbreviations like Ave., St., a.m. don't break a line).
+- **Layout follows the Claude Design canvas "NYC List Glass Redesign"** (Map, Place Card, Add A Spot, Shared List). Categories show line icons (`CAT_ICON` in `logic.js`, one per default category and per New Category emoji; others fall back to the emoji). Pins are frosted rings centered on the spot. Add A Spot has three modes (`addMode`: link, video, name) and found places are checkable (`aiSkip`). Lists have day tabs (`tripDay`) and estimated travel legs between stops. Delete Spot lives in Edit Spot.
 - **Font:** **Archivo** (Google Fonts). Headings are 900 weight and italic. All UI text uses Title Case On Every Word.
 - **Map palette "Colorful":** Manhattan `#FFE38F`, Brooklyn `#FFC09A`, Queens `#C4D0FF`, Bronx `#FFB5C9`, Staten Island `#D6C6F4`, water `#86C8EE`, parks `#7FCB8F`.
 - **Source badge colors:** TikTok navy, Instagram `#D9367F`, Threads `#2B2B2B`, Google Maps green, Website blue, Added By Name grey.
@@ -146,7 +147,7 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 
 ### Maps, routing and offline
 - **Subway routing:** an *estimate* from station coordinates and shared lines, not live. Live times come from the Google Maps links.
-- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v17`).
+- **Offline:** `sw.js` caches the app. Map data and libraries are served from the cache first; the page and code come from the network first. **Whenever files in `src/` change, bump `CACHE` in `sw.js`** (currently `nyc-list-v18`).
 
 ### Server functions (`/api`)
 Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files starting with `_` are helpers, not endpoints.

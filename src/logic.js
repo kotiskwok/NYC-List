@@ -4,6 +4,19 @@ const fgFor=c=>c===C.yellow?C.navy:'#fff';
 const CATS0=[{id:'coffee',name:'Coffee Shop',color:C.orange,emoji:'☕'},{id:'work',name:'Coffee Shop To Work At',color:C.blue,emoji:'💻'},{id:'food',name:'Restaurant',color:C.red,emoji:'🍽️'},{id:'bakery',name:'Bakery',color:C.yellow,emoji:'🥐'},{id:'grocery',name:'Gourmet Grocery',color:C.green,emoji:'🧀'},{id:'shop',name:'Cute Shop',color:C.pink,emoji:'🛍️'}];
 const EMO_DEF=Object.fromEntries(CATS0.map(c=>[c.id,c.emoji]));
 const emo=c=>(c&&(c.emoji||EMO_DEF[c.id]))||'📍';
+// Line icons drawn for each category emoji (24px grid, stroked). Emojis without one fall back to the emoji itself.
+const CAT_ICON={'☕':'M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z M16 9h2a2 2 0 0 1 0 4h-2','💻':'M5 6h14v9H5z M3 18h18','🍽️':'M7 3v18 M5 3v5a2 2 0 0 0 4 0V3 M17 3c-2.5 2-2.5 7 0 9v9',
+  '🥐':'M4 15c0-5 4-8 8-8s8 3 8 8c-2.5 2.5-13.5 2.5-16 0z M9 9l1 6 M15 9l-1 6','🧀':'M3 10h18l-2 9H5z M8 10l3-6 M16 10l-3-6','🛍️':'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
+  '⭐':'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z','🍵':'M5 10h12v3a6 6 0 0 1-12 0z M17 11h1.5a2 2 0 0 1 0 4H16 M9 3v3 M13 3v3',
+  '🧋':'M7 7h10l-1.5 13h-7z M6 7h12 M12 7l2-4 M10 16h.01 M13 17h.01 M11.5 13.5h.01','🍜':'M3 11h18a9 9 0 0 1-18 0z M8 11V4 M12 11V4 M16 4l-2 7',
+  '🍣':'M3 14c0-3 4-5 9-5s9 2 9 5-4 5-9 5-9-2-9-5z M8 11c1 1.5 7 1.5 8 0','🍕':'M12 21L3 6c6-3 12-3 18 0z M9 10h.01 M14 12h.01 M12 15h.01',
+  '🌮':'M3 17a9 9 0 0 1 18 0z M7 13c1-1 2-1 3 0s2 1 3 0 2-1 3 0','🥯':'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16z M12 10a2 2 0 1 0 0 4a2 2 0 1 0 0-4z',
+  '🍦':'M7.5 10a4.5 4.5 0 0 1 9 0 M7 10h10l-5 11z','🍷':'M8 3h8l-.5 5a3.5 3.5 0 0 1-7 0z M12 12v8 M8 21h8','🍸':'M4 4h16l-8 9z M12 13v7 M8 21h8',
+  '📚':'M5 4h4v16H5z M10 4h4v16h-4z M15 5l3.5-1 3 15-3.5 1z','🌿':'M5 19C5 10 11 5 20 4c-1 9-6 15-15 15z M5 19l8-8',
+  '🎨':'M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.5-4-8-9-8z M7.5 11h.01 M10 7h.01 M15 7h.01',
+  '🧘':'M12 4a2 2 0 1 0 0 4a2 2 0 1 0 0-4z M12 9v5 M6 12l6 2 6-2 M7 19l5-3 5 3','🖼️':'M4 5h16v14H4z M4 16l5-5 4 4 3-3 4 4',
+  '📍':'M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z M12 7a3 3 0 1 0 0 6a3 3 0 1 0 0-6z','🗽':'M4 5h16M4 12h16M4 19h16'};
+const iconSvg=(em,px,col)=>CAT_ICON[em]?`<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CAT_ICON[em]}"/></svg>`:`<span style="font-size:${Math.round(px*.95)}px;line-height:1">${em}</span>`;
 const EMOJIS=['⭐','🍵','🧋','🍜','🍣','🍕','🌮','🥯','🍦','🍷','🍸','📚','🌿','🎨','🧘','🖼️'];
 const BOROUGHS=['Manhattan','Brooklyn','Queens','Bronx','Staten Island'];
 const PAL={Colorful:{water:'#86C8EE',park:'#7FCB8F',air:'#D8D3C8',line:'rgba(255,255,255,.95)',boro:{Manhattan:'#FFE38F',Brooklyn:'#FFC09A',Queens:'#C4D0FF',Bronx:'#FFB5C9','Staten Island':'#D6C6F4'}},
@@ -95,7 +108,7 @@ class Component extends DCLogic {
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:true,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
-      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
+      auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
       newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,authName:'',acctDel:0};})();
 
@@ -110,7 +123,7 @@ class Component extends DCLogic {
 
   // Open Add A Spot with a shared link once sign-in has settled, and let AI read it.
   takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;if(this._shareQ&&this._shareQ.length)setTimeout(()=>this.toast(this._shareQ.length+' More Shared '+(this._shareQ.length===1?'Link':'Links')+' Waiting'),900);
-    this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
+    this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link Added — Tap ✨ Fill From Link To Read It.'});else this.aiAuto(u,true);}},400);}
   componentDidMount(){this._on=true;this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
     window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
@@ -199,14 +212,15 @@ class Component extends DCLogic {
     if(s.routeFor){const d=s.places.find(p=>p.id===s.routeFor);main=d?[d]:main;}
     this.syncOne(this.maps.main,main,false);if(this.maps.ex)this.syncOne(this.maps.ex,l.ex,true);
     this.syncMe();this.syncRoute();if(this.maps.plan)this.syncPlan(false);if(this.maps.trip)this.syncTrip(false);}
-  // Glass pin: a frosted ring around a colored core with the emoji (or stop number), and a small tip
-  // dot underneath that marks the exact spot (the marker's anchor sits 0.2z below the ring).
-  pinHtml(col,z,sel,faded,label,em){const core=z-(sel?10:8),tip=sel?8:6;return `<div style="position:relative;width:${z}px;height:${z}px;opacity:${faded?.55:1}"><div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(255,255,255,.4) 60%,rgba(255,255,255,.7));border:1px solid rgba(255,255,255,.95);box-shadow:0 6px 16px rgba(16,24,63,.3),inset 0 -1px 2px rgba(16,24,63,.08)${sel?',0 0 0 5px rgba(255,196,37,.55)':''};display:flex;align-items:center;justify-content:center"><div style="width:${core}px;height:${core}px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 2px 3px rgba(255,255,255,.45),inset 0 -2px 3px rgba(16,24,63,.18)">${label?`<span style="color:${fgFor(col)};font:italic 900 ${Math.round(core*.55)}px Archivo,sans-serif">${label}</span>`:em?`<span style="font-size:${Math.round(core*.55)}px;line-height:1">${em}</span>`:`<span style="width:${Math.round(core*.32)}px;height:${Math.round(core*.32)}px;border-radius:50%;background:#fff"></span>`}</div></div><div style="position:absolute;left:50%;top:${Math.round(z*1.2-(tip+4)/2)}px;width:${tip}px;height:${tip}px;margin-left:-${(tip+4)/2}px;border-radius:50%;background:${col};border:2px solid #fff;box-sizing:content-box;box-shadow:0 2px 5px rgba(16,24,63,.35)"></div></div>`;}
+  // Glass pin (mockup): a frosted ring around a colored core with the category's line icon or the stop number,
+  // centered on the spot. Selected pins grow and get a yellow halo.
+  pinHtml(col,z,sel,faded,label,em){const pad=sel?7:Math.max(4,Math.round(z*.11)),core=z-pad*2,fg=fgFor(col);
+    return `<div style="position:relative;width:${z}px;height:${z}px;opacity:${faded?.55:1}">${sel?`<div style="position:absolute;inset:-${Math.round(z*.28)}px;border-radius:50%;border:2px solid rgba(255,196,37,.9);background:rgba(255,196,37,.18)"></div>`:''}<div style="position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(10px) saturate(180%);backdrop-filter:blur(10px) saturate(180%);border:1px solid rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(16,24,63,.22),inset 0 1px 0 rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center"><div style="width:${core}px;height:${core}px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center">${label?`<span style="color:${fg};font:italic 900 ${Math.round(core*.5)}px Archivo,sans-serif">${label}</span>`:em?iconSvg(em,Math.round(core*.53),fg):`<span style="width:${Math.round(core*.32)}px;height:${Math.round(core*.32)}px;border-radius:50%;background:${fg}"></span>`}</div></div></div>`;}
   syncOne(m,list,fit){const L=window.L,s=this.state,cat=Object.fromEntries(s.cats.map(c=>[c.id,c]));
     const sig=list.map(p=>p.id+p.cat+(p.visited?'v':'')+(p.id===s.selId||p.id===s.routeFor?'s':'')+p.lat+p.lng).join()+s.cats.map(c=>c.color+emo(c)).join();
     if(sig===m.sig)return;const ids=list.map(p=>p.id).join();const refit=fit&&ids!==m.ids;m.sig=sig;m.ids=ids;m.layer.clearLayers();
-    list.forEach(p=>{const sel=p.id===s.selId||p.id===s.routeFor||p.draft,z=sel?42:30,col=(cat[p.cat]||{}).color||C.orange;
-      const mk=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:this.pinHtml(col,z,sel,p.visited&&!sel,null,cat[p.cat]?emo(cat[p.cat]):null),iconSize:[z,z],iconAnchor:[z/2,z*1.2]}),zIndexOffset:sel?1000:0,interactive:!p.draft});
+    list.forEach(p=>{const sel=p.id===s.selId||p.id===s.routeFor||p.draft,z=sel?64:44,col=(cat[p.cat]||{}).color||C.orange;
+      const mk=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:this.pinHtml(col,z,sel,p.visited&&!sel,null,cat[p.cat]?emo(cat[p.cat]):null),iconSize:[z,z],iconAnchor:[z/2,z/2]}),zIndexOffset:sel?1000:0,interactive:!p.draft});
       if(!p.draft)mk.on('click',e=>{L.DomEvent.stopPropagation(e);if(this.state.placing||this.state.routeFor)return;this.setState({selId:p.id,confirmDel:false});});mk.addTo(m.layer);});
     if(refit&&list.length)this.fit(m,list);}
   syncMe(){const m=this.maps.main,L=window.L,s=this.state;const sig=JSON.stringify([s.home,s.here,s.hereAcc]);if(sig===m.mesig)return;m.mesig=sig;m.me.clearLayers();
@@ -240,7 +254,7 @@ class Component extends DCLogic {
     const pts=[...(start?[start]:[]),...stops.map(p=>[p.lat,p.lng])];
     if(pts.length>1){const rend=L.svg({pane:'route'});L.polyline(pts,{renderer:rend,color:'#fff',weight:8,lineCap:'round',lineJoin:'round',interactive:false}).addTo(m.planL);L.polyline(pts,{renderer:rend,color:C.orange,weight:4,dashArray:'2 8',lineCap:'round',interactive:false}).addTo(m.planL);}
     if(start)L.marker(start,{interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div style="transform:translate(-50%,-50%);background:#10183F;color:#FFC425;font:italic 900 11px Archivo,sans-serif;padding:4px 9px;border-radius:999px;border:2px solid #fff;white-space:nowrap">Start</div>`})}).addTo(m.planL);
-    stops.forEach((p,i)=>{const col=(cat[p.cat]||{}).color||C.orange;L.marker([p.lat,p.lng],{zIndexOffset:500,icon:L.divIcon({className:'',html:this.pinHtml(col,36,true,false,String(i+1)),iconSize:[36,36],iconAnchor:[18,43]})})
+    stops.forEach((p,i)=>{const col=(cat[p.cat]||{}).color||C.orange;L.marker([p.lat,p.lng],{zIndexOffset:500,icon:L.divIcon({className:'',html:this.pinHtml(col,40,false,false,String(i+1)),iconSize:[40,40],iconAnchor:[20,20]})})
       .on('click',e=>{L.DomEvent.stopPropagation(e);this.toast((i+1)+'. '+p.name);}).addTo(m.planL);});
     if(pts.length)setTimeout(()=>this.fit(m,pts,{paddingTopLeft:[40,70],paddingBottomRight:[40,50],maxZoom:15.5}),30);}
   locate(after){if(!navigator.geolocation){this.setState({hereFailed:true,locFail:'This Browser Doesn\u2019t Share Location. Tap The Map Where You Are Instead.'});return;}
@@ -379,7 +393,7 @@ class Component extends DCLogic {
     if(!url&&!f.note.trim()){this.setState({aiMsg:'Paste A Link First.'});return;}
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
     if(!token){this.setState({aiMsg:'Sign In To Use AI Fill.'});return;}
-    this.setState({aiBusy:true,aiMsg:'',aiPlaces:[],aiFor:url});
+    this.setState({aiBusy:true,aiMsg:'',aiPlaces:[],aiSkip:[],aiFor:url});
     let j=null;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),45000);
       const r=await fetch(API('/api/extract'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
         body:JSON.stringify({url,notes:f.note.trim(),categories:this.state.cats.map(c=>({id:c.id,name:c.name})),neighborhoods:areas().map(a=>a.name)})});
@@ -388,7 +402,7 @@ class Component extends DCLogic {
     const places=(j&&j.places)||[];
     if(this.state.form.url.trim()!==url&&url){this.setState({aiBusy:false});return;}
     if(!places.length){this.setState({aiBusy:false,aiMsg:(j&&j.message)||'No Places Found In This Post.'});return;}
-    this.setState({aiBusy:false,aiPlaces:places,aiMsg:places.length>1?'':'Filled In From '+(detect(url)==='gmaps'?'Google Maps':'The Post')+' — Check It Looks Right.'});
+    this.setState({aiBusy:false,aiPlaces:places,aiSkip:[],aiMsg:places.length>1?'':'Filled In From '+(detect(url)==='gmaps'?'Google Maps':'The Post')+' — Check It Looks Right.'});
     await this.aiApply(places[0],places.length>1);}
   // ---- AI fill from a video saved to the phone: speech-to-text + on-screen text ----
   async aiVideo(file){if(!file||this.state.aiBusy)return;
@@ -397,7 +411,7 @@ class Component extends DCLogic {
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
     if(!token){this.setState({aiMsg:'Sign In To Use AI Fill.'});return;}
     const f=this.state.form,url=f.url.trim();
-    this.setState({aiBusy:true,aiStage:'🎬 Watching The Video…',aiMsg:'',aiPlaces:[],aiFor:url});
+    this.setState({aiBusy:true,aiStage:'🎬 Watching The Video…',aiMsg:'',aiPlaces:[],aiSkip:[],aiFor:url});
     const frames=await NYCVideo.frames(file,3).catch(()=>[]);
     let transcript='',heardNote='';
     this.setState({aiStage:'🎧 Listening To The Video…'});
@@ -418,7 +432,7 @@ class Component extends DCLogic {
     catch(e){this.setState({aiBusy:false,aiStage:'',aiMsg:'Couldn’t Reach AI Fill. Check Your Connection.'});return;}
     const places=(j&&j.places)||[];
     if(!places.length){this.setState({aiBusy:false,aiStage:'',aiMsg:'No Specific Places Found In This Video.'+(heardNote?' '+heardNote:'')});return;}
-    this.setState({aiBusy:false,aiStage:'',aiPlaces:places,aiMsg:places.length>1?(heardNote||''):'Filled In From The Video — Check It Looks Right.'+(heardNote?' '+heardNote:'')});
+    this.setState({aiBusy:false,aiStage:'',aiPlaces:places,aiSkip:[],aiMsg:places.length>1?(heardNote||''):'Filled In From The Video — Check It Looks Right.'+(heardNote?' '+heardNote:'')});
     await this.aiApply(places[0],true);}
   aiArea(name){if(!name)return null;const n=name.toLowerCase().trim(),A=areas();return (A.find(a=>a.name.toLowerCase()===n)||A.find(a=>n.includes(a.name.toLowerCase())||a.name.toLowerCase().includes(n))||{}).name||null;}
   async aiLocate(p,areaName){if(p.lat!=null&&p.lng!=null&&p.lat>40.45&&p.lat<40.95&&p.lng>-74.3&&p.lng<-73.65)return [r5(+p.lat),r5(+p.lng)];
@@ -439,7 +453,7 @@ class Component extends DCLogic {
     if(!multi)this.setState({aiMsg:ll?'Filled In And Pinned From '+from+' — Check It Looks Right.':area?'Filled In From '+from+' — It’ll Go In '+area+'. Drop A Pin To Be Exact.':'Filled In From '+from+' — Drop A Pin Or Pick A Neighborhood.'});}
   async aiAddAll(){const s=this.state;if(s.aiAdding||!s.aiPlaces.length)return;this.setState({aiAdding:true});
     const url=s.form.url.trim(),made=[];let skipped=0;
-    for(const p of s.aiPlaces){const area=this.aiArea(p.neighborhood);let ll=await this.aiLocate(p,area);
+    for(const p of s.aiPlaces.filter((_,i)=>!(s.aiSkip||[]).includes(i))){const area=this.aiArea(p.neighborhood);let ll=await this.aiLocate(p,area);
       if(!ll&&area){const ao=areas().find(a=>a.name===area);ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];}
       if(!ll){skipped++;continue;}
       const cat=p.category_id&&this.state.cats.some(c=>c.id===p.category_id)?p.category_id:(this.state.cats[0]||{}).id;
@@ -473,7 +487,11 @@ class Component extends DCLogic {
       sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
         hasStation:!!ns,stName:ns?ns.s.n:'',stRoutes:ns?ns.s.r.slice(0,6).map(bullet):[],stWalk:ns?fmtMin(walkMin([sp.lat,sp.lng],ns.s.c))+' Walk':'',
         cols:hasUrl?'1fr 1fr 1fr':'1fr 1fr',visBg:sp.visited?C.green:'#fff',visFg:sp.visited?'#fff':C.green,visLabel:sp.visited?'Been Here ✓':'Mark Visited',
-        planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1]};}
+        planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1],
+        srcBadge:hasUrl?'Saved From '+src.label:'',catEmoji:emo(c),catColor:c.color};
+      if(s.home&&km([s.home.lat,s.home.lng],[sp.lat,sp.lng])<60){const e=estimate([s.home.lat,s.home.lng],[sp.lat,sp.lng]),sub=e.subway;
+        const xf=sub?sub.legs.filter(x=>x.k==='xfer').length:0;
+        sel.homeMin=Math.max(1,Math.round(sub?sub.min:e.walk.min));sel.homeHow=sub?(xf?xf+(xf>1?' Transfers':' Transfer'):'No Transfers'):'Walk';}}
     // route
     const rd=this.routeData();let routeOpts=[],routeMsg='',routeNeedsHome=false;
     if(rd){if(!rd.a){if(s.routeMode==='home'){routeMsg='Save Your Home Once And Every Route Can Start There.';routeNeedsHome=true;}
@@ -528,10 +546,10 @@ class Component extends DCLogic {
       exTitle,exSub:`${areaTxt} · ${n} ${n===1?'Place':'Places'}`,
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
       viewList:()=>this.setState({exView:'list'}),viewMap:()=>this.setState({exView:'map'}),resultCards,noResults:!n,
-      hasSel:!!sp&&!s.placing&&!s.routeFor,sel,delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
+      hasSel:!!sp&&!s.placing&&!s.routeFor,sel,spotCount:s.places.length,onMapTab:s.tab==='map',delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
       openSource:()=>sp&&window.open(sp.url,'_blank'),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
       toggleVisited:()=>{if(!sp)return;this.setState(st=>({places:st.places.map(p=>p.id===sp.id?{...p,visited:!p.visited}:p)}));if(!sp.visited)this.toast('Nice! Marked As Visited');},
-      editSel:()=>sp&&this.setState({addOpen:true,form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',lat:sp.lat,lng:sp.lng}}),
+      editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',lat:sp.lat,lng:sp.lng}}),
       deleteSel:()=>{if(!sp)return;if(!s.confirmDel)return this.setState({confirmDel:true});this.setState(st=>({places:st.places.filter(p=>p.id!==sp.id),plan:{...st.plan,ids:st.plan.ids.filter(x=>x!==sp.id)},selId:null,confirmDel:false}));this.toast('Spot Deleted');},
       routeOpen:!!rd&&!s.placing,routeDest:rd?rd.d.name:'',closeRoute:()=>{const id=s.routeFor;this.setState({routeFor:null,selId:id});},
       originChips,originIsSpot:s.routeMode==='spot',routeSpotVal:s.routeSpot||'',onRouteSpot:e=>this.setState({routeSpot:e.target.value,routePick:0}),
@@ -548,7 +566,7 @@ class Component extends DCLogic {
         onClick:()=>this.setState(st=>({plan:{...st.plan,ids:ip?st.plan.ids.filter(x=>x!==p.id):[...st.plan.ids,p.id]}}))};}),
       goMap:()=>this.setState({tab:'map',selId:null,placing:false,routeFor:null,tripSel:null}),goExplore:()=>this.setState({tab:'explore',selId:null,placing:false,routeFor:null,tripSel:null}),goPlan:()=>this.setState({tab:'plan',selId:null,placing:false,routeFor:null,tripSel:null}),
       tabMapFg:tabC('map'),tabMapDot:tabD('map'),tabExFg:tabC('explore'),tabExDot:tabD('explore'),tabPlanFg:tabC('plan'),tabPlanDot:tabD('plan'),
-      openAdd:()=>this.setState({addOpen:true,addTarget:null,tripSel:null,placing:false,form:blank(),selId:null,routeFor:null,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''}),closeAdd:()=>this.setState({addOpen:false,sugg:[],...(s.addTarget?{addTarget:null,tab:'lists'}:{})}),
+      openAdd:()=>this.setState({addOpen:true,addTarget:null,tripSel:null,placing:false,form:blank(),selId:null,routeFor:null,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''}),closeAdd:()=>this.setState({addOpen:false,sugg:[],...(s.addTarget?{addTarget:null,tab:'lists'}:{})}),
       hasSugg:!!s.sugg.length&&!f.id,suggRows:s.sugg.map(g=>{const c=s.cats.find(x=>x.id===g.cat);return {name:g.name,sub:[g.street,g.hood].filter(Boolean).join(' · ')||'NYC',emoji:c?emo(c):'📍',bg:c?c.color:'#E9E4DA',onPick:()=>this.pickSugg(g)};}),
       suggBusy:s.suggBusy&&!s.sugg.length&&!f.id,closeSugg:()=>this.setState({sugg:[],suggPicked:f.name.trim()}),
       suggWeb:!!s.sugg.length&&s.sugg[0].web,suggGoogle:!!s.sugg.length&&!!s.sugg[0].gid,suggTitle:s.sugg.length&&s.sugg[0].web?'Found On The Web':'Is It One Of These?',
@@ -557,8 +575,10 @@ class Component extends DCLogic {
       webBusy:s.webBusy,webHasMsg:!!s.webMsg&&!s.webBusy,webMsg:s.webMsg,
       aiShow:!f.id&&!!f.url.trim(),aiVidShow:!f.id,onVideo:e=>{const fl=e.target.files&&e.target.files[0];e.target.value='';this.aiVideo(fl);},aiBtn:s.aiBusy?(s.aiStage||'✨ Reading The Post…'):s.aiFor&&s.aiFor===f.url.trim()?'✨ Read It Again':'✨ Fill From Link',aiBusy:s.aiBusy,
       aiRun:()=>this.aiFill(),aiHasMsg:!!s.aiMsg&&!s.aiBusy,aiMsg:s.aiMsg,aiMulti:s.aiPlaces.length>1&&!s.aiBusy,aiCount:s.aiPlaces.length,
-      aiAddAllLabel:s.aiAdding?'Adding…':`Add All ${s.aiPlaces.length} To ${s.addTarget?'The List':'My Map'}`,aiAddAll:()=>this.aiAddAll(),
-      aiRows:s.aiPlaces.map((p,i)=>{const c=cat[p.category_id];return {name:p.name,emoji:c?emo(c):'📍',bg:c?c.color:'#A9ADC2',sub:[c&&c.name,p.neighborhood].filter(Boolean).join(' · ')||'NYC',on:p.name===f.name,onPick:()=>this.aiApply(p)};}),
+      aiPickCount:s.aiPlaces.length-(s.aiSkip||[]).length,aiAddAllLabel:s.aiAdding?'Adding…':`Add ${s.aiPlaces.length-(s.aiSkip||[]).length} To ${s.addTarget?'The List':'My Map'}`,aiAddAll:()=>this.aiAddAll(),
+      aiRows:s.aiPlaces.map((p,i)=>{const c=cat[p.category_id];return {name:p.name,emoji:c?emo(c):'📍',bg:c?c.color:'#A9ADC2',sub:[c&&c.name,p.neighborhood].filter(Boolean).join(' · ')||'NYC',on:p.name===f.name,onPick:()=>this.aiApply(p),checked:!(s.aiSkip||[]).includes(i),onCheck:e=>{e.stopPropagation();const k=s.aiSkip||[];this.setState({aiSkip:k.includes(i)?k.filter(x=>x!==i):[...k,i]});}};}),
+      aiConfHigh:s.aiPlaces.length>0&&s.aiPlaces.every(p=>p.confidence==='high'),
+      addMode:f.id?'name':(s.addMode||'link'),setAddMode:m=>this.setState({addMode:m}),aiReads:({tiktok:'CAPTION · COVER · SPOKEN WORDS',instagram:'CAPTION · COVER IMAGE',threads:'POST TEXT · IMAGE',gmaps:'NAME · ADDRESS · PIN',link:'PAGE TITLE · DESCRIPTION'})[fsrc]||'AUDIO · ON-SCREEN TEXT',srcShort:fsrc?(fsrc==='link'?'WEBSITE':fsrc==='gmaps'?'MAPS':SRC[fsrc].label.toUpperCase()):'',formId:f.id||null,
       addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':s.addTarget?'Add To The List':'Add A Spot',formFor:s.addTarget?((s.trips.find(t=>t.id===s.addTarget)||{}).name||''):'',form:f,
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
       onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
