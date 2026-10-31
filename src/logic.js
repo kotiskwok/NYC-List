@@ -481,7 +481,7 @@ class Component extends DCLogic {
     try{Object.keys(localStorage).filter(k=>k.startsWith('nycList.')).forEach(k=>localStorage.removeItem(k));}catch(e){}
     await NYCSync.signOut(true);this.setState({acctDel:0});this.toast('Your Account Was Deleted');}
   openRouteFor(id){const s=this.state;let mode=s.routeMode;if(mode==='home'&&!s.home)mode=s.here?'here':'home';
-    const other=s.places.find(p=>p.id!==id);this.setState({routeFor:id,selId:null,tab:'map',routeMode:mode,routePick:0,routeSpot:s.routeSpot&&s.routeSpot!==id?s.routeSpot:(other&&other.id)});}
+    const other=s.places.find(p=>p.id!==id);this.setState({routeFor:id,routeMini:false,selId:null,tab:'map',routeMode:mode,routePick:0,routeSpot:s.routeSpot&&s.routeSpot!==id?s.routeSpot:(other&&other.id)});}
 
   // ---- Place-name suggestions while typing ----
   // Google's place search (server: /api/places, needs GOOGLE_MAPS_API_KEY in Vercel) when it's set up;
@@ -760,7 +760,7 @@ class Component extends DCLogic {
       deckSkip:()=>this.deckAct('skip'),deckPlan:()=>this.deckAct('plan'),deckOpen:()=>{const p=this.deckList()[this.deckPos()];if(p)this.setState({selId:p.id,confirmDel:false});},deckShuffle:()=>this.setState({deckSeed:s.deckSeed+1,deckDx:0,deckFly:''}),
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
       viewList:()=>this.setState({exView:'list'}),viewMap:()=>this.setState({exView:'map'}),resultCards,noResults:!n,
-      hasSel:!!sp&&!s.placing&&!s.routeFor,sel,spotCount:s.places.length,visitedCount:s.places.filter(p=>p.visited).length,
+      hasSel:!!sp&&!s.placing&&!s.routeFor,mapChrome:!(sp&&!s.placing&&!s.routeFor)&&!(s.routeFor&&!s.placing),sel,spotCount:s.places.length,visitedCount:s.places.filter(p=>p.visited).length,
       // Nearest saved spot to where you are (only once your location is known), for the card at the bottom of the map.
       nearest:(()=>{if(!s.here||s.tab!=='map'||s.placing||s.routeFor||s.selId)return null;let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited)return;const d=km(s.here,[p.lat,p.lng]);if(d<bd){bd=d;best=p;}});if(!best||bd>8)return null;
         const c=catOf(best.cat),walk=Math.max(1,Math.round(bd*1.25/4.8*60));return {name:best.name,img:placeImg(best),catName:c.name,col:c.color,fg:fgFor(c.color),em:emo(c),big:walk>99?Math.round(walk/60):walk,unit:walk>99?'hr':'min',
@@ -769,7 +769,7 @@ class Component extends DCLogic {
       toggleVisited:()=>{if(!sp)return;this.setState(st=>({places:st.places.map(p=>p.id===sp.id?{...p,visited:!p.visited}:p)}));if(!sp.visited)this.toast('Nice! Marked As Visited');},
       editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',lat:sp.lat,lng:sp.lng}}),
       deleteSel:()=>{if(!sp)return;if(!s.confirmDel)return this.setState({confirmDel:true});this.setState(st=>({places:st.places.filter(p=>p.id!==sp.id),plan:{...st.plan,ids:st.plan.ids.filter(x=>x!==sp.id)},selId:null,confirmDel:false}));this.toast('Spot Deleted');},
-      routeOpen:!!rd&&!s.placing,routeDest:rd?rd.d.name:'',closeRoute:()=>{const id=s.routeFor;this.setState({routeFor:null,selId:id});},
+      routeOpen:!!rd&&!s.placing,routeMini:!!s.routeMini,routeCollapse:()=>this.setState({routeMini:true}),routeExpand:()=>this.setState({routeMini:false}),routeDest:rd?rd.d.name:'',closeRoute:()=>{const id=s.routeFor;this.setState({routeFor:null,selId:id});},
       originChips,originIsSpot:s.routeMode==='spot',routeSpotVal:s.routeSpot||'',onRouteSpot:e=>this.setState({routeSpot:e.target.value,routePick:0}),
       spotOptions:s.places.filter(p=>p.id!==s.routeFor).map(p=>({id:p.id,name:p.name+' · '+p.area})),
       routeHasMsg:!!routeMsg,routeMsg,routeNeedsHome,routeNeedsHere:!!rd&&!rd.a&&s.routeMode==='here'&&s.hereFailed,setHereRoute:()=>this.startPlacing('here','route:'+s.routeFor),setHome:()=>this.startPlacing('home','route:'+s.routeFor),routeOpts,

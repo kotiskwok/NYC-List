@@ -82,7 +82,7 @@ const H3 = (title, onClear, clearLabel, mt) => html`
 
 function MapScreen(v) {
   const sideBtn = 'width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;cursor:pointer';
-  const hide = v.hasSel ? 'none' : 'flex';
+  const hide = v.mapChrome ? 'flex' : 'none';   // the banner, chips and side buttons hide under a spot or Get There
   return html`
   <div data-screen-label="Map" style=${S(`position:absolute;inset:0;display:${v.mapDisplay}`)}>
     <div ref=${v.mainMapRef} style=${S('position:absolute;inset:0')}></div>
@@ -115,7 +115,7 @@ function MapScreen(v) {
       <button class="lg" onClick=${v.toggleLayers} aria-label="Map Layers" aria-expanded=${v.layersOpen} style=${S(`${sideBtn};${v.layersOn ? 'border:1px solid rgba(255,255,255,.5);background:#10183F;box-shadow:0 10px 26px rgba(16,24,63,.3)' : GL};color:${v.layersOn ? '#FFC425' : '#10183F'}`)}>${Ico('M12 3l9 5-9 5-9-5z M3 13l9 5 9-5', 22)}</button>
       <button class="lg" onClick=${v.locateMe} aria-label="My Location" style=${S(`${sideBtn};${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 10px 26px rgba(16,24,63,.3)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg}`)}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg></button>
     </div>
-    ${v.layersOpen && !v.hasSel && html`
+    ${v.layersOpen && v.mapChrome && html`
     <div role="dialog" aria-label="Map Layers" class="lg" style=${S(`position:absolute;right:76px;bottom:${B(v.nearest ? 196 : 112)};z-index:700;width:236px;${GL};border-radius:26px;padding:8px;display:flex;flex-direction:column;gap:4px`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:6px 8px 4px')}>
         <span style=${S('font-weight:900;font-style:italic;font-size:17px')}>Map Layers</span>
@@ -129,7 +129,7 @@ function MapScreen(v) {
       </button>`)}
       <div style=${S('padding:4px 10px 4px;font-size:10.5px;color:#6A7090')}>${v.layersNote}</div>
     </div>`}
-    ${v.nearest && !v.hasSel && !v.layersOpen && html`
+    ${v.nearest && v.mapChrome && !v.layersOpen && html`
     <button class="lg" onClick=${v.nearest.onClick} style=${S(`position:absolute;left:16px;right:16px;bottom:${B(104)};z-index:600;${GL};border-radius:28px;padding:11px;display:flex;align-items:center;gap:12px;text-align:left;color:#10183F;cursor:pointer`)}>
       <span style=${S('width:54px;height:54px;flex:none;border-radius:19px;background:linear-gradient(150deg,rgba(255,220,120,.95),rgba(255,196,37,.75));border:1px solid rgba(255,255,255,.8);box-shadow:inset 0 2px 1px rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1')}><span style=${S('font-size:23px;font-weight:200')}>${v.nearest.big}</span><span style=${S('font-size:10px;font-weight:800')}>${v.nearest.unit} walk</span></span>
       <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:11.5px;font-weight:700;color:#4A5275')}>Nearest To You · ${v.nearest.catName}</span><span style=${S('font-size:18px;font-weight:900;font-style:italic;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.nearest.name}</span></span>
@@ -537,11 +537,57 @@ function PlaceCard(v) {
   </section>`;
 }
 
+// Drag a sheet by its header: down calls onDown (e.g. shrink it), up calls onUp (e.g. grow it). The sheet is the
+// nearest [data-sheet] ancestor; it follows the finger, then springs back while the state change resizes it.
+const dragHandle = (onDown, onUp) => el => {
+  if (!el) return; el._down = onDown; el._up = onUp; if (el._dh) return; el._dh = 1;
+  let y0 = null, dy = 0, t0 = 0, on = false, just = 0;
+  const sheet = () => el.closest('[data-sheet]') || el;
+  const start = y => { y0 = y; dy = 0; t0 = Date.now(); on = false; };
+  const move = (y, e) => {
+    if (y0 == null) return; const d = y - y0;
+    if (!on) { if (Math.abs(d) > 8) { on = true; sheet().style.transition = 'none'; } else return; }
+    dy = d; if ((dy > 0 && !el._down) || (dy < 0 && !el._up)) dy /= 4;
+    if (e && e.cancelable) e.preventDefault(); sheet().style.transform = `translateY(${Math.max(dy, -60)}px)`;
+  };
+  const end = () => {
+    if (y0 == null) return; y0 = null; if (!on) return; on = false; just = Date.now();
+    const sh = sheet(), vel = dy / Math.max(1, Date.now() - t0);
+    sh.style.transition = 'transform .24s cubic-bezier(.2,.8,.2,1)'; sh.style.transform = '';
+    if ((dy > 70 || (vel > .5 && dy > 30)) && el._down) el._down();
+    else if ((dy < -40 || (vel < -.5 && dy < -20)) && el._up) el._up();
+  };
+  el.addEventListener('touchstart', e => start(e.touches[0].clientY), { passive: true });
+  el.addEventListener('touchmove', e => move(e.touches[0].clientY, e), { passive: false });
+  el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+  el.addEventListener('mousedown', e => { if (e.button) return; start(e.clientY);
+    const mm = ev => move(ev.clientY, ev), mu = () => { end(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); });
+  el.addEventListener('click', e => { if (Date.now() - just < 350) { e.stopPropagation(); e.preventDefault(); } }, true);
+};
+
 function RouteSheet(v) {
+  const best = v.routeOpts.find(o => o.best) || v.routeOpts[0];
+  // Swiped down: just the destination and the fastest way, so the map shows. Tap or swipe up to open it again.
+  if (v.routeMini) return html`
+  <div class="lg" data-sheet="" data-screen-label="Get There" style=${S(`position:absolute;left:12px;right:12px;bottom:${B(100)};z-index:980;${GL2};border-radius:30px;display:flex;flex-direction:column;padding-top:8px;box-shadow:0 18px 40px rgba(16,24,63,.22),inset 0 2px 1px #fff`)}>
+    <div ref=${dragHandle(null, v.routeExpand)} onClick=${v.routeExpand} role="button" aria-label="Show Route Options" style=${S('display:flex;flex-direction:column;gap:8px;padding:0 10px 10px 18px;cursor:pointer;touch-action:none')}>
+      ${Grab()}
+      <div style=${S('display:flex;align-items:center;gap:12px')}>
+        <div style=${S('flex:1;min-width:0')}>
+          <div style=${S('font-size:12px;font-weight:700;color:#4A5275;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>Get There · To ${v.routeDest}</div>
+          ${best ? html`<div style=${S('display:flex;align-items:baseline;gap:8px;margin-top:2px')}><span style=${S(`font-weight:900;font-style:italic;font-size:24px;line-height:1.1;color:${best.color}`)}>${best.mins}</span><span style=${S('font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${best.title}</span></div>`
+            : html`<div style=${S('font-size:15px;font-weight:800;margin-top:2px')}>Pick Where You're Starting</div>`}
+        </div>
+        <span style=${S(`width:38px;height:38px;flex:none;border-radius:50%;${GL};color:#10183F;display:flex;align-items:center;justify-content:center`)}>${Ico('M6 15l6-6 6 6', 18, 'currentColor', 2.6)}</span>
+        <button onClick=${e => { e.stopPropagation(); v.closeRoute(); }} aria-label="Close" style=${S('flex:none;width:38px;height:38px;border-radius:50%;border:0;background:#fff;color:#10183F;font-weight:800;font-size:15px;cursor:pointer')}>✕</button>
+      </div>
+    </div>
+  </div>`;
   return html`
-  <div class="lg" data-screen-label="Get There" style=${S(`position:absolute;left:0;right:0;bottom:0;z-index:980;max-height:60%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
-    ${Grab()}
-    <div style=${S('flex:none;padding:10px 18px 10px;display:flex;flex-direction:column;gap:10px')}>
+  <div class="lg" data-sheet="" data-screen-label="Get There" style=${S(`position:absolute;left:0;right:0;bottom:0;z-index:980;max-height:60%;${GL2};border-bottom:0;border-radius:34px 34px 0 0;display:flex;flex-direction:column;padding-top:10px`)}>
+    <div ref=${dragHandle(v.routeCollapse, null)} style=${S('flex:none;display:flex;flex-direction:column;touch-action:none')}>${Grab()}<div style=${S('height:6px')}></div></div>
+    <div ref=${dragHandle(v.routeCollapse, null)} style=${S('flex:none;padding:4px 18px 10px;display:flex;flex-direction:column;gap:10px')}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
         <div style=${S('min-width:0')}><div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:24px;color:#1B3DB8;line-height:1')}>Get There</div><div style=${S('font-size:13px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>To ${v.routeDest}</div></div>
         <button onClick=${v.closeRoute} aria-label="Close" style=${S('flex:none;width:34px;height:34px;border-radius:50%;border:0;background:#fff;color:#10183F;font-weight:800;font-size:15px;cursor:pointer')}>✕</button>

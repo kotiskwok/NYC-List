@@ -282,6 +282,7 @@ The App Store version is the same website wrapped with Capacitor 8 in `native/`.
 ### Build 5 additions
 - **Explore deck dock** (`DeckDock` in `view.js`): a liquid-glass control bar under the deck with Skip, Open (`deckOpen`) and Plan keys; the card itself no longer carries buttons.
 - **Swipe down to close a spot** (`dragDown(onClose)` ref helper in `view.js`, used on the `PlaceCard` section): starts when the sheet is scrolled to the top; closes past ~110 px or on a flick. Works from the map and from the Explore deck (closing returns to the deck).
+- **Get There sheet shrinks**: drag its header down and it becomes a small bar above the tab bar (destination + fastest option); tap it or drag up to open it again. `state.routeMini`, `dragHandle(onDown, onUp)` in `view.js` (moves the nearest `[data-sheet]`). While a spot or Get There is open the map's Spots To Try banner, category chips and side buttons hide (`mapChrome`).
 - **Reorder Wallet lists**: long-press a card (380 ms), drag up or down, let go. `walletDown`/`walletDrop`/`walletRef` in `lists.js`; the order is `state.listOrder` (list ids, front card first). It's per person and syncs in the main snapshot (`listOrder`, merged in `sync.js`). Lists not in it yet go in front. Card colors stay tied to creation order.
 
 ### Ideas not built yet
