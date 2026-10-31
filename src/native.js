@@ -56,6 +56,6 @@ const NYCNative = (() => {
   }
   window.addEventListener('load', () => setTimeout(takeInbox, 600));
 
-  return { tap() { try { Haptics && Haptics.impact({ style: 'LIGHT' }); } catch (e) {} } };
+  return { tap(style) { try { Haptics && Haptics.impact({ style: style || 'LIGHT' }); } catch (e) {} } };
 })();
 window.NYCNative = NYCNative;

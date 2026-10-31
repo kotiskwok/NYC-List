@@ -368,11 +368,11 @@ Object.assign(Component.prototype, {
     const done = () => { clearTimeout(this._wdT); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); };
     const mv = ev => { const dy = ev.clientY - y0;
       if (!this._wd) { if (Math.abs(dy) > 8 || Math.abs(ev.clientX - x0) > 8) done(); return; }
-      this._wd = { ...this._wd, dy, over: Math.max(0, Math.min(n - 1, vis + Math.round(dy / WSTEP))) }; this.setState({ walletDrag: this._wd }); };
+      const over = Math.max(0, Math.min(n - 1, vis + Math.round(dy / WSTEP))); if (over !== this._wd.over && window.NYCNative) NYCNative.tap(); this._wd = { ...this._wd, dy, over }; this.setState({ walletDrag: this._wd }); };
     const up = () => { const wd = this._wd; done(); if (wd) { this._wd = null; this._wdJust = Date.now(); this.walletDrop(wd); } };
     const cancel = () => { done(); if (this._wd) { this._wd = null; this.setState({ walletDrag: null }); } };
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel);
-    this._wdT = setTimeout(() => { this._wd = { id, from: vis, over: vis, dy: 0 }; try { navigator.vibrate && navigator.vibrate(12); } catch (_) {} this.setState({ walletDrag: this._wd }); }, 380);
+    this._wdT = setTimeout(() => { this._wd = { id, from: vis, over: vis, dy: 0 }; try { window.NYCNative ? NYCNative.tap('MEDIUM') : navigator.vibrate && navigator.vibrate(12); } catch (_) {} this.setState({ walletDrag: this._wd }); }, 380);
   },
   walletDrop(wd) {
     const front = this._walletIds || [], vis = [...front].reverse(), [m] = vis.splice(wd.from, 1); vis.splice(wd.over, 0, m);
