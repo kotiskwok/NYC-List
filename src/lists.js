@@ -17,13 +17,13 @@ const NYCLists = (() => {
   const same = (a, b) => NYCSync.same(a, b);
   const set = p => app && app.setState(p);
   const trips = () => (app && app.state.trips) || [];
-  const normD = d => ({ stops: (d && d.stops) || [], days: (d && d.days) || 0, start: (d && d.start) || '', cats: (d && d.cats) || [] });
+  const normD = d => ({ stops: (d && d.stops) || [], days: (d && d.days) || 0, start: (d && d.start) || '', cats: (d && d.cats) || [], photo: (d && d.photo) || '' });
   const toTrip = r => ({ id: r.id, owner: r.owner, owner_name: r.owner_name || '', name: r.name || 'New List', share_list: !!r.share_list, share_map: !!r.share_map,
     invite_code: r.invite_code, rev: r.rev || 0, created_at: r.created_at, data: normD(r.data), members: (r.nyc_trip_members || []).map(m => ({ user_id: m.user_id, name: m.name || '' })) });
   function merge(b, l, r) {
     b = normD(b); l = normD(l); r = normD(r);
     const pick = k => same(l[k], b[k]) ? r[k] : l[k];
-    return { stops: NYCSync.mergeList(b.stops, l.stops, r.stops), cats: NYCSync.mergeList(b.cats, l.cats, r.cats), days: pick('days'), start: pick('start') };
+    return { stops: NYCSync.mergeList(b.stops, l.stops, r.stops), cats: NYCSync.mergeList(b.cats, l.cats, r.cats), days: pick('days'), start: pick('start'), photo: pick('photo') };
   }
   const missing = e => /does not exist|could not find the (table|function)|PGRST20[25]|42P01|42883/i.test(String((e && (e.message + ' ' + e.code)) || ''));
   const key = () => 'nycList.trips.' + uid;
@@ -196,7 +196,7 @@ const NYCLists = (() => {
       if (stale) edit(t.id, d => ({ ...d, stops: d.stops.map(st => st.by === uid && st.pid && byId.has(st.pid) ? { ...st, p: snap(byId.get(st.pid)) } : st) }));
     });
   }
-  const snap = p => ({ name: p.name, cat: p.cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0 });
+  const snap = p => ({ name: p.name, cat: p.cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0, photo: p.photo || '' });
 
   return { attach, onUser, refresh, create, edit, meta, newCode, removeMember, leave, remove, loadSharedMap, touchPlaces, pendingCode, myName, snap,
     uid: () => uid, setName: n => NYCSync.setName(n) };
@@ -215,6 +215,12 @@ const gSearch = p => 'https://www.google.com/maps/search/?api=1&query=' + encode
 
 Object.assign(Component.prototype, {
   tripCur() { const s = this.state; return s.trips.find(t => t.id === s.tripId) || null; },
+  // A list's own picture (instead of its initial), saved in the uploader's photo folder and shared through the list's data.
+  pickTripPhoto(id, file) { if (!file) return; if (!window.NYCSync || this.state.auth !== 'signedIn') { this.toast('Sign In To Add Photos'); return; }
+    this.setState({ tripPhotoBusy: true });
+    shrinkImage(file, 480, 480).then(b => NYCSync.uploadImage('list-' + id, b)).then(r => { this.setState({ tripPhotoBusy: false });
+      if (r.error) { this.toast(photoErr(r.error)); return; } NYCLists.edit(id, d => ({ ...d, photo: r.url })); this.toast('List Photo Saved'); })
+      .catch(e => { this.setState({ tripPhotoBusy: false }); this.toast((e && e.message) || 'Couldn’t Upload It'); }); },
   tripPerm(t) { const me = NYCLists.uid(), own = !!t && t.owner === me;
     return { own, edit: !!t && (own || t.share_list), list: !!t && (own || t.share_list), map: !!t && !own && t.share_map }; },
   tripViewEff(t) { const p = this.tripPerm(t); if (!t) return 'list'; if (!p.list) return 'map'; return this.state.tripView === 'map' && p.map ? 'map' : 'list'; },
@@ -334,7 +340,7 @@ Object.assign(Component.prototype, {
       else { tags.push({ t: pm.list ? 'You Can Add Spots' : 'Map Only', bg: pm.list ? C.pink : C.green }); }
       const firstDate = dayDate(tr.data.start, 1);
       return { name: tr.name, who: who(tr), meta: (pm.list ? n + (n === 1 ? ' Spot' : ' Spots') : 'View-Only Map') + (d ? ' · ' + d + (d === 1 ? ' Day' : ' Days') : '') + (firstDate ? ' · From ' + firstDate : ''),
-        tags, initial: tr.name.replace(/^the\s+/i, '')[0] || '★', bg: own ? C.yellow : C.pink, fg: own ? C.navy : '#fff', onClick: () => this.openTrip(tr.id) }; });
+        tags, img: tr.data.photo || null, initial: tr.name.replace(/^the\s+/i, '')[0] || '★', bg: own ? C.yellow : C.pink, fg: own ? C.navy : '#fff', onClick: () => this.openTrip(tr.id) }; });
 
     let detail = null;
     if (t) {
@@ -348,7 +354,7 @@ Object.assign(Component.prototype, {
               leg = sub ? { min: Math.max(1, Math.round(sub.min)), walk: false, bullets: [...new Set(sub.legs.filter(x => x.k === 'ride').flatMap(x => x.r.slice(0, 1)))].slice(0, 2).map(bullet) }
                 : { min: Math.max(1, Math.round(e.walk.min)), walk: true, bullets: [] }; } }
           return { key: st.id, leg, catEmoji: emo(c), catColor: c.color, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [c.name, p.area].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
-            badge: numbered ? (sec.flat ? c.color : dayCol(sec.day)) : c.color, badgeFg: numbered && !sec.flat ? '#fff' : fgFor(c.color),
+            img: placeImg(p), badge: numbered ? (sec.flat ? c.color : dayCol(sec.day)) : c.color, badgeFg: numbered && !sec.flat ? '#fff' : fgFor(c.color),
             by: st.by === me ? '' : 'Added By ' + (st.byName || 'A Friend'), hasBy: st.by !== me, ring: s.tripSel && s.tripSel.id === st.id ? C.navy : 'transparent',
             canEdit: perm.edit, hasDays: !!(d.days), dayVal: String(sec.day), dayOpts, onDay: e => this.setStopDay(t.id, st.id, +e.target.value),
             up: e => { e.stopPropagation(); this.moveStop(t.id, st.id, -1); }, down: e => { e.stopPropagation(); this.moveStop(t.id, st.id, 1); },
@@ -430,7 +436,10 @@ Object.assign(Component.prototype, {
       const days = s.tripEditDays || 0, start = s.tripEditStart || '';
       const dropped = t.data.stops.filter(st => st.day > days).length;
       const last = days && start ? dayDate(start, days) : '';
-      editSheet = { name: s.tripEditName || '', canRename: perm.own, ownerName: t.owner_name || 'The Owner', onName: e => this.setState({ tripEditName: e.target.value }),
+      editSheet = { photo: t.data.photo || null, canPhoto: perm.edit, photoBusy: !!s.tripPhotoBusy, initial: t.name.replace(/^the\s+/i, '')[0] || '★',
+        onPhoto: e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; this.pickTripPhoto(t.id, f); },
+        removePhoto: () => NYCLists.edit(t.id, d => ({ ...d, photo: '' })),
+        name: s.tripEditName || '', canRename: perm.own, ownerName: t.owner_name || 'The Owner', onName: e => this.setState({ tripEditName: e.target.value }),
         days, daysLabel: days ? days + (days === 1 ? ' Day' : ' Days') : 'No Days',
         less: () => this.setState({ tripEditDays: Math.max(0, days - 1) }), more: () => this.setState({ tripEditDays: Math.min(14, days + 1) }),
         dropNote: dropped ? dropped + (dropped === 1 ? ' Spot Moves' : ' Spots Move') + ' Back To “Not On A Day Yet”.' : '',

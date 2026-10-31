@@ -165,6 +165,16 @@ const NYCSync = (() => {
   // (a timestamp) marks that you have one and busts the cache after a change.
   const AVATAR = 'avatars';
   const avatarUrl = (uid, v) => uid && cfg.supabaseUrl ? cfg.supabaseUrl.replace(/\/$/, '') + '/storage/v1/object/public/' + AVATAR + '/' + encodeURIComponent(uid) + '/avatar.jpg' + (v ? '?v=' + v : '') : null;
+  // Any photo you add (a spot's or a list's) goes in your own folder of the same bucket: <user id>/<name>.jpg.
+  // Answers { url } with a cache-busting version, or { error } ('setup' when avatars.sql hasn't been run).
+  async function uploadImage(name, blob) {
+    if (!sb || !user) return { error: 'Sign In To Add Photos.' };
+    const path = user.id + '/' + name + '.jpg';
+    const up = await sb.storage.from(AVATAR).upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '300' });
+    if (up.error) return { error: /bucket|not found/i.test(up.error.message || '') ? 'setup' : (up.error.message || 'Upload Failed.') };
+    return { url: cfg.supabaseUrl.replace(/\/$/, '') + '/storage/v1/object/public/' + AVATAR + '/' + path.split('/').map(encodeURIComponent).join('/') + '?v=' + Date.now() };
+  }
+  async function removeImage(name) { if (!sb || !user) return; try { await sb.storage.from(AVATAR).remove([user.id + '/' + name + '.jpg']); } catch (e) {} }
   async function setAvatar(blob) {
     if (!sb || !user) return { error: 'Sign In First.' };
     const up = await sb.storage.from(AVATAR).upload(user.id + '/avatar.jpg', blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '300' });
@@ -182,6 +192,6 @@ const NYCSync = (() => {
   }
 
   return { enabled, attach, queue, submit, signOut, getToken, syncNow: () => sync(),
-    client: () => sb, currentUser: () => user, displayName, setName, mergeList, same, avatarUrl, setAvatar, removeAvatar };
+    client: () => sb, currentUser: () => user, displayName, setName, mergeList, same, avatarUrl, setAvatar, removeAvatar, uploadImage, removeImage };
 })();
 window.NYCSync = NYCSync;
