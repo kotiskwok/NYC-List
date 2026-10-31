@@ -1,0 +1,3 @@
+text: ["isaasung \n\nhow i’d spend the perfect self care day in bk <3 there’s def more spots in other parts of Brooklyn to share but this is a fun one! xx"]
+video: true sec 65.466
+frames 6 spoken ""
