@@ -1,0 +1,10 @@
+short iphone 200 https://www.tiktok.com/@allihollinger/video/7702567666904583438?_r=1&_t=ZP-9B1PdKKM2Nq
+short desktop 200 https://www.tiktok.com/@allihollinger/video/7702567666904583438?_r=1&_t=ZP-9B1PdKKM2Nq
+oembed 200 {"version":"1.0","type":"video","width":"325","height":"578","html":"<iframe height=\"578\" width=\"325\" src=\"https://www.tiktok.com/player/v1/7702567666904583438?embed_from=oembed&music_info=1&description=1&autoplay=1&muted=1\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; e
+page iphone 200 len 150006 rehydration true cookies 226
+parse fail Cannot read properties of undefined (reading 'itemInfo')
+page desktop 200 len 402700 rehydration true cookies 226
+desc Mentally furnishing my entire apartment from here #williamsburg #brooklyn #nyc #nycshopping  dur 8 play true dl true bitrates 4
+  video 206 video/mp4 2474995 https://v16-webapp-prime.us.tiktok.com/video/tos/useast5/tos
+  video 206 video/mp4 2257064 https://v16-webapp-prime.us.tiktok.com/video/tos/useast5/tos
+  video 206 video/mp4 2474995 https://v16-webapp-prime.us.tiktok.com/video/tos/useast5/tos
