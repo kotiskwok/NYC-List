@@ -73,8 +73,26 @@ function vttToText(vtt) {
     .filter(l => l && !/^WEBVTT|^NOTE|^\d+$|-->/.test(l.trim()))
     .map(l => l.replace(/<[^>]+>/g, '').trim()).filter(l => l && !seen.has(l) && seen.add(l)).join(' ');
 }
-async function tiktokSpoken(videoUrl) {
-  const p = await fetchText(videoUrl, UA_BROWSER, 9000);
+// TikTok's full post data (caption, captions, video file, photo-mode images) is only in the desktop page; the
+// video file needs that page's cookies. (The phone page and oEmbed no longer carry the caption.)
+async function tiktokPage(videoUrl) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 9000);
+  try {
+    const r = await fetch(videoUrl, { signal: ac.signal, redirect: 'follow', headers: { 'user-agent': UA_DESKTOP, 'accept-language': 'en-US,en;q=0.9' } });
+    const html = r.ok ? await r.text() : '';
+    const cookie = (r.headers.getSetCookie ? r.headers.getSetCookie() : []).map(c => c.split(';')[0]).join('; ');
+    const m = html.match(/<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/);
+    let it = null; try { it = m && JSON.parse(m[1]).__DEFAULT_SCOPE__['webapp.video-detail'].itemInfo.itemStruct; } catch (e) {}
+    if (!it) return { html, url: r.url };
+    const v = it.video || {};
+    return { html, url: r.url, desc: it.desc || '', author: (it.author && (it.author.nickname || it.author.uniqueId)) || '', cookie,
+      video: v.downloadAddr || v.playAddr || '', sec: +v.duration || 0, cover: v.cover || v.originCover || '',
+      images: ((it.imagePost && it.imagePost.images) || []).map(x => ((x.imageURL || {}).urlList || [])[0]).filter(Boolean).slice(0, 12),
+      poi: (it.poi && [it.poi.name, it.poi.address].filter(Boolean).join(', ')) || '' };
+  } catch (e) { return {}; } finally { clearTimeout(t); }
+}
+async function tiktokSpoken(videoUrl, html) {
+  const p = html ? { ok: true, text: html } : await fetchText(videoUrl, UA_DESKTOP, 9000);
   if (!p.ok || !p.text) return { text: '', desc: '' };
   const { subs, desc } = findSubtitles(p.text);
   const rank = s => { const l = String(s.LanguageCodeName || s.language || '').toLowerCase(); return (l.startsWith('en') ? 0 : 2) + (s.Source === 'ASR' || s.Source === 'CLA' ? 0 : 1); };
@@ -126,7 +144,15 @@ async function readPost(url) {
     out.finalUrl = u;
     const o = await fetchText('https://www.tiktok.com/oembed?url=' + encodeURIComponent(u), UA_BROWSER);
     if (o.ok) { try { const j = JSON.parse(o.text); if (j.title) out.text.push(j.title); out.author = j.author_name || j.author_unique_id || ''; out.image = j.thumbnail_url || ''; } catch (e) {} }
-    try { const sp = await tiktokSpoken(u); out.spoken = sp.text; if (!out.text.length && sp.desc) out.text.push(sp.desc); } catch (e) {}
+    const tp = await tiktokPage(u);
+    if (tp.url && /\/(video|photo)\//.test(tp.url)) out.finalUrl = tp.url;
+    if (tp.desc && !out.text.includes(tp.desc)) out.text.unshift(tp.desc);
+    if (tp.poi) out.text.push('Location tag: ' + tp.poi);
+    if (tp.author && !out.author) out.author = tp.author;
+    if (tp.images && tp.images.length) { out.images = tp.images; out.image = out.image || tp.images[0]; }
+    else if (tp.video) { out.video = tp.video; out.videoSec = tp.sec; out.videoHeaders = { referer: 'https://www.tiktok.com/', cookie: tp.cookie, 'user-agent': UA_DESKTOP }; }
+    if (!out.image && tp.cover) out.image = tp.cover;
+    try { const sp = await tiktokSpoken(u, tp.html); out.spoken = sp.text; if (!out.text.length && sp.desc) out.text.push(sp.desc); } catch (e) {}
     if (!out.text.length) { const p = await fetchText(u, UA_BOT); const d = meta(p.text, 'og:description') || meta(p.text, 'description'); if (d) out.text.push(d); out.image = out.image || meta(p.text, 'og:image'); }
   } else if (/instagram\.com$|instagr\.am$/i.test(host)) {
     out.source = 'instagram';
@@ -238,11 +264,11 @@ async function photosB64(urls) {
 
 // Watch an Instagram reel from its link: download the video, take a few evenly spaced frames (for on-screen text)
 // and transcribe what's said. Frames need ffmpeg (the ffmpeg-static package); without it, only the speech is used.
-async function watchVideo(url, sec) {
+async function watchVideo(url, sec, headers) {
   const fs = require('fs'), os = require('os'), path = require('path'), { execFile } = require('child_process');
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), 15000);
   let buf;
-  try { const r = await fetch(url, { signal: ac.signal, headers: { 'user-agent': UA_BROWSER } }); if (!r.ok) return null; buf = Buffer.from(await r.arrayBuffer()); }
+  try { const r = await fetch(url, { signal: ac.signal, headers: headers || { 'user-agent': UA_BROWSER } }); if (!r.ok) return null; buf = Buffer.from(await r.arrayBuffer()); }
   catch (e) { return null; } finally { clearTimeout(t); }
   if (!buf || buf.length < 10000 || buf.length > 60e6) return null;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reel-')), mp4 = path.join(dir, 'v.mp4'); fs.writeFileSync(mp4, buf);
@@ -361,7 +387,7 @@ module.exports = async (req, res) => {
 
   const post = hasLink ? await readPost(url) : { source: transcript || frames.length ? 'video' : 'notes', text: [], image: '', author: '', finalUrl: '', spoken: '' };
   let vFrames = [], vSpoken = '';
-  if (post.video && !transcript && !frames.length) { const w = await watchVideo(post.video, post.videoSec).catch(() => null); if (w) { vFrames = w.frames; vSpoken = w.spoken; } }
+  if (post.video && !transcript && !frames.length) { const w = await watchVideo(post.video, post.videoSec, post.videoHeaders).catch(() => null); if (w) { vFrames = w.frames; vSpoken = w.spoken; } }
   if (!post.text.length && !post.spoken && !post.image && !notes && !transcript && !frames.length) {
     return send(res, 200, { places: [], readable: false, source: post.source, message: 'Couldn’t Read This Post. Paste The Caption Into Notes And Tap Fill Again.' });
   }
