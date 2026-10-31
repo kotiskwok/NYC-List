@@ -160,23 +160,19 @@ function MapScreen(v) {
 // Explore: the hybrid "Command Center + Deck" design. Search, category chips and a glass matches card on top
 // (filters live behind the navy button), then the matches as a swipeable deck: right adds to the plan, left skips,
 // a tap opens the spot. "See All" still opens the full results list and map.
-// What shows on the card while you swipe it: a tinted glow on the side it's heading, and a liquid-glass readout
-// (lens icon, mono label, and a bar that fills until the swipe will count). Full at the 90px threshold.
+// What shows on the card while you swipe it ("Colour Wash"): the card floods green (Plan) or red (Skip) from the side
+// it's heading to, a big Plan / Skip slides in, and a light bar on the edge fills until the swipe counts (90px).
 function DeckStamp(p, kind) {
   p = Math.min(1, p); if (p <= 0) return null;
-  const plan = kind === 'plan', col = plan ? '#1F9D6B' : '#E8242C', rgb = plan ? '31,157,107' : '232,36,44', armed = p >= 1;
+  const plan = kind === 'plan', rgb = plan ? '31,157,107' : '232,36,44', armed = p >= 1;
+  const icon = plan ? 'M12 5v14M5 12h14' : 'M6 6l12 12M18 6L6 18';
   return html`
-  <span aria-hidden="true" style=${S(`position:absolute;inset:0;pointer-events:none;opacity:${p};background:linear-gradient(${plan ? '90deg' : '270deg'},rgba(${rgb},.55),rgba(${rgb},.12) 45%,rgba(${rgb},0) 70%)`)}></span>
-  <span aria-hidden="true" style=${S(`position:absolute;top:50%;${plan ? 'left:18px' : 'right:18px'};transform:translateY(-50%) scale(${.82 + .18 * p}) rotate(${plan ? -6 : 6}deg);transform-origin:${plan ? 'left' : 'right'} center;opacity:${Math.min(1, p * 1.6)};display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:999px;${GLX};background:linear-gradient(150deg,rgba(255,255,255,.72),rgba(255,255,255,.34) 55%,rgba(255,255,255,.55));box-shadow:inset 0 1.5px 0 #fff,inset 0 -1px 1px rgba(255,255,255,.4),0 0 0 ${armed ? 3 : 0}px rgba(${rgb},.55),0 14px 30px rgba(${rgb},.35);transition:box-shadow .15s`)}>
-    <span style=${S('position:absolute;left:10%;right:10%;top:1px;height:45%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,0))')}></span>
-    <span style=${S(`position:relative;width:38px;height:38px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.5),${col} 62%);border:1px solid rgba(255,255,255,.7);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),0 4px 10px rgba(${rgb},.45)`)}>${Ico(plan ? 'M12 5v14M5 12h14' : 'M6 6l12 12M18 6L6 18', 18, '#fff', 3)}</span>
-    <span style=${S('position:relative;display:flex;flex-direction:column;gap:5px')}>
-      <span style=${S(`${MONO};font-size:13px;font-weight:800;letter-spacing:1.6px;color:#10183F;white-space:nowrap`)}>${plan ? 'ADD TO PLAN' : 'SKIP'}</span>
-      <span style=${S('display:flex;align-items:center;gap:6px')}>
-        <span style=${S('position:relative;width:64px;height:4px;border-radius:2px;background:rgba(16,24,63,.12);overflow:hidden')}><span style=${S(`position:absolute;left:0;top:0;bottom:0;width:${Math.round(p * 100)}%;border-radius:2px;background:${col}`)}></span></span>
-        <span style=${S(`${MONO};font-size:8.5px;font-weight:800;letter-spacing:1px;color:${armed ? col : '#4A5275'}`)}>${armed ? 'LET GO' : plan ? 'SWIPE →' : '← SWIPE'}</span>
-      </span>
-    </span>
+  <span aria-hidden="true" style=${S(`position:absolute;top:0;bottom:0;${plan ? 'left:0' : 'right:0'};width:${Math.round(40 + 60 * p)}%;pointer-events:none;background:linear-gradient(${plan ? '90deg' : '270deg'},rgba(${rgb},.92),rgba(${rgb},.6) 55%,rgba(${rgb},0))`)}></span>
+  <span aria-hidden="true" style=${S(`position:absolute;top:14px;bottom:14px;${plan ? 'left:14px' : 'right:14px'};width:6px;border-radius:3px;background:rgba(255,255,255,.35);overflow:hidden;pointer-events:none`)}><span style=${S(`position:absolute;left:0;right:0;bottom:0;height:${Math.round(p * 100)}%;border-radius:3px;background:#fff;box-shadow:0 0 10px #fff`)}></span></span>
+  <span aria-hidden="true" style=${S(`position:absolute;top:50%;${plan ? 'left:34px' : 'right:34px'};transform:translateY(-50%) translateX(${(plan ? -1 : 1) * 24 * (1 - p)}px);opacity:${p};display:flex;flex-direction:column;align-items:${plan ? 'flex-start' : 'flex-end'};gap:6px;color:#fff;pointer-events:none`)}>
+    ${Ico(icon, 40, '#fff', 3)}
+    <span style=${S('font-size:30px;font-weight:900;font-style:italic;letter-spacing:-1px;line-height:1')}>${plan ? 'Plan' : 'Skip'}</span>
+    <span style=${S(`${MONO};font-size:10px;font-weight:800;letter-spacing:1.6px;opacity:.9`)}>${armed ? 'LET GO ✓' : plan ? 'ADD TO TODAY' : 'NOT TODAY'}</span>
   </span>`;
 }
 
