@@ -87,8 +87,9 @@ function MapScreen(v) {
   <div data-screen-label="Map" style=${S(`position:absolute;inset:0;display:${v.mapDisplay}`)}>
     <div ref=${v.mainMapRef} style=${S('position:absolute;inset:0')}></div>
     <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:500;display:${hide};flex-direction:column;gap:16px;pointer-events:none`)}>
-      <div class="lg" style=${S(`${GL};pointer-events:auto;border-radius:32px;padding:16px 16px 13px`)}>
-        <div style=${S('display:flex;align-items:flex-start;justify-content:space-between;gap:10px')}>
+      <div class="lg" style=${S(`${GL};pointer-events:auto;border-radius:32px;padding:16px 16px 13px;display:flex;align-items:center;gap:12px`)}>
+        <div style=${S('flex:1;min-width:0')}>
+        <div>
           <div style=${S('min-width:0')}>
             <div style=${S('display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#4A5275')}>Spotted In<span style=${S('display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;background:#FFC425;color:#10183F;font-size:10.5px;font-weight:900;font-style:italic;letter-spacing:.4px')}>NYC</span></div>
             <div role="img" aria-label=${v.spotCount + (v.spotCount === 1 ? ' Spot To Try' : ' Spots To Try')} style=${S('display:flex;align-items:center;gap:10px;margin-top:6px')}>
@@ -96,7 +97,6 @@ function MapScreen(v) {
               <span style=${S('display:flex;flex-direction:column;font-size:21px;line-height:.98;font-weight:900;font-style:italic;letter-spacing:-.4px')}><span>${v.spotCount === 1 ? 'Spot' : 'Spots'}</span><span>To Try</span></span>
             </div>
           </div>
-          ${v.syncOn && html`<button class="lg" onClick=${v.openAcct} aria-label=${'Your Account: ' + v.syncLabel} style=${S('position:relative;flex:none;border:0;padding:0;background:none;border-radius:50%;cursor:pointer')}>${Avatar(v.avatarSrc, v.avatarInitial, 52, '#1B3DB8', 'border:2px solid #FFFFFF;box-shadow:0 6px 16px rgba(16,24,63,.18)')}<span style=${S(`position:absolute;right:0;bottom:0;width:13px;height:13px;border-radius:50%;background:${v.syncDot};border:2px solid #FFFFFF`)}></span></button>`}
         </div>
         <div style=${S('display:flex;align-items:baseline;gap:16px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(16,24,63,.08);font-size:11.5px;font-weight:700;color:#4A5275;white-space:nowrap')}>
           <span><span style=${S('font-size:21px;font-weight:200;letter-spacing:-.8px;color:#10183F')}>${v.visitedCount}</span> Visited</span>
@@ -104,6 +104,8 @@ function MapScreen(v) {
           <span style=${S('flex:1')}></span>
           ${v.syncOn && html`<span style=${S('display:flex;align-items:center;gap:6px;align-self:center')}><span style=${S(`width:7px;height:7px;border-radius:50%;background:${v.syncDot};box-shadow:0 0 0 3px ${v.syncDot}33`)}></span>${v.syncLabel}</span>`}
         </div>
+        </div>
+        ${v.syncOn && html`<button class="lg" onClick=${v.openAcct} aria-label=${'Your Account: ' + v.syncLabel} style=${S('position:relative;flex:none;border:0;padding:0;background:none;border-radius:50%;cursor:pointer')}>${Avatar(v.avatarSrc, v.avatarInitial, 52, '#1B3DB8', 'border:2px solid #FFFFFF;box-shadow:0 6px 16px rgba(16,24,63,.18)')}<span style=${S(`position:absolute;right:0;bottom:0;width:13px;height:13px;border-radius:50%;background:${v.syncDot};border:2px solid #FFFFFF`)}></span></button>`}
       </div>
       <nav aria-label="Categories" class="noscroll" style=${S('display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;pointer-events:auto')}>
         ${v.mapChips.map((c, i) => c.bg === '#fff' ? html`
