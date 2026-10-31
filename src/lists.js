@@ -212,6 +212,7 @@ const dayDate = (start, d) => { if (!start || !d) return ''; const t = new Date(
 const dayName = (start, d) => d ? 'Day ' + d + (dayDate(start, d) ? ' · ' + dayDate(start, d) : '') : 'Not On A Day Yet';
 // Wallet cards: each list gets a palette color (in list order), a date range and a countdown.
 const WALLET = [['#F98DBE', '#F45FA0', '#D93F86', '#fff'], ['#FFE38F', '#FFC425', '#F5AE10', '#10183F'], ['#5C78E6', '#1B3DB8', '#142E92', '#fff'], ['#52C496', '#1F9D6B', '#16805A', '#fff'], ['#FFA26A', '#FF6B1A', '#E8561A', '#fff']];
+const WSTEP = 64; // how much of each stacked card shows (196px card, -132px overlap)
 const walletOf = i => { const w = WALLET[Math.max(0, i) % WALLET.length]; return { bg: `linear-gradient(135deg,${w[0]},${w[1]} 55%,${w[2]})`, fg: w[3], solid: w[1] }; };
 const shortD = (start, d) => { const x = dayDate(start, d); return x ? (x.split(', ')[1] || x) : ''; };
 const dayTag = (start, d) => { const x = dayDate(start, d); if (!x) return ''; const [wd, md] = x.split(', '); return (wd + ' ' + (md || '').split(' ')[1]).toUpperCase(); };
@@ -359,6 +360,28 @@ Object.assign(Component.prototype, {
   setTripStopMap(on) { this.setState({ tripStopMap: on, tripSel: null }, () => setTimeout(() => { this.refreshVisible && this.refreshVisible(); }, 60)); },
 
   // ---- values for the view ----
+  // ---- Wallet: long-press a card, then drag it up or down to reorder (like Apple Wallet). ----
+  // state.listOrder holds list ids front-first (the front card is the big one at the bottom); it syncs with the account.
+  // Lists not in it yet (new or just joined) go in front.
+  walletDown(e, id, vis, n) {
+    if (e.button) return; const y0 = e.clientY, x0 = e.clientX; clearTimeout(this._wdT);
+    const done = () => { clearTimeout(this._wdT); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); };
+    const mv = ev => { const dy = ev.clientY - y0;
+      if (!this._wd) { if (Math.abs(dy) > 8 || Math.abs(ev.clientX - x0) > 8) done(); return; }
+      this._wd = { ...this._wd, dy, over: Math.max(0, Math.min(n - 1, vis + Math.round(dy / WSTEP))) }; this.setState({ walletDrag: this._wd }); };
+    const up = () => { const wd = this._wd; done(); if (wd) { this._wd = null; this._wdJust = Date.now(); this.walletDrop(wd); } };
+    const cancel = () => { done(); if (this._wd) { this._wd = null; this.setState({ walletDrag: null }); } };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel);
+    this._wdT = setTimeout(() => { this._wd = { id, from: vis, over: vis, dy: 0 }; try { navigator.vibrate && navigator.vibrate(12); } catch (_) {} this.setState({ walletDrag: this._wd }); }, 380);
+  },
+  walletDrop(wd) {
+    const front = this._walletIds || [], vis = [...front].reverse(), [m] = vis.splice(wd.from, 1); vis.splice(wd.over, 0, m);
+    this.setState({ walletDrag: null, ...(wd.over !== wd.from ? { listOrder: vis.reverse() } : {}) });
+    if (wd.over !== wd.from) this.toast('List Order Saved');
+  },
+  // Stops the page scrolling while a card is lifted (iOS needs a non-passive touchmove listener).
+  walletRef(el) { if (!el || el._wl) return; el._wl = 1; el.addEventListener('touchmove', e => { if (this._wd && e.cancelable) e.preventDefault(); }, { passive: false }); },
+
   listVals() {
     const s = this.state, me = NYCLists.uid(), signedIn = s.auth === 'signedIn', t = this.tripCur(), perm = this.tripPerm(t);
     const chip = (on, label, onClick, col) => ({ label, onClick, bg: on ? (col || C.navy) : '#fff', fg: on ? '#fff' : C.navy, border: on ? (col || C.navy) : 'rgba(16,24,63,.14)' });
@@ -376,6 +399,15 @@ Object.assign(Component.prototype, {
         ppl: ppl.map((a, i) => ({ key: i, initial: (a.n || '?')[0].toUpperCase(), bg: [C.blue, C.orange, C.purple][i] })), tagMono: tags.map(g => g.t.toUpperCase()).join(' · '),
         name: tr.name, who: who(tr), meta: (pm.list ? n + (n === 1 ? ' Spot' : ' Spots') : 'View-Only Map') + (d ? ' · ' + d + (d === 1 ? ' Day' : ' Days') : '') + (firstDate ? ' · From ' + firstDate : ''),
         tags, img: tr.data.photo || null, initial: tr.name.replace(/^the\s+/i, '')[0] || '★', bg: own ? C.yellow : C.pink, fg: own ? C.navy : '#fff', onClick: () => this.openTrip(tr.id) }; });
+
+    { const ord = s.listOrder || [], rk = id => ord.indexOf(id); cards.sort((a, b) => rk(a.id) - rk(b.id)); }
+    this._walletIds = cards.map(c => c.id);
+    { const wd = s.walletDrag, n = cards.length;
+      cards.forEach((c, k) => { const j = n - 1 - k; let sh = 0;
+        if (wd && c.id !== wd.id) { if (wd.from < wd.over && j > wd.from && j <= wd.over) sh = -WSTEP; else if (wd.from > wd.over && j >= wd.over && j < wd.from) sh = WSTEP; }
+        const lifted = !!wd && c.id === wd.id, click = c.onClick;
+        Object.assign(c, { lifted, dragging: !!wd, wTf: lifted ? `translateY(${wd.dy}px) scale(1.035)` : sh ? `translateY(${sh}px)` : '',
+          onDown: e => this.walletDown(e, c.id, j, n), onClick: () => { if (Date.now() - (this._wdJust || 0) < 450) return; click(); } }); }); }
 
     let detail = null;
     if (t) {
@@ -531,7 +563,7 @@ Object.assign(Component.prototype, {
     return {
       listsDisplay: s.tab === 'lists' ? 'block' : 'none', listsIndex: !t, listsSignedIn: signedIn, listsLocal: s.auth === 'local',
       listsState: s.tripsState, listsMissing: s.tripsState === 'missing', listsLoading: s.tripsState === 'loading' && !s.trips.length, listsError: s.tripsState === 'error' && !s.trips.length,
-      listCards: cards, listsEmpty: s.tripsState === 'ready' && !s.trips.length, retryLists: () => NYCLists.refresh(),
+      listCards: cards, walletRef: el => this.walletRef(el), walletDragging: !!s.walletDrag, listsEmpty: s.tripsState === 'ready' && !s.trips.length, retryLists: () => NYCLists.refresh(),
       openNewTrip: () => this.setState({ newTripOpen: true, newTripName: '', newTripDays: 0, newTripStart: '', newTripAddPid: null }),
       trip: detail, tripMapRef: this.tripMapRef, tripMapH: '100%', tripMapOn: !!detail && (detail.showMap || detail.stopMap), tripEdit: editSheet,
       hasTripSel: !!tsel && s.tab === 'lists' && !s.addOpen, tsel, tripShare: share, tripPick: pick, listChoose: choose, newTrip,

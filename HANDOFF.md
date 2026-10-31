@@ -279,6 +279,11 @@ The App Store version is the same website wrapped with Capacitor 8 in `native/`.
 - **Never put secrets in the code:** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_MAPS_API_KEY`, or the Supabase **secret/service_role** key. The Supabase **publishable** key is fine.
 - **Server-side fetches to Google:** request as a phone or a plain client, not desktop Chrome (see Google Maps above).
 
+### Build 5 additions
+- **Explore deck dock** (`DeckDock` in `view.js`): a liquid-glass control bar under the deck with Skip, Open (`deckOpen`) and Plan keys; the card itself no longer carries buttons.
+- **Swipe down to close a spot** (`dragDown(onClose)` ref helper in `view.js`, used on the `PlaceCard` section): starts when the sheet is scrolled to the top; closes past ~110 px or on a flick. Works from the map and from the Explore deck (closing returns to the deck).
+- **Reorder Wallet lists**: long-press a card (380 ms), drag up or down, let go. `walletDown`/`walletDrop`/`walletRef` in `lists.js`; the order is `state.listOrder` (list ids, front card first). It's per person and syncs in the main snapshot (`listOrder`, merged in `sync.js`). Lists not in it yet go in front. Card colors stay tied to creation order.
+
 ### Ideas not built yet
 - Saving a shared link **in the background** from the iPhone share sheet without opening the app. This would need a server endpoint that writes to Supabase with the service-role key plus a personal token for the Shortcut.
 - Directly downloading audio from Instagram or TikTok links (blocked by the platforms; 🎬 upload is used instead).

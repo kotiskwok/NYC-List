@@ -166,7 +166,7 @@ class Component extends DCLogic {
   mainMapRef=React.createRef(); exMapRef=React.createRef(); planMapRef=React.createRef(); tripMapRef=React.createRef();
   state=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LS))}catch(e){}
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
-    return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},
+    return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
@@ -179,14 +179,14 @@ class Component extends DCLogic {
   // versions, and the other cities' home/plan live under cities.{sg,hk,to}.
   snapshot(){const s=this.state,cur=CUR.id,meta={...(s.cityMeta||{}),[cur]:{home:s.home,plan:s.plan}},cities={};
     CITY_ORDER.forEach(k=>{if(k!=='nyc'&&meta[k])cities[k]=meta[k];});const ny=meta.nyc||{};
-    return {places:[...s.places.map(p=>p.city?p:{...p,city:cur}),...(s.otherPlaces||[])],cats:s.cats,home:ny.home||null,plan:ny.plan||{ids:[],start:'first'},cities,city:cur};}
+    return {places:[...s.places.map(p=>p.city?p:{...p,city:cur}),...(s.otherPlaces||[])],cats:s.cats,home:ny.home||null,plan:ny.plan||{ids:[],start:'first'},cities,city:cur,listOrder:s.listOrder||[]};}
   emptyData(){return {places:[],cats:CATS0,home:null,plan:{ids:[],start:'first'},cities:{}};}
   isExampleOnly(){const ids=new Set(SEED.map(p=>p.id)),s=this.state;return !(s.otherPlaces||[]).length&&s.places.length===SEED.length&&s.places.every(p=>ids.has(p.id))&&s.cats.length===CATS0.length;}
   // The picked city syncs too: when another device switched, this one follows.
   applyRemote(d){const moved=!!(d.city&&CITIES[d.city]&&d.city!==CUR.id);if(moved){setCityData(d.city);try{localStorage.setItem('nycList.city',d.city);}catch(e){}}
     const names=new Set(areas().map(a=>a.name)),cur=CUR.id,all=d.places||[],cm={nyc:{home:d.home||null,plan:d.plan||{ids:[],start:'first'}},...(d.cities||{})},m0=cm[cur]||{};
     const places=all.filter(p=>cityOf(p)===cur).map(p=>names.size&&!names.has(p.area)?{...p,area:hoodAt([p.lat,p.lng])||p.area}:p);
-    this.setState(st=>({places,otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,cats:d.cats&&d.cats.length?d.cats:CATS0,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},
+    this.setState(st=>({places,otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,cats:d.cats&&d.cats.length?d.cats:CATS0,listOrder:Array.isArray(d.listOrder)?d.listOrder:st.listOrder,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},
       selId:places.some(p=>p.id===st.selId)?st.selId:null,routeFor:places.some(p=>p.id===st.routeFor)?st.routeFor:null,
       ...(moved?{city:cur,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',exStage:'pick',busState:'',tramState:'',ferryState:'',bikeState:''}:{})}),()=>{if(moved)this.cityMoved();});}
   setCity(id){if(!CITIES[id])return;const s=this.state,prev=CUR.id;if(id===prev){this.setState({cityOpen:false});return;}
@@ -214,7 +214,7 @@ class Component extends DCLogic {
       this.syncMaps();setTimeout(()=>this.refreshVisible(),80);}
     else setTimeout(go,100);};go();}
   componentDidUpdate(){const s=this.state;if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
-    if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan||this._op!==s.otherPlaces||this._cm!==s.cityMeta){this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;this._op=s.otherPlaces;this._cm=s.cityMeta;
+    if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan||this._op!==s.otherPlaces||this._cm!==s.cityMeta||this._lo!==s.listOrder){this._lo=s.listOrder;this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;this._op=s.otherPlaces;this._cm=s.cityMeta;
       try{localStorage.setItem(LS,JSON.stringify(this.snapshot()))}catch(e){}
       window.NYCSync&&NYCSync.queue(this.snapshot());
       clearTimeout(this._tpt);this._tpt=setTimeout(()=>window.NYCLists&&NYCLists.touchPlaces(this.state.places),1500);}
@@ -757,7 +757,7 @@ class Component extends DCLogic {
       toggleExFilters:()=>this.setState({exFilters:!s.exFilters}),closeExFilters:()=>this.setState({exFilters:false}),
       clearExAll:()=>this.setState({exCats:[],exAreas:[],exPrices:[],hideVisited:false,exQuery:''}),
       deckCards,deckDx:s.deckDx,deckFly:s.deckFly,deckDone:!!n&&dpos>=n,deckEmpty:!n,deckTotal:String(n).padStart(2,'0'),
-      deckSkip:()=>this.deckAct('skip'),deckPlan:()=>this.deckAct('plan'),deckShuffle:()=>this.setState({deckSeed:s.deckSeed+1,deckDx:0,deckFly:''}),
+      deckSkip:()=>this.deckAct('skip'),deckPlan:()=>this.deckAct('plan'),deckOpen:()=>{const p=this.deckList()[this.deckPos()];if(p)this.setState({selId:p.id,confirmDel:false});},deckShuffle:()=>this.setState({deckSeed:s.deckSeed+1,deckDx:0,deckFly:''}),
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
       viewList:()=>this.setState({exView:'list'}),viewMap:()=>this.setState({exView:'map'}),resultCards,noResults:!n,
       hasSel:!!sp&&!s.placing&&!s.routeFor,sel,spotCount:s.places.length,visitedCount:s.places.filter(p=>p.visited).length,

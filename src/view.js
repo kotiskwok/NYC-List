@@ -184,10 +184,30 @@ function DeckCard(c, i, v) {
         <div style=${S('font-size:21px;letter-spacing:-.6px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900')}>${c.bold}</span> <span style=${S('font-weight:200')}>${c.light}</span></div>
         <div style=${S(`${MONO};font-size:10px;font-weight:700;color:#4A5275;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${c.meta}</div>
       </div>
-      ${front && html`
-      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" class="lg" style=${S(`${GL};width:46px;height:46px;flex:none;border-radius:50%;color:#E8242C;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
-      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckPlan} aria-label="Add To Plan" style=${S('width:50px;height:50px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 2px 1px rgba(255,255,255,.55),0 10px 22px rgba(255,107,26,.38)')}>${Ico('M12 5v14M5 12h14', 20, 'currentColor', 2.8)}</button>`}
     </div>
+  </div>`;
+}
+
+// The deck's controls: a liquid-glass dock under the cards. Skip (left swipe), Open (tap) and Plan (right swipe),
+// each a glass key with a tinted lens icon and a mono label; Plan is the lit orange key.
+const SPEC = 'position:absolute;left:8%;right:8%;top:1px;height:46%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));pointer-events:none';
+function DeckDock(v) {
+  const lens = (d, tint, col, lit) => html`<span style=${S(`position:relative;width:34px;height:34px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:${col};background:${lit ? 'radial-gradient(circle at 35% 28%,rgba(255,255,255,.55),rgba(255,255,255,.12) 62%)' : `radial-gradient(circle at 35% 28%,rgba(255,255,255,.95),${tint} 70%)`};border:1px solid ${lit ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.9)'};box-shadow:inset 0 1.5px 0 rgba(255,255,255,.9),inset 0 -2px 4px ${lit ? 'rgba(160,50,0,.25)' : 'rgba(16,24,63,.08)'},0 3px 8px ${lit ? 'rgba(150,40,0,.25)' : 'rgba(16,24,63,.1)'}`)}>${Ico(d, 16, 'currentColor', 2.8)}</span>`;
+  const label = (t, k, col, kcol) => html`<span style=${S('display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1')}><span style=${S(`${MONO};font-size:11.5px;font-weight:800;letter-spacing:1.4px;color:${col}`)}>${t}</span><span style=${S(`${MONO};font-size:8.5px;font-weight:700;letter-spacing:1px;color:${kcol}`)}>${k}</span></span>`;
+  const key = 'position:relative;overflow:hidden;height:54px;border-radius:999px;display:flex;align-items:center;gap:9px;padding:0 14px 0 9px;cursor:pointer;font-family:inherit';
+  return html`
+  <div class="lg" role="group" aria-label="Deck Controls" style=${S(`position:relative;margin:2px 0 0;padding:6px;border-radius:999px;${GLX};background:linear-gradient(150deg,rgba(255,255,255,.62),rgba(255,255,255,.22) 55%,rgba(255,255,255,.42));display:grid;grid-template-columns:1fr auto 1.15fr;gap:6px`)}>
+    <span aria-hidden="true" style=${S(SPEC)}></span>
+    <button onClick=${v.deckSkip} aria-label="Skip" class="press" style=${S(`${key};border:1px solid rgba(255,255,255,.9);background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,255,255,.34));box-shadow:inset 0 1.5px 0 #fff,inset 0 -1px 0 rgba(16,24,63,.05),0 6px 16px rgba(16,24,63,.08)`)}>
+      ${lens('M6 6l12 12M18 6L6 18', 'rgba(232,36,44,.22)', '#E8242C')}${label('SKIP', '← SWIPE', '#10183F', '#E8242C')}
+    </button>
+    <button onClick=${v.deckOpen} aria-label="Open This Spot" class="press" style=${S(`${key};padding:0 9px;border:1px solid rgba(255,255,255,.9);background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,255,255,.34));box-shadow:inset 0 1.5px 0 #fff,0 6px 16px rgba(16,24,63,.08)`)}>
+      ${lens(ARROW_NE, 'rgba(27,61,184,.2)', '#1B3DB8')}
+    </button>
+    <button onClick=${v.deckPlan} aria-label="Add To Plan" class="press" style=${S(`${key};justify-content:space-between;padding:0 9px 0 16px;border:1px solid rgba(255,255,255,.6);background:linear-gradient(160deg,rgba(255,170,110,.96),rgba(255,107,26,.92) 55%,rgba(232,86,26,.95));box-shadow:inset 0 1.5px 0 rgba(255,255,255,.65),inset 0 -2px 6px rgba(150,40,0,.25),0 10px 24px rgba(255,107,26,.38)`)}>
+      <span aria-hidden="true" style=${S(SPEC + ';opacity:.55')}></span>
+      ${label('PLAN', 'SWIPE →', '#fff', 'rgba(255,255,255,.82)')}${lens('M12 5v14M5 12h14', '', '#fff', true)}
+    </button>
   </div>`;
 }
 
@@ -269,7 +289,7 @@ function ExploreScreen(v) {
             : v.deckDone ? endCard('That’s All', v.deckTotal, 'You went through every match. Shuffle for a new order, or see them all at once.', [pill('See All', v.showResults), pill('Shuffle Again', v.deckShuffle, true)])
             : v.deckCards.map((c, i) => DeckCard(c, i, v)).reverse()}
         </div>
-        ${!v.deckEmpty && !v.deckDone && html`<div style=${S('display:flex;justify-content:center;gap:22px;padding-top:6px')}>${mono('← SKIP', '#E8242C')}${mono('TAP TO OPEN', '#1B3DB8')}${mono('PLAN →', '#1F9D6B')}</div>`}
+        ${!v.deckEmpty && !v.deckDone && DeckDock(v)}
       </div>
     </div>
     <div style=${S(`position:absolute;inset:0;display:${v.exResDisplay};flex-direction:column`)}>
@@ -419,6 +439,37 @@ function PlanScreen(v) {
   </div>`;
 }
 
+// Swipe a sheet down to close it (like iOS sheets). Starts only when the sheet is scrolled to the top and the finger
+// moves down; the sheet follows the finger and closes past ~110px or on a quick flick, else springs back.
+// Native listeners so the touchmove can stop the page from scrolling; attached once per element.
+const dragDown = onClose => el => {
+  if (!el) return; el._close = onClose; if (el._dd) return; el._dd = 1;
+  let y0 = null, dy = 0, t0 = 0, on = false, just = 0;
+  const start = y => { if (el.scrollTop > 0) return; y0 = y; dy = 0; t0 = Date.now(); on = false; };
+  const move = (y, e) => {
+    if (y0 == null) return; const d = y - y0;
+    if (!on) { if (d > 8 && el.scrollTop <= 0) { on = true; el.style.transition = 'none'; } else if (d < -6) { y0 = null; return; } else return; }
+    dy = Math.max(0, d); if (e && e.cancelable) e.preventDefault();
+    el.style.transform = `translateY(${dy}px)`; el.style.opacity = String(Math.max(.55, 1 - dy / 700));
+  };
+  const end = () => {
+    if (y0 == null) return; y0 = null; if (!on) return; on = false; just = Date.now();
+    const fast = dy / Math.max(1, Date.now() - t0) > .55 && dy > 40;
+    el.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s';
+    if (dy > 110 || fast) { el.style.transform = 'translateY(105%)'; el.style.opacity = '0'; setTimeout(() => { el.style.transition = 'none'; el.style.transform = ''; el.style.opacity = ''; el._close && el._close(); }, 200); }
+    else { el.style.transform = ''; el.style.opacity = ''; }
+  };
+  el.addEventListener('touchstart', e => start(e.touches[0].clientY), { passive: true });
+  el.addEventListener('touchmove', e => move(e.touches[0].clientY, e), { passive: false });
+  el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+  // Mouse (desktop testing): drag from anywhere on the sheet.
+  el.addEventListener('mousedown', e => { if (e.button) return; start(e.clientY);
+    const mm = ev => move(ev.clientY, ev), mu = () => { end(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); });
+  // A drag isn't a tap on whatever it started over.
+  el.addEventListener('click', e => { if (Date.now() - just < 350) { e.stopPropagation(); e.preventDefault(); } }, true);
+};
+
 function PlaceCard(v) {
   // V5 mockup: a big frosted sheet with a two-weight name, a glass row of quick numbers, round glass action
   // bubbles and a Get There pill with an orange arrow button.
@@ -436,7 +487,7 @@ function PlaceCard(v) {
   return html`
   ${onMap && html`<button class="lg" onClick=${v.closeSel} aria-label="Back To Map" style=${S(`position:absolute;top:${T(56)};left:16px;z-index:900;width:46px;height:46px;border-radius:50%;${GL};color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico(BACK, 20, 'currentColor', 2.4)}</button>`}
   ${onMap && html`<button class="lg" onClick=${v.editSel} aria-label="Edit Spot" style=${S(`position:absolute;top:${T(56)};right:16px;z-index:900;width:46px;height:46px;border-radius:50%;${GL};color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M4 20h4L19 9l-4-4L4 16z', 18, 'currentColor', 2.2)}</button>`}
-  <section aria-label=${sel.name} class="noscroll" style=${S(`position:absolute;left:0;right:0;bottom:${onMap ? '0px' : B(96)};z-index:900;${GL2};border-radius:${onMap ? '42px 42px 0 0' : '40px'};${onMap ? 'border-bottom:0;' : 'margin:0 8px;'}padding:12px 20px ${onMap ? B(24) : '20px'};display:flex;flex-direction:column;gap:15px;max-height:calc(100% - var(--st) - ${onMap ? 70 : 150}px);overflow-y:auto`)}>
+  <section ref=${dragDown(v.closeSel)} aria-label=${sel.name} class="noscroll" style=${S(`position:absolute;left:0;right:0;bottom:${onMap ? '0px' : B(96)};z-index:900;${GL2};border-radius:${onMap ? '42px 42px 0 0' : '40px'};${onMap ? 'border-bottom:0;' : 'margin:0 8px;'}padding:12px 20px ${onMap ? B(24) : '20px'};display:flex;flex-direction:column;gap:15px;max-height:calc(100% - var(--st) - ${onMap ? 70 : 150}px);overflow-y:auto`)}>
     ${Grab()}
     ${sel.img && html`
     <div style=${S(`position:relative;flex:none;height:170px;border-radius:26px;overflow:hidden;background:${sel.catBg};box-shadow:0 10px 26px rgba(16,24,63,.16)`)}>
@@ -596,7 +647,7 @@ function ListsScreen(v) {
     <div class="noscroll" style=${S(`position:absolute;inset:0;z-index:5;background:var(--bgfx);overflow-y:auto;padding:${T(56)} 16px ${B(130)};display:flex;flex-direction:column;gap:12px`)}>
       <div style=${S('display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:0 4px')}>
         <div style=${S('min-width:0')}>
-          <span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#4A5275`)}>WALLET · ${v.listCards.length} ${v.listCards.length === 1 ? 'LIST' : 'LISTS'}</span>
+          <span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:${v.walletDragging ? '#FF6B1A' : '#4A5275'}`)}>${v.walletDragging ? 'DRAG TO REORDER · LET GO TO DROP' : `WALLET · ${v.listCards.length} ${v.listCards.length === 1 ? 'LIST' : 'LISTS'}${v.listCards.length > 1 ? ' · HOLD TO REORDER' : ''}`}</span>
           <div style=${S('font-weight:900;font-style:italic;font-size:38px;line-height:1.02;letter-spacing:-1.5px;color:#10183F;white-space:nowrap')}>My <span style=${S('font-weight:200;font-style:normal')}>Lists</span></div>
         </div>
         ${v.listsSignedIn && !v.listsMissing && html`<button class="lg" onClick=${v.openNewTrip} aria-label="New List" style=${S(`${GL};width:48px;height:48px;flex:none;border-radius:50%;color:#FF6B1A;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M12 5v14M5 12h14', 22, 'currentColor', 2.8)}</button>`}
@@ -607,10 +658,10 @@ function ListsScreen(v) {
       ${v.listsError && Msg('Can’t Load Lists Right Now', 'Check Your Connection And Try Again.', 'Try Again', v.retryLists)}
       ${v.listsEmpty && Msg('No Lists Yet', 'Make One For A Friend’s Visit, A Birthday Or A Weekend — Then Invite Them To Add Spots Too.')}
       ${v.listCards.length > 0 && html`
-      <div style=${S('display:flex;flex-direction:column;padding-top:4px')}>
+      <div ref=${v.walletRef} style=${S('display:flex;flex-direction:column;padding-top:4px')}>
         ${[...v.listCards].reverse().map((c, i, arr) => { const front = i === arr.length - 1;
           return html`
-        <button key=${c.id} class="press" onClick=${c.onClick} aria-label=${'Open ' + c.name} style=${S(`${WCARD(c.wbg, `z-index:${i + 1};margin-bottom:${front ? 0 : -132}px;height:${front ? 'auto' : '196px'};min-height:196px`)};border:0;padding:0;text-align:left;color:${c.wfg};cursor:pointer;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%`)}>
+        <button key=${c.id} class=${c.dragging ? '' : 'press'} onClick=${c.onClick} onPointerDown=${c.onDown} onContextMenu=${e => e.preventDefault()} aria-label=${'Open ' + c.name + '. Hold To Reorder.'} style=${S(`${WCARD(c.wbg, `z-index:${c.lifted ? 50 : i + 1};margin-bottom:${front ? 0 : -132}px;height:${front ? 'auto' : '196px'};min-height:196px`)};border:0;padding:0;text-align:left;color:${c.wfg};cursor:${c.lifted ? 'grabbing' : 'pointer'};display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;transform:${c.wTf || 'none'};transition:${c.lifted ? 'box-shadow .2s' : 'transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .2s'}${c.lifted ? ';box-shadow:0 30px 60px rgba(16,24,63,.38),0 8px 18px rgba(16,24,63,.2)' : ''}`)}>
           <span aria-hidden="true" style=${S(`position:absolute;inset:0;${SHEEN}`)}></span>
           <span style=${S('position:relative;display:flex;flex-direction:column;gap:12px;padding:14px 16px 16px')}>
             <span style=${S('display:flex;align-items:center;gap:10px;min-height:36px')}>${wIcon(c.wfg, c.img, c.initial)}${wName(c.name)}<span style=${S('display:flex;flex-direction:column;align-items:flex-end;flex:none')}>${c.spots != null ? wMono(c.spots + (c.spots === 1 ? ' SPOT' : ' SPOTS'), c.wfg) : wMono('MAP ONLY', c.wfg)}${c.days > 0 && wMono(c.days + (c.days === 1 ? ' DAY' : ' DAYS'), c.wfg)}</span></span>
