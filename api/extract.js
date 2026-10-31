@@ -88,7 +88,7 @@ async function tiktokSpoken(videoUrl) {
 
 // Pull whatever text and cover image we can from the post.
 async function readPost(url) {
-  const out = { source: 'link', text: [], image: '', author: '', finalUrl: url, spoken: '', pin: null };
+  const out = { source: 'link', text: [], image: '', images: [], author: '', finalUrl: url, spoken: '', pin: null };
   const host = (() => { try { return new URL(url).hostname; } catch (e) { return ''; } })();
 
   if (G.isGmaps(url)) {
@@ -136,6 +136,14 @@ async function readPost(url) {
       const cap = (e.text.match(/<div class="Caption"[^>]*>([\s\S]*?)<div class="CaptionComments"/i) || e.text.match(/<div class="Caption"[^>]*>([\s\S]*?)<\/div>/i) || [])[1];
       if (cap) out.text.push(decode(cap.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ')).replace(/[ \t]+/g, ' ').trim());
       const img = (e.text.match(/<img[^>]+class="EmbeddedMediaImage"[^>]+src="([^"]+)"/i) || [])[1]; if (img) out.image = decode(img);
+      // Carousel posts: every photo's URL sits in the embed's data (escaped JSON), under edge_sidecar_to_children.
+      // Places are often only named on the photos themselves, so all of them get read, not just the cover.
+      const k = e.text.indexOf('edge_sidecar_to_children');
+      if (k >= 0) {
+        const un = x => x.replace(/\\+\//g, '/').replace(/\\+u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/&amp;/g, '&');
+        out.images = [...new Set([...e.text.slice(k).matchAll(/display_url\\*"\s*:\s*\\*"(https:.*?)\\*"/g)].map(m => un(m[1])))].filter(u => /^https:\/\/[^/]*(cdninstagram\.com|fbcdn\.net)\//.test(u)).slice(0, 12);
+        if (out.images.length && !out.image) out.image = out.images[0];
+      }
     }
     if (!out.text.length) { const p = await fetchText(url, UA_BOT); const d = meta(p.text, 'og:description') || meta(p.text, 'og:title'); if (d) out.text.push(d); out.image = out.image || meta(p.text, 'og:image'); }
   } else if (/threads\.(net|com)$/i.test(host)) {
@@ -208,19 +216,37 @@ const TOOL = {
   }
 };
 
+// Fetch a post's photos here and send them inline: Instagram's image servers don't always answer other fetchers.
+async function photosB64(urls) {
+  const got = await Promise.all(urls.map(async u => {
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), 7000);
+    try {
+      const r = await fetch(u, { signal: ac.signal, headers: { 'user-agent': UA_BROWSER, accept: 'image/avif,image/webp,image/jpeg,*/*' } });
+      const type = (r.headers.get('content-type') || '').split(';')[0];
+      if (!r.ok || !/^image\/(jpeg|png|webp|gif)$/.test(type)) return null;
+      const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 3.5e6) return null;
+      return { type: 'image', source: { type: 'base64', media_type: type, data: buf.toString('base64') } };
+    } catch (e) { return null; } finally { clearTimeout(t); }
+  }));
+  return got.filter(Boolean);
+}
+
 async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage, city }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (neighborhoods || []).slice(0, 400).join(', ');
   const isMap = post.source === 'gmaps';
   const lines = [
     `Platform: ${post.source}`, post.author ? `Posted by: ${post.author}` : '', `Link: ${post.finalUrl}`,
+    post.images && post.images.length > 1 ? `The post has ${post.images.length} photos (attached in order).` : '',
     post.text.length ? `Post text:\n${post.text.join('\n---\n')}` : (post.source === 'video' ? '' : 'Post text: (could not be read)'),
     post.spoken ? `What is said in the video (TikTok auto-captions, may have spelling mistakes):\n${post.spoken}` : '',
     transcript ? `What is said in the video (speech-to-text; place names may be misspelled, so correct them to the real business name when you recognize it):\n${transcript}` : '',
     notes ? `Extra notes the user typed:\n${notes}` : ''
   ].filter(Boolean).join('\n\n');
   const content = [];
-  if (withImage && post.image) content.push({ type: 'image', source: { type: 'url', url: post.image } });
+  const many = withImage && post.images && post.images.length > 1 ? await photosB64(post.images) : [];
+  if (many.length) many.forEach(b => content.push(b));
+  else if (withImage && post.image) content.push({ type: 'image', source: { type: 'url', url: post.image } });
   (frames || []).forEach(b64 => content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }));
   content.push({ type: 'text', text: localize(isMap ?
 `This is a Google Maps link to one specific NYC place. Identify it so it can be saved to a personal "places to visit" map.
@@ -249,7 +275,7 @@ Neighborhood names the app knows (prefer one of these spellings): ${hoods}
 
 Rules:
 - Only include real, specific places a person could walk into. Skip general areas, dishes, brands without a storefront, and the creator's own name.
-- Use text visible in the images too (cover image and video frames): creators often put the place name on screen.
+- Use text visible in the images too (every photo of the post, the cover image and video frames): creators often put the place name on screen. When the post has several photos, look at each one: list posts usually show one place per photo, named in the photo's text, a sign or a location tag.
 - Spoken words are often the main source; listen for "this is", "go to", "called", and street names.
 - If the post names a place but not where it is, fill neighborhood and address from your own knowledge only when you are confident; otherwise null.
 - If nothing identifiable is mentioned, return an empty places list.
@@ -258,7 +284,7 @@ Call save_places with the result.`, city) });
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1500, tools: [localizeObj(TOOL, city)], tool_choice: { type: 'tool', name: 'save_places' }, messages: [{ role: 'user', content }] })
+    body: JSON.stringify({ model: MODEL, max_tokens: 3000, tools: [localizeObj(TOOL, city)], tool_choice: { type: 'tool', name: 'save_places' }, messages: [{ role: 'user', content }] })
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { const err = new Error((j.error && j.error.message) || ('AI request failed (' + r.status + ')')); err.status = r.status; throw err; }
