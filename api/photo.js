@@ -10,9 +10,14 @@
 const { cors, send } = require('./_shared');
 
 const okHost = h => h === 'nyc-lovat.vercel.app' || /^nyc-[a-z0-9-]+-kotis1\.vercel\.app$/.test(h) || h === 'localhost' || h === '127.0.0.1';
+// The iPhone app's pages live at capacitor://localhost, and WebKit sends no Referer or Origin from there for <img>,
+// so it's recognized by the app's own image links (&app=ios, from build 5) or, for older builds, by the in-app
+// web view's user agent (iPhone WebKit without "Safari", which Safari itself always includes).
+const inAppView = ua => /\b(iPhone|iPad|iPod)\b/.test(ua) && /AppleWebKit/.test(ua) && !/Safari\//.test(ua);
 const fromApp = req => {
-  const o = String(req.headers.origin || ''), ref = String(req.headers.referer || '');
+  const o = String(req.headers.origin || ''), ref = String(req.headers.referer || ''), ua = String(req.headers['user-agent'] || '');
   if (/^(capacitor|ionic):\/\/localhost/.test(o) || /^(capacitor|ionic):\/\/localhost/.test(ref)) return true;
+  if (!o && !ref && (/[?&]app=ios(&|$)/.test(req.url || '') || inAppView(ua))) return true;
   try { return okHost(new URL(o && o !== 'null' ? o : ref).hostname); } catch (e) { return false; }
 };
 

@@ -59,7 +59,7 @@ const shrinkImage=(file,w,h)=>new Promise((res,rej)=>{if(!file)return rej(new Er
 const photoErr=e=>e==='setup'?'Photos Need One Setup Step: Run supabase/avatars.sql In Supabase.':(e||'Couldn\u2019t Save The Photo.');
 // A spot's picture: the photo you added, else (once GOOGLE_MAPS_API_KEY is set) its first Google Maps photo via /api/photo.
 const GPHOTO={on:false};
-const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&isFinite(p.lng)?API('/api/photo?q='+encodeURIComponent([p.name,p.address||p.area,CITIES[cityOf(p)].q].filter(Boolean).join(', '))+'&ll='+(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)):null);
+const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&isFinite(p.lng)?API('/api/photo?q='+encodeURIComponent([p.name,p.address||p.area,CITIES[cityOf(p)].q].filter(Boolean).join(', '))+'&ll='+(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)+(NATIVE?'&app=ios':'')):null);
 // Map layers you turned on (subway, bus routes, Citi Bike) are remembered on this device.
 const LAYERS=(()=>{try{return JSON.parse(localStorage.getItem('nycList.layers'))||{};}catch(e){return {};}})();
 const saveLayers=o=>{try{localStorage.setItem('nycList.layers',JSON.stringify(o));}catch(e){}};
