@@ -1077,6 +1077,17 @@ function AddSheet(v) {
     </div>
     ${v.aiBusy ? busyCard(v.aiReads) : v.aiShow && !v.aiMulti && html`
     <button onClick=${v.aiRun} style=${S(`${darkCard};flex-direction:row;align-items:center;border:none;cursor:pointer;text-align:left`)}>${sparkle}<span style=${S('display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900;font-style:italic')}>${plain(v.aiBtn)}</span><span style=${S('font-family:var(--mono);font-size:10.5px;font-weight:500;color:#C4D0FF')}>${v.aiReads}</span></span></button>`}
+    ${v.aiCityAsk && html`
+    <div role="alert" class="lg" style=${S(`${GL};border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px`)}>
+      <div style=${S('display:flex;align-items:center;gap:12px')}>
+        <span aria-hidden="true" style=${S('width:44px;height:44px;flex:none;border-radius:14px;background:#FFC425;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:inset 0 2px 1px rgba(255,255,255,.6)')}><span class="emo">${v.aiCityAsk.emoji}</span></span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}><span style=${S('font-size:16px;font-weight:900;font-style:italic;line-height:1.15')}>${v.aiCityAsk.title}</span><span style=${S('font-size:12.5px;font-weight:600;color:#4A5275;line-height:1.3')}>${v.aiCityAsk.sub}</span></span>
+      </div>
+      <div style=${S('display:grid;grid-template-columns:1fr 1.4fr;gap:8px')}>
+        <button onClick=${v.aiCityAsk.stay} style=${S('height:42px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:rgba(255,255,255,.6);color:#10183F;font-weight:800;font-size:13.5px;cursor:pointer')}>${v.aiCityAsk.stayLbl}</button>
+        <button onClick=${v.aiCityAsk.go} style=${S('height:42px;border-radius:999px;border:0;background:#10183F;color:#FFC425;font-weight:800;font-size:13.5px;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25)')}>${v.aiCityAsk.btn}</button>
+      </div>
+    </div>`}
     ${v.aiHasMsg && status(v.aiMsg)}
     ${found}
     ${!f.url && hint('Paste A Post Or A Google Maps Link And AI Fills In The Rest — Including What’s Said Out Loud.')}`;
@@ -1092,6 +1103,17 @@ function AddSheet(v) {
       <input id="f-video" type="file" accept="video/*" onChange=${v.onVideo} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')} />
     </div>
     ${v.aiBusy && busyCard('AUDIO · ON-SCREEN TEXT')}
+    ${v.aiCityAsk && html`
+    <div role="alert" class="lg" style=${S(`${GL};border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px`)}>
+      <div style=${S('display:flex;align-items:center;gap:12px')}>
+        <span aria-hidden="true" style=${S('width:44px;height:44px;flex:none;border-radius:14px;background:#FFC425;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:inset 0 2px 1px rgba(255,255,255,.6)')}><span class="emo">${v.aiCityAsk.emoji}</span></span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}><span style=${S('font-size:16px;font-weight:900;font-style:italic;line-height:1.15')}>${v.aiCityAsk.title}</span><span style=${S('font-size:12.5px;font-weight:600;color:#4A5275;line-height:1.3')}>${v.aiCityAsk.sub}</span></span>
+      </div>
+      <div style=${S('display:grid;grid-template-columns:1fr 1.4fr;gap:8px')}>
+        <button onClick=${v.aiCityAsk.stay} style=${S('height:42px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:rgba(255,255,255,.6);color:#10183F;font-weight:800;font-size:13.5px;cursor:pointer')}>${v.aiCityAsk.stayLbl}</button>
+        <button onClick=${v.aiCityAsk.go} style=${S('height:42px;border-radius:999px;border:0;background:#10183F;color:#FFC425;font-weight:800;font-size:13.5px;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25)')}>${v.aiCityAsk.btn}</button>
+      </div>
+    </div>`}
     ${v.aiHasMsg && status(v.aiMsg)}
     ${found}
     ${hint('The Video Stays On Your Phone — Only The Sound And Three Stills Are Sent So AI Can Find The Places.')}`;

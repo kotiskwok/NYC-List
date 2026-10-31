@@ -275,6 +275,13 @@ async function watchVideo(url, sec) {
   return { frames, spoken };
 }
 
+// The person's map may be set to another city than the post's (someone in NYC saving a Hong Kong trip, or the
+// picker left on Toronto). Then still list the places and say which city, so the app can offer to switch.
+const OTHER_CITY = c => `\n\nThe person's map is currently set to ${(c && c.name) || 'New York City'}. The app also supports New York City, Singapore, Hong Kong and Toronto. If the places in this post are clearly in one of those other cities, list them anyway (overriding any rule above that limits places to ${(c && c.name) || 'New York City'}) and set post_city to that city. Always set post_city.`;
+
+// Added after localizing, so the city names in it stay as written.
+const withPostCity = t => { t.input_schema.properties.post_city = { type: 'string', enum: ['nyc', 'sg', 'hk', 'to', 'other', 'unknown'], description: 'Which city the places are in: nyc (New York City), sg (Singapore), hk (Hong Kong), to (Toronto), other, or unknown.' }; t.input_schema.required = [...t.input_schema.required, 'post_city']; return t; };
+
 async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage, city }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (neighborhoods || []).slice(0, 400).join(', ');
@@ -323,12 +330,12 @@ Rules:
 - Spoken words are often the main source; listen for "this is", "go to", "called", and street names.
 - If the post names a place but not where it is, fill neighborhood and address from your own knowledge only when you are confident; otherwise null.
 - If nothing identifiable is mentioned, return an empty places list.
-Call save_places with the result.`, city) });
+Call save_places with the result.`, city) + OTHER_CITY(city) });
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 3000, tools: [localizeObj(TOOL, city)], tool_choice: { type: 'tool', name: 'save_places' }, messages: [{ role: 'user', content }] })
+    body: JSON.stringify({ model: MODEL, max_tokens: 3000, tools: [withPostCity(localizeObj(TOOL, city))], tool_choice: { type: 'tool', name: 'save_places' }, messages: [{ role: 'user', content }] })
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { const err = new Error((j.error && j.error.message) || ('AI request failed (' + r.status + ')')); err.status = r.status; throw err; }
@@ -368,8 +375,11 @@ module.exports = async (req, res) => {
       places = places.slice(0, 1);
       if (places[0] && post.pin) Object.assign(places[0], { lat: post.pin.lat, lng: post.pin.lng });
     }
-    await Promise.all(places.filter(p => p.lat == null).map(p => pinPlace(p, CITIES[body.city] || CITIES.nyc)));
-    return send(res, 200, { places, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript || vSpoken), source: post.source,
+    // Which city the spots are in: the Google Maps pin's city, else what the AI said.
+    let postCity = post.pin ? Object.keys(CITIES).find(k => inCityBox(post.pin.lat, post.pin.lng, CITIES[k])) : CITIES[out.post_city] ? out.post_city : null;
+    const hereCity = CITIES[body.city] ? body.city : 'nyc';
+    await Promise.all(places.filter(p => p.lat == null).map(p => pinPlace(p, CITIES[postCity || hereCity])));
+    return send(res, 200, { places, city: postCity || hereCity, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript || vSpoken), source: post.source,
       message: places.length ? '' : 'No Specific Places Found In This Post. Add It By Name Instead.' });
   } catch (e) {
     return send(res, 502, { error: 'AI Couldn’t Read It Right Now — ' + (e.message || 'Try Again') });
