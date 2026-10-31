@@ -161,16 +161,23 @@ async function readPost(url) {
 async function pinPlace(p, city) {
   const key = process.env.GOOGLE_MAPS_API_KEY; if (!key || !p || !p.name) return;
   const c = city.box ? city : CITIES.nyc, b = c.box;
-  const q = [p.name, p.address || p.neighborhood, c.name].filter(Boolean).join(', ');
-  try {
-    const ac = new AbortController(), t = setTimeout(() => ac.abort(), 6000);
-    const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', signal: ac.signal,
-      headers: { 'content-type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'places.displayName,places.location,places.shortFormattedAddress' },
-      body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', locationRestriction: { rectangle: { low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } } } }) });
-    clearTimeout(t);
-    const g = r.ok ? ((await r.json()).places || [])[0] : null;
-    if (g && g.location && inCityBox(g.location.latitude, g.location.longitude, c)) { p.lat = +g.location.latitude.toFixed(6); p.lng = +g.location.longitude.toFixed(6); }
-  } catch (e) {}
+  const search = async q => {
+    try {
+      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 6000);
+      const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', signal: ac.signal,
+        headers: { 'content-type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'places.displayName,places.location,places.formattedAddress' },
+        body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', locationRestriction: { rectangle: { low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } } } }) });
+      clearTimeout(t);
+      const g = r.ok ? ((await r.json()).places || [])[0] : null;
+      return g && g.location && inCityBox(g.location.latitude, g.location.longitude, c) ? g : null;
+    } catch (e) { return null; }
+  };
+  // Chains have several branches: when the post gives a street address, the match must be at that street number,
+  // otherwise pin the address itself.
+  const num = (String(p.address || '').match(/^\s*(\d+[A-Za-z]?)\b/) || [])[1];
+  let g = await search([p.name, p.address || p.neighborhood, c.name].filter(Boolean).join(', '));
+  if (g && num && !new RegExp('(^|[\\s,])' + num + '\\b').test(g.formattedAddress || '')) g = await search(p.address + ', ' + c.name);
+  if (g) { p.lat = +g.location.latitude.toFixed(6); p.lng = +g.location.longitude.toFixed(6); }
 }
 
 const TOOL = {
