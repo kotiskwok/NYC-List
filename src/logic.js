@@ -56,6 +56,7 @@ const bullet=r=>({t:r==='SIR'?'SI':r,bg:RC[r]||'#808183',fg:['N','Q','R','W'].in
 const r5=n=>Math.round(n*1e5)/1e5;
 const km=(a,b)=>Math.hypot((a[0]-b[0])*111,(a[1]-b[1])*84);
 const mi=k=>(k*0.621).toFixed(1)+' Mi';
+const fmtShort=m=>{m=Math.max(1,Math.round(m));return m<60?m+'m':Math.floor(m/60)+'h'+(m%60?String(m%60).padStart(2,'0'):'');};
 const fmtMin=m=>{m=Math.max(1,Math.round(m));return m<60?m+' Min':Math.floor(m/60)+' Hr'+(m%60?' '+m%60+' Min':'');};
 const walkMin=(a,b)=>km(a,b)*1.25/0.08;
 const rideMin=(a,b)=>km(a,b)*1.25/0.45+1;
@@ -594,11 +595,11 @@ class Component extends DCLogic {
       chip(s.routeMode==='home',s.home?'Home':'Home (Set It)',()=>this.setState({routeMode:'home',routePick:0})),
       chip(s.routeMode==='spot','A Saved Spot',()=>this.setState({routeMode:'spot',routePick:0}))];
     // plan
-    const stops=this.planStops(),pStart=this.planStartPt();let total=0;
+    const stops=this.planStops(),pStart=this.planStartPt();let total=0,walkTot=0,subTot=0;
     const planRows=stops.map((p,i)=>{const c=catOf(p.cat),from=i===0?pStart:[stops[i-1].lat,stops[i-1].lng];let hasLeg=false,legText='',legBullets=[],legOpen=null;
       if(from&&km(from,[p.lat,p.lng])<60){hasLeg=true;const e=estimate(from,[p.lat,p.lng]);
-        if(e.subway){total+=e.subway.min;legText='Subway · ~'+fmtMin(e.subway.min);legBullets=[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet);}
-        else{total+=e.walk.min;legText='Walk · ~'+fmtMin(e.walk.min)+' · '+mi(e.walk.km);}
+        if(e.subway){total+=e.subway.min;subTot+=e.subway.min;legText='Subway · ~'+fmtMin(e.subway.min);legBullets=[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet);}
+        else{total+=e.walk.min;walkTot+=e.walk.min;legText='Walk · ~'+fmtMin(e.walk.min)+' · '+mi(e.walk.km);}
         legOpen=()=>window.open(gmaps(from.join(','),placeQ(p),e.subway?'transit':'walking'),'_blank');}
       return {num:i+1,name:p.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:p.area,hasLeg,legText,legBullets,legOpen,
         onClick:()=>{this.setState({tab:'map',selId:p.id});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([p.lat,p.lng],15.5,{duration:.6}),120);},
@@ -637,7 +638,11 @@ class Component extends DCLogic {
       exTitle,exSub:`${areaTxt} · ${n} ${n===1?'Place':'Places'}`,
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
       viewList:()=>this.setState({exView:'list'}),viewMap:()=>this.setState({exView:'map'}),resultCards,noResults:!n,
-      hasSel:!!sp&&!s.placing&&!s.routeFor,sel,spotCount:s.places.length,onMapTab:s.tab==='map',delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
+      hasSel:!!sp&&!s.placing&&!s.routeFor,sel,spotCount:s.places.length,visitedCount:s.places.filter(p=>p.visited).length,
+      // Nearest saved spot to where you are (only once your location is known), for the card at the bottom of the map.
+      nearest:(()=>{if(!s.here||s.tab!=='map'||s.placing||s.routeFor||s.selId)return null;let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited)return;const d=km(s.here,[p.lat,p.lng]);if(d<bd){bd=d;best=p;}});if(!best||bd>8)return null;
+        const c=catOf(best.cat),walk=Math.max(1,Math.round(bd*1.25/4.8*60));return {name:best.name,catName:c.name,col:c.color,fg:fgFor(c.color),em:emo(c),big:walk>99?Math.round(walk/60):walk,unit:walk>99?'hr':'min',
+          onClick:()=>{this.setState({selId:best.id});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([best.lat,best.lng],15.5,{duration:.6}),60);}};})(),onMapTab:s.tab==='map',delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
       openSource:()=>sp&&window.open(sp.url,'_blank'),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
       toggleVisited:()=>{if(!sp)return;this.setState(st=>({places:st.places.map(p=>p.id===sp.id?{...p,visited:!p.visited}:p)}));if(!sp.visited)this.toast('Nice! Marked As Visited');},
       editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',lat:sp.lat,lng:sp.lng}}),
@@ -652,7 +657,9 @@ class Component extends DCLogic {
         chip(ps==='here','My Location',()=>{this.setState(st=>({plan:{...st.plan,start:'here'}}));if(!s.here)this.locate();})],
       planStartMsg,planStartMsgText:ps==='home'?'Set Your Home To Start There.':'Waiting For Your Location…',
       autoOrder:()=>this.autoOrder(),openPicker:()=>this.setState({pickerOpen:true}),closePicker:()=>this.setState({pickerOpen:false}),
-      planEmpty:!stops.length,planHas:!!stops.length,planRows,clearPlan:()=>this.setState(st=>({plan:{...st.plan,ids:[]}})),planCount:s.plan.ids.length,
+      planEmpty:!stops.length,planHas:!!stops.length,planRows,planStopsN:stops.length,
+      planBig:total?(total<60?String(Math.round(total)):Math.floor(total/60)+':'+String(Math.round(total%60)).padStart(2,'0')):'0',planBigUnit:total<60?'min':'hr',
+      planWalk:walkTot?fmtShort(walkTot):'—',planSub:subTot?fmtShort(subTot):'—',clearPlan:()=>this.setState(st=>({plan:{...st.plan,ids:[]}})),planCount:s.plan.ids.length,
       pickerOpen:s.pickerOpen,pickerRows:s.places.map(p=>{const c=catOf(p.cat),ip=inPlan(p.id);return {name:p.name,catName:c.name,catBg:c.color,emoji:emo(c),area:p.area,chk:ip?'✓':'',chkBg:ip?C.orange:'#fff',ring:ip?C.orange:'transparent',
         onClick:()=>this.setState(st=>({plan:{...st.plan,ids:ip?st.plan.ids.filter(x=>x!==p.id):[...st.plan.ids,p.id]}}))};}),
       goMap:()=>this.setState({tab:'map',selId:null,placing:false,routeFor:null,tripSel:null}),goExplore:()=>this.setState({tab:'explore',selId:null,placing:false,routeFor:null,tripSel:null}),goPlan:()=>this.setState({tab:'plan',selId:null,placing:false,routeFor:null,tripSel:null}),
