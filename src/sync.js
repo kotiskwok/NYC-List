@@ -61,9 +61,9 @@ const NYCSync = (() => {
     const u = (session && session.user) || null;
     if (u && user && u.id === user.id) return;
     user = u;
-    if (!user) { base = null; set({ auth: 'signedOut', syncEmail: '', syncState: '', avatarV: 0 }); window.NYCLists && NYCLists.onUser(null); return; }
+    if (!user) { base = null; set({ auth: 'signedOut', syncEmail: '', syncState: '', avatarV: 0, obNeed: false, obStep: 0 }); window.NYCLists && NYCLists.onUser(null); return; }
     base = loadBase();
-    set({ auth: 'signedIn', syncEmail: user.email || '', syncState: 'syncing', authPass: '', authMsg: '', avatarV: (user.user_metadata && user.user_metadata.avatar_v) || 0 });
+    set({ auth: 'signedIn', syncEmail: user.email || '', syncState: 'syncing', authPass: '', authMsg: '', avatarV: (user.user_metadata && user.user_metadata.avatar_v) || 0, obNeed: !(user.user_metadata && user.user_metadata.onboarded) });
     await sync();
     window.NYCLists && NYCLists.onUser(user);
   }
@@ -191,7 +191,13 @@ const NYCSync = (() => {
     set({ avatarV: 0 }); return { ok: true };
   }
 
-  return { enabled, attach, queue, submit, signOut, getToken, syncNow: () => sync(),
+  // The welcome pages: save the name you want to be called and remember you've seen them (user_metadata.onboarded).
+  async function finishOnboarding(name) {
+    if (!sb || !user) return false;
+    try { const r = await sb.auth.updateUser({ data: { ...(name ? { name } : {}), onboarded: true } }); if (r.data && r.data.user) user = r.data.user; return !r.error; } catch (e) { return false; }
+  }
+
+  return { finishOnboarding, enabled, attach, queue, submit, signOut, getToken, syncNow: () => sync(),
     client: () => sb, currentUser: () => user, displayName, setName, mergeList, same, avatarUrl, setAvatar, removeAvatar, uploadImage, removeImage };
 })();
 window.NYCSync = NYCSync;

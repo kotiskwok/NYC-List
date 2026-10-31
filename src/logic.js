@@ -149,7 +149,7 @@ class Component extends DCLogic {
     return {places:s?.places||SEED,cats:s?.cats||CATS0,home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
-      showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,layersOpen:false,busState:'',bikeState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
+      showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,layersOpen:false,busState:'',bikeState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
       newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,authName:'',acctDel:0};})();
@@ -708,6 +708,24 @@ class Component extends DCLogic {
       lookResults:(s.lookResults||[]).map(r=>{const a=r.address||{};const title=r.name||[a.house_number,a.road].filter(Boolean).join(' ')||r.display_name.split(',')[0];
         const sub=[a.house_number&&r.name?[a.house_number,a.road].join(' '):a.road,hoodAt([+r.lat,+r.lon])].filter(Boolean).filter(v=>v!==title).join(' · ');return {title,sub,onPick:()=>this.pickLookup(r)};}),
       hasToast:!!s.toast,toast:s.toast,
+      // Welcome pages after signing in for the first time: what to call you, then home (optional).
+      obOpen:s.auth==='signedIn'&&s.obNeed,obStep:s.obStep,obName:s.obName,obAddr:s.obAddr,obRes:s.obRes,obBusy:s.obBusy,obMsg:s.obMsg,obHome:s.obHome,
+      obFirst:(s.obName||'').trim().split(/\s+/)[0]||'Friend',
+      obStart:()=>this.setState({obStep:1,obName:s.obName||((window.NYCSync&&NYCSync.displayName())||'').trim().split(/\s+/)[0]||'',obMsg:''}),
+      obBack:()=>this.setState({obStep:Math.max(0,s.obStep-1),obMsg:''}),
+      onObName:e=>this.setState({obName:e.target.value,obMsg:''}),
+      obNameNext:e=>{e&&e.preventDefault&&e.preventDefault();if(!(s.obName||'').trim()){this.setState({obMsg:'Even A Nickname Works!'});return;}this.setState({obStep:2,obMsg:''});},
+      onObAddr:e=>this.setState({obAddr:e.target.value,obMsg:''}),
+      obFind:async e=>{e&&e.preventDefault&&e.preventDefault();const q=(this.state.obAddr||'').trim();if(!q){this.setState({obMsg:'Type An Address Or Cross Streets First.'});return;}
+        this.setState({obBusy:true,obMsg:'',obRes:[]});const res=await this.lookup(q.match(/new york|nyc|brooklyn|queens|bronx|staten/i)?q:q+', New York City',4);
+        if(res===null){this.setState({obBusy:false,obMsg:'Address Search Isn\u2019t Reachable Right Now. You Can Skip And Add Home Later.'});return;}
+        const rows=res.map(r=>{const ll=[r5(+r.lat),r5(+r.lon)],a=r.address||{};return {label:[a.house_number&&a.road?a.house_number+' '+a.road:(a.road||r.name||String(r.display_name).split(',')[0]),a.suburb||a.neighbourhood||a.city_district].filter(Boolean).join(', '),lat:ll[0],lng:ll[1],area:hoodAt(ll)||a.suburb||a.city_district||''};});
+        this.setState({obBusy:false,obRes:rows,obMsg:rows.length?'':'No Match In NYC Yet — Try Adding The Borough Or A Cross Street.'});},
+      obPick:r=>this.setState({obHome:r,obRes:[],obAddr:r.label}),
+      obHomeNext:()=>this.setState({obStep:3,obMsg:''}),obSkipHome:()=>this.setState({obStep:3,obHome:null,obMsg:''}),
+      obDone:()=>{const name=(this.state.obName||'').trim(),h=this.state.obHome;if(h)this.setState({home:{lat:h.lat,lng:h.lng,area:h.area}});
+        this.setState({obNeed:false,obStep:0});if(window.NYCSync)NYCSync.finishOnboarding(name);this.toast('Welcome To The City, '+(name.split(/\s+/)[0]||'Friend')+'!');},
+      showPass:s.showPass,toggleShowPass:()=>this.setState({showPass:!s.showPass}),
       authOpen:s.auth==='signedOut',authUp:s.authMode==='up',authEmail:s.authEmail,authPass:s.authPass,authMsg:s.authMsg,hasAuthMsg:!!s.authMsg,
       authBtn:s.authBusy?'One Sec…':s.authMode==='up'?'Create My Account':'Sign In',authTitle:s.authMode==='up'?'Make Your Account':'Welcome Back',
       authSwitch:s.authMode==='up'?'Already Have An Account? Sign In':'New Here? Create An Account',

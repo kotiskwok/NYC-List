@@ -73,7 +73,9 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - **iPhone:** an **"Add To NYC List"** Shortcut sits in the share sheet. It is set up in the Shortcuts app with Show in Share Sheet turned on and Receive set to URLs and Text. Its actions are **URL Encode** (Shortcut Input), then **Open URLs** `https://nyc-lovat.vercel.app/?add=` followed by the URL Encoded Text variable.
   - iPhone opens these links in Safari, not the home-screen app, so the app needs signing in once in Safari as well. Spots added there sync to the home-screen app.
 
-**Sign-in screen:** email and password (Supabase).
+**Sign-in screen:** email and password (Supabase), with a show/hide eye on the password. Fields carry `autocomplete` names so iPhone offers to save and fill the password; sessions already persist, so you stay signed in. The name field only shows on sign-up from a list invite.
+
+**Welcome pages** (first sign-in, until `user_metadata.onboarded` is set): a subway-ride flow — "Welcome Aboard!", "How Do You Want Us To Call You?" (saved as your name), "Where's Home?" (optional address search that sets Home), "You're All Set". `Onboarding()` in `view.js`, `ob*` values in `logic.js`, `NYCSync.finishOnboarding()`.
 
 ### Default categories
 ☕ Coffee Shop (orange) · 💻 Coffee Shop To Work At (blue) · 🍽️ Restaurant (red) · 🥐 Bakery (yellow) · 🧀 Gourmet Grocery (green) · 🛍️ Cute Shop (pink).

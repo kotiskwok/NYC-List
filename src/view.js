@@ -1009,6 +1009,71 @@ function AccountSheet(v) {
   </div>`;
 }
 
+// Welcome pages after a first sign-in, styled like a subway ride: a station sign per stop, route bullets for progress.
+function Onboarding(v) {
+  const step = v.obStep, bullets = [['S', '#808183'], ['1', '#EE352E'], ['2', '#FCCC0A'], ['3', '#00933C']];
+  const sign = (txt) => html`
+    <div style=${S('align-self:stretch;display:flex;align-items:center;gap:10px;background:#111111;color:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 10px 24px rgba(16,24,63,.25),inset 0 1px 0 rgba(255,255,255,.12)')}>
+      <span style=${S('flex:1;min-width:0;font-size:15px;font-weight:800;letter-spacing:.2px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${txt}</span>
+      <span style=${S('display:flex;gap:5px;flex:none')}>${bullets.map(([t, c], i) => html`<span key=${i} aria-hidden="true" style=${S(`width:24px;height:24px;border-radius:50%;background:${i <= step ? c : 'transparent'};border:2px solid ${c};color:${i <= step ? (c === '#FCCC0A' ? '#111' : '#fff') : c};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-sizing:border-box`)}>${t}</span>`)}</span>
+    </div>`;
+  const art = (em, bg) => html`<div aria-hidden="true" class="lg" style=${S(`width:118px;height:118px;border-radius:50%;${GL};display:flex;align-items:center;justify-content:center;font-size:58px;position:relative`)}><span class="emo">${em}</span><span style=${S(`position:absolute;right:-4px;bottom:6px;width:34px;height:34px;border-radius:50%;background:${bg};border:3px solid #FFFFFF`)}></span></div>`;
+  const title = (t, sub) => html`<div style=${S('display:flex;flex-direction:column;gap:10px;align-items:center')}><h1 style=${S('margin:0;font-size:38px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-1.4px;text-wrap:balance')}>${t}</h1>${sub && html`<p style=${S('margin:0;font-size:15px;line-height:1.45;font-weight:500;color:#3C4466;text-wrap:pretty')}>${sub}</p>`}</div>`;
+  const go = (label, onClick, type) => html`
+    <div style=${S('align-self:stretch;display:flex;align-items:center')}>
+      <button type=${type || 'button'} onClick=${onClick} style=${S('flex:1;min-width:0;height:58px;border-radius:999px;border:0;background:#10183F;color:#fff;font-size:17px;font-weight:900;font-style:italic;cursor:pointer;text-align:left;padding-left:24px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25)')}>${label}</button>
+      <button type=${type || 'button'} onClick=${onClick} aria-label=${label} style=${S('margin-left:8px;width:58px;height:58px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 3px 1px rgba(255,255,255,.55),0 12px 26px rgba(255,107,26,.4)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.4)}</button>
+    </div>`;
+  const back = step > 0 && step < 3 && html`<button onClick=${v.obBack} style=${S('align-self:flex-start;border:0;background:none;color:#1B3DB8;font-weight:800;font-size:14px;cursor:pointer;padding:4px 0')}>← Back</button>`;
+  const field = 'width:100%;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.85);box-shadow:inset 0 2px 1px #fff,0 8px 20px rgba(16,24,63,.08);padding:0 20px;font-family:inherit;font-size:17px;font-weight:700;color:#10183F;outline:none;box-sizing:border-box';
+  const msg = v.obMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C')}>${v.obMsg}</div>`;
+  return html`
+  <div data-screen-label="Welcome" class="noscroll" style=${S(`position:absolute;inset:0;z-index:1260;background:var(--bgfx);overflow-y:auto;padding:${T(58)} 22px ${B(30)};display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;color:#10183F`)}>
+    <div aria-hidden="true" style=${S('position:absolute;left:0;right:0;top:0;height:10px;background:repeating-linear-gradient(90deg,#111 0 10px,#FFC425 10px 20px);opacity:.9')}></div>
+    ${step === 0 && html`
+      ${sign('The Spotted In Express')}
+      <div style=${S('margin-top:auto')}>${art('🗽', '#FFC425')}</div>
+      ${title('Welcome Aboard!', 'Your Map Of Every Café, Bakery, Restaurant And Cute Shop You Spot Online. Stand Clear Of The Closing Doors — We’ll Set You Up In Two Quick Stops.')}
+      <div style=${S('margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:10px')}>${go('Let’s Ride', v.obStart)}</div>`}
+    ${step === 1 && html`
+      ${sign('Next Stop: You')}
+      ${back}
+      ${art('🥯', '#EE352E')}
+      ${title('How Do You Want Us To Call You?', 'Your Bodega Guy Knows You By Name. So Should We. Friends On Your Shared Lists See It Too.')}
+      <form onSubmit=${v.obNameNext} style=${S('align-self:stretch;display:flex;flex-direction:column;gap:12px;margin-top:auto')}>
+        <label for="ob-name" style=${S('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)')}>First Name</label>
+        <input id="ob-name" autocomplete="given-name" autocapitalize="words" value=${v.obName} onChange=${v.onObName} placeholder="First Name Or Nickname" maxlength="40" style=${S(field + ';text-align:center')}/>
+        ${msg}
+        ${go('That’s Me', null, 'submit')}
+      </form>`}
+    ${step === 2 && html`
+      ${sign('Next Stop: Home Base')}
+      ${back}
+      ${art('🏠', '#FCCC0A')}
+      ${title('Where’s Home, ' + v.obFirst + '?', 'Totally Optional. We’ll Use It To Show How Far Each Spot Is From Your Couch. It Stays Private To Your Account.')}
+      <form onSubmit=${v.obFind} style=${S('align-self:stretch;display:flex;flex-direction:column;gap:10px;margin-top:auto;text-align:left')}>
+        <label for="ob-addr" style=${S('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)')}>Home Address</label>
+        <div style=${S('display:flex;gap:8px')}>
+          <input id="ob-addr" autocomplete="street-address" value=${v.obAddr} onChange=${v.onObAddr} placeholder="Address Or Cross Streets" style=${S(field + ';flex:1;min-width:0')}/>
+          <button type="submit" class=${v.obBusy ? 'ai-busy' : ''} style=${S('flex:none;height:56px;padding:0 18px;border-radius:999px;border:0;background:#FFC425;color:#10183F;font-weight:900;font-size:15px;cursor:pointer;box-shadow:inset 0 2px 1px rgba(255,255,255,.7)')}>${v.obBusy ? '…' : 'Find'}</button>
+        </div>
+        ${msg}
+        ${v.obRes.length > 0 && html`<div class="lg" style=${S(`${GL};border-radius:24px;padding:6px`)}>${v.obRes.map((r, i) => html`
+          <button key=${i} type="button" onClick=${() => v.obPick(r)} style=${S(`display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;border-radius:18px;cursor:pointer;color:#10183F;${i ? 'border-top:1px solid rgba(16,24,63,.08)' : ''}`)}><span style=${S('font-weight:800;font-size:15px')}>${r.label}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.area || 'New York'}</span></button>`)}</div>`}
+        ${v.obHome && html`<div class="lg" style=${S(`${GL};border-radius:24px;padding:12px 16px;display:flex;align-items:center;gap:10px`)}><span style=${S('width:32px;height:32px;border-radius:50%;background:#1F9D6B;color:#fff;display:flex;align-items:center;justify-content:center;flex:none')}>${Ico('M5 12l5 5 9-10', 16, 'currentColor', 3)}</span><span style=${S('display:flex;flex-direction:column;min-width:0')}><span style=${S('font-weight:800;font-size:15px')}>Home Base Set</span><span style=${S('font-size:12.5px;font-weight:600;color:#4A5275;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.obHome.label}${v.obHome.area ? ' · ' + v.obHome.area : ''}</span></span></div>`}
+      </form>
+      <div style=${S('align-self:stretch;display:flex;flex-direction:column;gap:6px')}>
+        ${v.obHome ? go('Save Home', v.obHomeNext) : ''}
+        <button onClick=${v.obSkipHome} style=${S('align-self:center;border:0;background:none;color:#1B3DB8;font-weight:800;font-size:14px;cursor:pointer;padding:10px')}>${v.obHome ? 'Skip Instead' : 'Skip For Now — I’ll Add It Later'}</button>
+      </div>`}
+    ${step === 3 && html`
+      ${sign('Last Stop: The Whole City')}
+      <div style=${S('margin-top:auto')}>${art('🚕', '#00933C')}</div>
+      ${title('You’re All Set, ' + v.obFirst + '!', 'Tap + To Save A Spot From TikTok, Instagram, Threads Or Google Maps. We’ll Pin It On Your Map So You Never Forget Where That Cute Bakery Was.')}
+      <div style=${S('margin-top:auto;align-self:stretch')}>${go('Start Spotting', v.obDone)}</div>`}
+  </div>`;
+}
+
 function AuthScreen(v) {
   const inp = S('height:52px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:0 14px;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none');
   return html`
@@ -1024,18 +1089,22 @@ function AuthScreen(v) {
       <span style=${S('font-size:13.5px;font-weight:700')}>${v.joinSub}</span>
     </div>`}
     <form onSubmit=${v.authSubmit} style=${S('align-self:stretch;width:100%;max-width:420px;margin:0 auto;text-align:left;background:#FFF3DF;border-radius:28px;padding:20px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>
-      ${v.authUp && html`
+      ${v.authUp && v.hasJoin && html`
       <div style=${S('display:flex;flex-direction:column;gap:8px')}>
         <label for="auth-name" style=${S('font-weight:800;font-size:15px')}>Your Name</label>
         <input id="auth-name" autocomplete="given-name" value=${v.authName} onChange=${v.onAuthName} placeholder="So Friends Know It’s You" style=${inp} />
       </div>`}
       <div style=${S('display:flex;flex-direction:column;gap:8px')}>
         <label for="auth-email" style=${S('font-weight:800;font-size:15px')}>Email</label>
-        <input id="auth-email" type="email" autocomplete="email" inputmode="email" value=${v.authEmail} onChange=${v.onAuthEmail} placeholder="you@example.com" style=${inp} />
+        <input id="auth-email" name="email" type="email" autocomplete="username email" inputmode="email" value=${v.authEmail} onChange=${v.onAuthEmail} placeholder="you@example.com" style=${inp} />
       </div>
       <div style=${S('display:flex;flex-direction:column;gap:8px')}>
         <label for="auth-pass" style=${S('font-weight:800;font-size:15px')}>Password</label>
-        <input id="auth-pass" type="password" autocomplete=${v.authUp ? 'new-password' : 'current-password'} value=${v.authPass} onChange=${v.onAuthPass} placeholder=${v.authUp ? 'At Least 6 Characters' : 'Your Password'} style=${inp} />
+        <div style=${S('position:relative;display:flex')}>
+          <input id="auth-pass" name="password" type=${v.showPass ? 'text' : 'password'} autocomplete=${v.authUp ? 'new-password' : 'current-password'} autocapitalize="off" autocorrect="off" spellcheck="false" value=${v.authPass} onChange=${v.onAuthPass} placeholder=${v.authUp ? 'At Least 6 Characters' : 'Your Password'} style=${S('flex:1;min-width:0;height:52px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:0 54px 0 14px;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none')} />
+          <button type="button" onClick=${v.toggleShowPass} aria-label=${v.showPass ? 'Hide Password' : 'Show Password'} aria-pressed=${v.showPass} style=${S('position:absolute;right:6px;top:6px;width:40px;height:40px;border-radius:12px;border:0;background:rgba(16,24,63,.06);color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${v.showPass ? Ico('M3 3l18 18 M10.6 10.6a2 2 0 0 0 2.8 2.8 M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 5 10 7a13 13 0 0 1-3 3.8 M6.1 6.1A13 13 0 0 0 2 12c1 2 5 7 10 7a9.7 9.7 0 0 0 4-.9', 20, 'currentColor', 2) : Ico('M2 12c1-2 5-7 10-7s9 5 10 7c-1 2-5 7-10 7S3 14 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 20, 'currentColor', 2)}</button>
+        </div>
+        ${!v.authUp && html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>You Stay Signed In On This Phone. Your iPhone Can Also Save This Password For Next Time.</span>`}
       </div>
       ${v.hasAuthMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C;line-height:1.35')}>${v.authMsg}</div>`}
       <button type="submit" style=${S('height:52px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:20px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>${v.authBtn}</button>
@@ -1071,6 +1140,7 @@ function App(v) {
         ${v.newTrip && NewTripSheet(v)}
         ${AddSheet(v)}
         ${v.authOpen && AuthScreen(v)}
+        ${v.obOpen && Onboarding(v)}
         ${v.hasToast && html`
         <div role="status" style=${S(`position:absolute;top:${T(54)};left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none`)}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${v.toast}</div></div>`}
       </div>
