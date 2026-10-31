@@ -143,6 +143,11 @@ async function readPost(url) {
         const un = x => x.replace(/\\+\//g, '/').replace(/\\+u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/&amp;/g, '&');
         out.images = [...new Set([...e.text.slice(k).matchAll(/display_url\\*"\s*:\s*\\*"(https:.*?)\\*"/g)].map(m => un(m[1])))].filter(u => /^https:\/\/[^/]*(cdninstagram\.com|fbcdn\.net)\//.test(u)).slice(0, 12);
         if (out.images.length && !out.image) out.image = out.images[0];
+      } else if (/is_video\\*"\s*:\s*true/.test(e.text)) {
+        // Reels: the places are often only said in the video or shown as text on screen, not in the caption.
+        const un = x => x.replace(/\\+\//g, '/').replace(/\\+u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/&amp;/g, '&');
+        const v = (e.text.match(/video_url\\*"\s*:\s*\\*"(https:.*?)\\*"/) || [])[1], dur = +((e.text.match(/video_duration\\*"\s*:\s*([\d.]+)/) || [])[1] || 0);
+        if (v && /^https:\/\/[^/]*(cdninstagram\.com|fbcdn\.net)\//.test(un(v))) { out.video = un(v); out.videoSec = dur; }
       }
     }
     if (!out.text.length) { const p = await fetchText(url, UA_BOT); const d = meta(p.text, 'og:description') || meta(p.text, 'og:title'); if (d) out.text.push(d); out.image = out.image || meta(p.text, 'og:image'); }
@@ -231,6 +236,45 @@ async function photosB64(urls) {
   return got.filter(Boolean);
 }
 
+// Watch an Instagram reel from its link: download the video, take a few evenly spaced frames (for on-screen text)
+// and transcribe what's said. Frames need ffmpeg (the ffmpeg-static package); without it, only the speech is used.
+async function watchVideo(url, sec) {
+  const fs = require('fs'), os = require('os'), path = require('path'), { execFile } = require('child_process');
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 15000);
+  let buf;
+  try { const r = await fetch(url, { signal: ac.signal, headers: { 'user-agent': UA_BROWSER } }); if (!r.ok) return null; buf = Buffer.from(await r.arrayBuffer()); }
+  catch (e) { return null; } finally { clearTimeout(t); }
+  if (!buf || buf.length < 10000 || buf.length > 60e6) return null;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reel-')), mp4 = path.join(dir, 'v.mp4'); fs.writeFileSync(mp4, buf);
+  let ff = null; try { ff = require('ffmpeg-static'); if (ff && !fs.existsSync(ff)) ff = null; } catch (e) {}
+  const run = args => new Promise(res => execFile(ff, args, { timeout: 20000 }, err => res(!err)));
+  const frames = [];
+  let audio = buf.length <= 24e6 ? { data: buf, type: 'video/mp4', name: 'clip.mp4' } : null;
+  if (ff) {
+    const n = 6, d = sec > 1 ? sec : 30;
+    await Promise.all([
+      run(['-y', '-i', mp4, '-vf', `fps=${(n / d).toFixed(4)},scale=512:-2`, '-frames:v', String(n), '-q:v', '5', path.join(dir, 'f%02d.jpg')]),
+      run(['-y', '-i', mp4, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '48k', path.join(dir, 'a.mp3')])
+    ]);
+    fs.readdirSync(dir).filter(f => /^f\d+\.jpg$/.test(f)).sort().forEach(f => frames.push(fs.readFileSync(path.join(dir, f)).toString('base64')));
+    const a = path.join(dir, 'a.mp3'); if (fs.existsSync(a) && fs.statSync(a).size > 2000) audio = { data: fs.readFileSync(a), type: 'audio/mpeg', name: 'clip.mp3' };
+  }
+  let spoken = '';
+  if (audio && process.env.OPENAI_API_KEY) {
+    for (const model of [process.env.OPENAI_TRANSCRIBE_MODEL || 'gpt-4o-mini-transcribe', 'whisper-1']) {
+      try {
+        const form = new FormData();
+        form.append('file', new Blob([audio.data], { type: audio.type }), audio.name); form.append('model', model); form.append('response_format', 'json');
+        form.append('prompt', 'A short food, shopping and wellness video. Expect names of restaurants, cafes, bakeries, bars, shops, spas, streets and neighborhoods.');
+        const r = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { authorization: 'Bearer ' + process.env.OPENAI_API_KEY }, body: form });
+        const j = await r.json().catch(() => ({})); if (r.ok) { spoken = String(j.text || '').trim(); break; }
+      } catch (e) {}
+    }
+  }
+  try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+  return { frames, spoken };
+}
+
 async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage, city }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (neighborhoods || []).slice(0, 400).join(', ');
@@ -307,12 +351,14 @@ module.exports = async (req, res) => {
   if (!hasLink && !notes && !transcript && !frames.length) return send(res, 400, { error: 'Paste A Link Or Pick A Video First.' });
 
   const post = hasLink ? await readPost(url) : { source: transcript || frames.length ? 'video' : 'notes', text: [], image: '', author: '', finalUrl: '', spoken: '' };
+  let vFrames = [], vSpoken = '';
+  if (post.video && !transcript && !frames.length) { const w = await watchVideo(post.video, post.videoSec).catch(() => null); if (w) { vFrames = w.frames; vSpoken = w.spoken; } }
   if (!post.text.length && !post.spoken && !post.image && !notes && !transcript && !frames.length) {
     return send(res, 200, { places: [], readable: false, source: post.source, message: 'Couldn’t Read This Post. Paste The Caption Into Notes And Tap Fill Again.' });
   }
   try {
     let out;
-    const args = { post, notes, transcript, frames, categories: body.categories, neighborhoods: body.neighborhoods, city: cityFor(body.city) };
+    const args = { post, notes, transcript: transcript || vSpoken, frames: frames.length ? frames : vFrames, categories: body.categories, neighborhoods: body.neighborhoods, city: cityFor(body.city) };
     try { out = await askClaude({ ...args, withImage: true }); }
     catch (e) { if (post.image && e.status === 400) out = await askClaude({ ...args, withImage: false }); else throw e; }
     let places = (out.places || []).filter(p => p && p.name).slice(0, 12);
@@ -321,7 +367,7 @@ module.exports = async (req, res) => {
       if (places[0] && post.pin) Object.assign(places[0], { lat: post.pin.lat, lng: post.pin.lng });
     }
     await Promise.all(places.filter(p => p.lat == null).map(p => pinPlace(p, CITIES[body.city] || CITIES.nyc)));
-    return send(res, 200, { places, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript), source: post.source,
+    return send(res, 200, { places, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript || vSpoken), source: post.source,
       message: places.length ? '' : 'No Specific Places Found In This Post. Add It By Name Instead.' });
   } catch (e) {
     return send(res, 502, { error: 'AI Couldn’t Read It Right Now — ' + (e.message || 'Try Again') });
