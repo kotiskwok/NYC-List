@@ -156,6 +156,23 @@ async function readPost(url) {
   return out;
 }
 
+// Pin a found place with Google's place search (when GOOGLE_MAPS_API_KEY is set), so the app doesn't have to
+// geocode it: Google knows businesses by name (stalls in food halls too), where an address search often doesn't.
+async function pinPlace(p, city) {
+  const key = process.env.GOOGLE_MAPS_API_KEY; if (!key || !p || !p.name) return;
+  const c = city.box ? city : CITIES.nyc, b = c.box;
+  const q = [p.name, p.address || p.neighborhood, c.name].filter(Boolean).join(', ');
+  try {
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), 6000);
+    const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', signal: ac.signal,
+      headers: { 'content-type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'places.displayName,places.location,places.shortFormattedAddress' },
+      body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', locationRestriction: { rectangle: { low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } } } }) });
+    clearTimeout(t);
+    const g = r.ok ? ((await r.json()).places || [])[0] : null;
+    if (g && g.location && inCityBox(g.location.latitude, g.location.longitude, c)) { p.lat = +g.location.latitude.toFixed(6); p.lng = +g.location.longitude.toFixed(6); }
+  } catch (e) {}
+}
+
 const TOOL = {
   name: 'save_places',
   description: 'Record every specific, visitable place in New York City that the post mentions or shows.',
@@ -270,6 +287,7 @@ module.exports = async (req, res) => {
       places = places.slice(0, 1);
       if (places[0] && post.pin) Object.assign(places[0], { lat: post.pin.lat, lng: post.pin.lng });
     }
+    await Promise.all(places.filter(p => p.lat == null).map(p => pinPlace(p, CITIES[body.city] || CITIES.nyc)));
     return send(res, 200, { places, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript), source: post.source,
       message: places.length ? '' : 'No Specific Places Found In This Post. Add It By Name Instead.' });
   } catch (e) {

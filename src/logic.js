@@ -432,7 +432,10 @@ class Component extends DCLogic {
   componentWillUnmount(){this._on=false;if(this._wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(this._wid);}
 
   async lookup(q,limit){try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),7000);
-    const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit='+(limit||5)+'&viewbox='+[CUR.box[1],CUR.box[2],CUR.box[3],CUR.box[0]].join()+'&bounded=1&q='+encodeURIComponent(q),{signal:ac.signal,headers:{'Accept-Language':'en'}});clearTimeout(t);
+    // OpenStreetMap address search. Its servers turn away requests with no Referer, which is how the iPhone app's
+    // web view sends them, so the app goes through /api/geocode (same answer, sent with the site's name).
+    const qs='format=jsonv2&addressdetails=1&limit='+(limit||5)+'&viewbox='+[CUR.box[1],CUR.box[2],CUR.box[3],CUR.box[0]].join()+'&bounded=1&q='+encodeURIComponent(q);
+    const r=await fetch(NATIVE?API('/api/geocode?'+qs):'https://nominatim.openstreetmap.org/search?'+qs,{signal:ac.signal,headers:{'Accept-Language':'en'}});clearTimeout(t);
     if(!r.ok)return null;return await r.json();}catch(e){return null;}}
   async runLookup(){const q=(this.state.lookQ||'').trim()||[this.state.form.name,this.state.form.address].filter(Boolean).join(', ');if(!q){this.setState({lookMsg:'Type An Address Or Place Name First'});return;}
     this.setState({lookBusy:true,lookMsg:'',lookResults:[]});const res=await this.lookup(withCity(q));
@@ -600,6 +603,9 @@ class Component extends DCLogic {
   aiArea(name){if(!name)return null;const n=name.toLowerCase().trim(),A=areas();return (A.find(a=>a.name.toLowerCase()===n)||A.find(a=>n.includes(a.name.toLowerCase())||a.name.toLowerCase().includes(n))||{}).name||null;}
   async aiLocate(p,areaName){if(p.lat!=null&&p.lng!=null&&inBox([+p.lat,+p.lng]))return [r5(+p.lat),r5(+p.lng)];
     const ao=areas().find(a=>a.name===areaName);
+    // Google's place search first: it knows businesses by name (stalls in food halls too), not just street addresses.
+    const g=await this.googleCall({action:'find',q:[p.name,p.address||areaName||p.neighborhood].filter(Boolean).join(', '),city:CUR.id});
+    if(g&&g.place&&isFinite(g.place.lat)&&inBox([g.place.lat,g.place.lng])){const ll=[r5(g.place.lat),r5(g.place.lng)];if(!ao||km(ll,ao.c)<=4||p.address)return ll;}
     const q=[p.name,p.address,areaName||p.neighborhood].filter(Boolean).join(', ')+', '+CUR.qc;
     let res=await this.lookup(q,1);if((!res||!res[0])&&p.address)res=await this.lookup(withCity(p.address),1);
     if(res&&res[0]){const ll=[r5(+res[0].lat),r5(+res[0].lon)];if(!ao||km(ll,ao.c)<=3)return ll;}return null;}

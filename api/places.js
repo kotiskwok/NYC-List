@@ -1,6 +1,7 @@
 // POST /api/places  — Google's place search for the Place Name suggestions.
 //   { action: 'auto', q, near?: [lat, lng], session }  → { suggestions: [{ id, name, sub, types }] }
 //   { action: 'detail', id, session }                  → { place: { name, address, lat, lng, types, price } }
+//   { action: 'find', q, city, near? }                 → { place: {…same…} | null }  (best match for "name, address"; used to pin AI-filled spots)
 // Uses Places API (New). The key stays on the server; only signed-in users of this app can call it.
 // Pass the same `session` (a random id) to every 'auto' call and the final 'detail' call for one place:
 // Google then bills the typing as one session.
@@ -64,12 +65,30 @@ module.exports = async (req, res) => {
       } });
     }
 
+    const box = body.city && body.city !== 'nyc' ? (b => ({ low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } }))(cityFor(body.city).box) : NYC;
+    if (body.action === 'find') {
+      const q = String(body.q || '').trim().slice(0, 200);
+      if (q.length < 2) return send(res, 200, { place: null });
+      const j = await google('places:searchText', { method: 'POST', headers: { 'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.shortFormattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.addressComponents' },
+        body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', locationRestriction: { rectangle: box } }) });
+      const p = (j.places || [])[0];
+      if (!p || !p.location) return send(res, 200, { place: null });
+      const comp = type => ((p.addressComponents || []).find(c => (c.types || []).includes(type)) || {}).shortText || '';
+      const street = [comp('street_number'), comp('route')].filter(Boolean).join(' ');
+      return send(res, 200, { place: {
+        name: (p.displayName && p.displayName.text) || '',
+        address: street || tidy(p.shortFormattedAddress || p.formattedAddress).split(',')[0] || '',
+        hood: comp('neighborhood') || comp('sublocality_level_1') || '',
+        lat: p.location.latitude, lng: p.location.longitude,
+        types: [p.primaryType, ...(p.types || [])].filter(Boolean), price: PRICE[p.priceLevel] || 0
+      } });
+    }
     const q = String(body.q || '').trim().slice(0, 120);
     if (q.length < 2) return send(res, 200, { suggestions: [] });
     const near = Array.isArray(body.near) && body.near.length === 2 && body.near.every(Number.isFinite) ? body.near : null;
     const j = await google('places:autocomplete', { method: 'POST', body: JSON.stringify({
       input: q, sessionToken: session, languageCode: 'en', regionCode: 'us',
-      locationRestriction: { rectangle: body.city && body.city !== 'nyc' ? (b => ({ low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } }))(cityFor(body.city).box) : NYC },
+      locationRestriction: { rectangle: box },
       ...(near ? { origin: { latitude: near[0], longitude: near[1] } } : {})
     }) });
     const suggestions = (j.suggestions || []).map(s => s.placePrediction).filter(Boolean).map(p => ({
