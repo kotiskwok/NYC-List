@@ -33,8 +33,10 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - Buttons open Google Maps for live directions.
 
 **Explore tab ("Where To Today?")**
-- Filter by category, price ($–$$$$, for restaurants) and neighborhoods grouped by borough, with an option to hide visited places.
-- Results show as a list or a map, with **+ Add All To Plan**.
+- "Command Center + Deck" layout: a search bar (matches name, area, address and note), category chips, and a glass matches card (count, neighborhoods, a color bar by category, the price filter).
+- The navy filter button opens price ($–$$$$, for restaurants) and neighborhoods by borough; **Hide Visited** is the small switch at the top. A badge on the button counts active filters.
+- **Shuffle The Deck**: the matches as a stack of swipeable cards. Swipe right or tap the orange + to add a spot to the plan; swipe left or ✕ to skip; tap to open the place card. At the end you can Shuffle Again (new order) or See All. The deck resets when filters change (`deckList()`, `deckPos()`, `deckAct()` in `logic.js`; `DeckCard()` in `view.js`).
+- **See All** shows the results as a list or a map, with **+ Add All To Plan**.
 
 **Route tab (Plan A Day)**
 - An ordered list of stops, shown on a map with a dotted route.

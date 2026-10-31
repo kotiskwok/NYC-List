@@ -157,62 +157,138 @@ function MapScreen(v) {
   </div>`;
 }
 
+// Explore: the hybrid "Command Center + Deck" design. Search, category chips and a glass matches card on top
+// (filters live behind the navy button), then the matches as a swipeable deck: right adds to the plan, left skips,
+// a tap opens the spot. "See All" still opens the full results list and map.
+function DeckCard(c, i, v) {
+  const front = i === 0, dx = front ? v.deckDx : 0;
+  const fly = front && v.deckFly ? (v.deckFly === 'right' ? 'translateX(130%) rotate(22deg)' : 'translateX(-130%) rotate(-22deg)') : '';
+  const tf = front ? (fly || `translateX(${dx}px) rotate(${dx / 16}deg)`) : i === 1 ? 'rotate(-3deg) translateY(8px) scale(.97)' : 'rotate(4deg) translateY(16px) scale(.94)';
+  const still = front && dx !== 0 && !v.deckFly;
+  const grad = `linear-gradient(150deg,${c.col}88,${c.col})`;
+  return html`
+  <div key=${c.id} class="lg" onPointerDown=${front ? c.onDown : null} onPointerMove=${front ? c.onMove : null} onPointerUp=${front ? c.onUp : null} onPointerCancel=${front ? c.onCancel : null}
+    style=${S(`position:absolute;left:0;right:0;top:0;z-index:${3 - i};${GL};background:linear-gradient(150deg,rgba(255,255,255,.94),rgba(255,247,234,.8));border-radius:32px;padding:8px;display:flex;flex-direction:column;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:${front ? 'grab' : 'default'};transform:${tf};transform-origin:50% 110%;opacity:${i === 2 ? .7 : 1};transition:${still ? 'none' : 'transform .24s ease, opacity .24s'}`)}>
+    <div style=${S(`position:relative;height:230px;border-radius:25px;overflow:hidden;background:${grad};display:flex;align-items:center;justify-content:center`)}>
+      <div aria-hidden="true" style=${S('position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.18) 1px,transparent 1px);background-size:24px 24px')}></div>
+      <span style=${S('position:relative;opacity:.85')}>${CatIcon(c.emoji, 58, c.fg)}</span>
+      ${Photo(c.img, c.bold + ' ' + c.light)}
+      ${front && html`
+      <span class="lg" style=${S(`position:absolute;left:10px;top:10px;${GLX};height:26px;padding:0 9px;border-radius:999px;display:flex;align-items:center;${MONO};font-size:10.5px;font-weight:700;color:#10183F;background:rgba(255,255,255,.55)`)}>${c.idx} / ${v.deckTotal}</span>
+      ${(c.inPlan || c.visited) && html`<span style=${S(`position:absolute;right:10px;top:10px;height:26px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;${MONO};font-size:10.5px;font-weight:700;background:rgba(255,255,255,.85);color:${c.inPlan ? '#1B3DB8' : '#1F9D6B'}`)}>${c.inPlan ? 'IN PLAN ✓' : 'BEEN HERE ✓'}</span>`}
+      <span aria-hidden="true" style=${S(`position:absolute;left:16px;top:44px;transform:rotate(-14deg);padding:4px 12px;border-radius:12px;border:3px solid #1F9D6B;background:rgba(255,255,255,.9);color:#1F9D6B;font-size:24px;font-weight:900;font-style:italic;opacity:${Math.max(0, Math.min(1, (dx - 20) / 70)) + (v.deckFly === 'right' ? 1 : 0)}`)}>PLAN +</span>
+      <span aria-hidden="true" style=${S(`position:absolute;right:16px;top:44px;transform:rotate(14deg);padding:4px 12px;border-radius:12px;border:3px solid #E8242C;background:rgba(255,255,255,.9);color:#E8242C;font-size:24px;font-weight:900;font-style:italic;opacity:${Math.max(0, Math.min(1, (-dx - 20) / 70)) + (v.deckFly === 'left' ? 1 : 0)}`)}>SKIP</span>`}
+    </div>
+    <div style=${S(`display:flex;align-items:center;gap:8px;padding:10px 4px 2px 8px;min-height:52px;visibility:${front ? 'visible' : 'hidden'}`)}>
+      <div style=${S('flex:1;min-width:0')}>
+        <div style=${S('font-size:21px;letter-spacing:-.6px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900')}>${c.bold}</span> <span style=${S('font-weight:200')}>${c.light}</span></div>
+        <div style=${S(`${MONO};font-size:10px;font-weight:700;color:#4A5275;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${c.meta}</div>
+      </div>
+      ${front && html`
+      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" class="lg" style=${S(`${GL};width:46px;height:46px;flex:none;border-radius:50%;color:#E8242C;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
+      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckPlan} aria-label="Add To Plan" style=${S('width:50px;height:50px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 2px 1px rgba(255,255,255,.55),0 10px 22px rgba(255,107,26,.38)')}>${Ico('M12 5v14M5 12h14', 20, 'currentColor', 2.8)}</button>`}
+    </div>
+  </div>`;
+}
+
 function ExploreScreen(v) {
+  const mono = (t, col, extra) => html`<span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:${col || '#4A5275'};${extra || ''}`)}>${t}</span>`;
+  const endCard = (title, light, body, btns) => html`
+    <div class="lg" style=${S(`position:absolute;left:0;right:0;top:0;${GL};border-radius:32px;padding:26px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center`)}>
+      <div style=${S('font-size:26px;letter-spacing:-.8px;line-height:1.1')}><span style=${S('font-weight:900;font-style:italic')}>${title}</span> <span style=${S('font-weight:200')}>${light}</span></div>
+      <div style=${S('font-size:14px;font-weight:500;color:#4A5275;line-height:1.4')}>${body}</div>
+      <div style=${S('display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;justify-content:center')}>${btns}</div>
+    </div>`;
+  const pill = (label, onClick, dark) => html`<button onClick=${onClick} style=${S(`height:44px;padding:0 18px;border-radius:999px;border:${dark ? '0' : '1.5px solid rgba(16,24,63,.14)'};background:${dark ? '#10183F' : 'rgba(255,255,255,.7)'};color:${dark ? '#fff' : '#10183F'};font-weight:800;font-size:14px;cursor:pointer`)}>${label}</button>`;
   return html`
   <div data-screen-label="Explore" style=${S(`position:absolute;inset:0;display:${v.exDisplay}`)}>
-    <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:${T(62)} 20px ${B(200)};display:${v.exPickDisplay}`)}>
-      <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:46px;line-height:.9;letter-spacing:-.03em;color:#10183F')}>Where To<br/><span style=${S('font-weight:200;font-style:normal;letter-spacing:-.03em')}>Today?</span></div>
-      <p style=${S('margin:10px 0 0;font-size:15px;font-weight:500;color:#3C4466')}>Pick A Vibe, Pick A Neighborhood, Go.</p>
-      ${H3('What Kind Of Place?', v.clearCats, v.clearCatsLabel, '28px 0 12px')}
-      <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:10px')}>
-        ${v.exTiles.map((t, i) => html`
-        <button key=${i} class="press" onClick=${t.onClick} style=${S(`position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:16px;min-height:100px;padding:14px;border-radius:22px;border:2.5px solid ${t.border};background:${t.bg};color:${t.fg};text-align:left;cursor:pointer`)}>
-          <span style=${S('display:flex;justify-content:space-between;align-items:center')}><span style=${S(`width:38px;height:38px;border-radius:13px;background:${t.check ? 'rgba(255,255,255,.25)' : t.dot};display:flex;align-items:center;justify-content:center`)}>${CatIcon(t.emoji, 20, t.check ? t.fg : (t.dot === '#FFC425' ? '#10183F' : '#fff'))}</span><span style=${S('font-weight:900;font-size:15px')}>${t.check}</span></span>
-          <span style=${S('display:flex;flex-direction:column;gap:3px')}><span style=${S('font-weight:800;font-size:15px;line-height:1.15;text-wrap:pretty')}>${t.name}</span><span style=${S('font-size:12px;font-weight:600;opacity:.8')}>${t.countLabel}</span></span>
-        </button>`)}
-      </div>
-      ${v.exShowPrice && html`
-        ${H3('Price Range', v.clearPrices, v.clearPricesLabel, '30px 0 4px')}
-        <p style=${S('margin:0 0 12px;font-size:13px;color:#5A6080')}>For Restaurants · Leave Empty For Any Price</p>
-        <div style=${S('display:grid;grid-template-columns:repeat(4,1fr);gap:8px')}>
-          ${v.exPriceChips.map((p, i) => html`
-          <button key=${i} onClick=${p.onClick} style=${S(`height:46px;border-radius:14px;border:2px solid ${p.border};background:${p.bg};color:${p.fg};font-weight:900;font-size:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px`)}>${p.label}<span style=${S('font-size:10px;font-weight:700;opacity:.75')}>${p.count}</span></button>`)}
-        </div>`}
-      ${H3('Which Area?', v.clearAreas, v.clearAreasLabel, '30px 0 4px')}
-      <p style=${S('margin:0 0 12px;font-size:13px;color:#5A6080')}>Leave Empty For Anywhere</p>
-      <div style=${S('display:flex;flex-direction:column;gap:14px')}>
-        ${v.exBoroughs.map((b, i) => html`
-        <div key=${i} style=${S('display:flex;flex-direction:column;gap:8px')}>
-          <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:13px;color:#E8242C')}>${b.name}</div>
-          <div style=${S('display:flex;flex-wrap:wrap;gap:8px')}>
-            ${b.areas.map((a, j) => html`
-            <button key=${j} onClick=${a.onClick} style=${S(`display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;border:2px solid ${a.border};background:${a.bg};color:${a.fg};opacity:${a.op};font-weight:700;font-size:13px;cursor:pointer`)}>${a.name}<span style=${S('opacity:.7;font-weight:600')}>${a.count}</span></button>`)}
+    <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:${T(56)} 16px ${B(118)};display:${v.exPickDisplay}`)}>
+      <div aria-hidden="true" style=${S('position:absolute;left:-90px;top:-70px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,26,.28),rgba(255,107,26,0) 68%);pointer-events:none')}></div>
+      <div style=${S('position:relative;display:flex;flex-direction:column;gap:10px')}>
+        <div style=${S('display:flex;justify-content:space-between;align-items:center;padding:0 4px')}>
+          ${mono(`EXPLORE · ${v.exSaved} SAVED · NYC`)}
+          <button onClick=${v.toggleHideVisited} role="switch" aria-checked=${v.hideVisited} style=${S(`height:26px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;display:flex;align-items:center;gap:5px;${MONO};font-size:10px;font-weight:700;background:${v.hideVisited ? '#1F9D6B' : 'rgba(16,24,63,.07)'};color:${v.hideVisited ? '#fff' : '#4A5275'}`)}>${v.hideVisited ? '✓ ' : ''}HIDE VISITED</button>
+        </div>
+        <h1 style=${S('margin:0 4px;font-size:38px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-1.6px;white-space:nowrap;color:#10183F')}>Where To <span style=${S('font-weight:200;font-style:normal')}>Today?</span></h1>
+        <div style=${S('display:flex;gap:8px')}>
+          <label class="lg" style=${S(`${GL};flex:1;min-width:0;height:50px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 8px 0 16px`)}>
+            ${Ico('M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14 M20 20l-3.5-3.5', 18, '#4A5275')}
+            <input value=${v.exQuery} onInput=${v.onExQuery} placeholder="Search spots, vibes, streets" aria-label="Search Your Spots" enterkeyhint="search" style=${S('flex:1;min-width:0;border:0;background:transparent;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none')}/>
+            ${v.exQuery && html`<button onClick=${v.clearExQuery} aria-label="Clear Search" style=${S('width:32px;height:32px;flex:none;border-radius:50%;border:0;background:rgba(16,24,63,.08);color:#10183F;font-weight:800;cursor:pointer')}>✕</button>`}
+          </label>
+          <button onClick=${v.toggleExFilters} aria-label="More Filters" aria-expanded=${v.exFiltersOpen} style=${S('position:relative;width:50px;height:50px;flex:none;border-radius:50%;border:0;background:#10183F;color:#FFC425;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 10px 22px rgba(16,24,63,.25)')}>
+            ${v.exFiltersOpen ? Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.6) : Ico('M4 7h10M18 7h2M4 17h4M12 17h8 M16 5v4 M10 15v4', 20)}
+            ${v.exFilterN > 0 && !v.exFiltersOpen && html`<span style=${S('position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#FF6B1A;color:#fff;border:2px solid #FFF3DF;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.exFilterN}</span>`}
+          </button>
+        </div>
+        ${v.exFiltersOpen && html`
+        <div class="lg" style=${S(`${GL};border-radius:26px;padding:14px;display:flex;flex-direction:column;gap:12px`)}>
+          ${v.exShowPrice && html`
+          <div style=${S('display:flex;flex-direction:column;gap:7px')}>
+            <div style=${S('display:flex;justify-content:space-between')}>${mono('PRICE · RESTAURANTS')}${v.clearPricesLabel && html`<button onClick=${v.clearPrices} style=${S(`border:0;background:none;padding:0;cursor:pointer;${MONO};font-size:10.5px;font-weight:700;color:#1B3DB8`)}>CLEAR</button>`}</div>
+            <div style=${S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.06)')}>
+              ${v.exPriceChips.map((p, i) => html`<button key=${i} onClick=${p.onClick} aria-pressed=${p.on} style=${S(`height:38px;border-radius:999px;border:0;cursor:pointer;font-weight:800;font-size:14px;background:${p.on ? '#10183F' : 'transparent'};color:${p.on ? '#FFC425' : '#10183F'};box-shadow:${p.on ? 'inset 0 1.5px 0 rgba(255,255,255,.25)' : 'none'}`)}>${p.label}</button>`)}
+            </div>
+          </div>`}
+          ${v.exBoroughs.length > 0 && html`
+          <div style=${S('display:flex;flex-direction:column;gap:7px')}>
+            <div style=${S('display:flex;justify-content:space-between')}>${mono('NEIGHBORHOODS')}${v.clearAreasLabel && html`<button onClick=${v.clearAreas} style=${S(`border:0;background:none;padding:0;cursor:pointer;${MONO};font-size:10.5px;font-weight:700;color:#1B3DB8`)}>CLEAR</button>`}</div>
+            ${v.exBoroughs.map((b, i) => html`
+            <div key=${i} style=${S('display:flex;flex-wrap:wrap;gap:6px;align-items:center')}>
+              ${mono(b.name.toUpperCase(), '#E8242C', 'font-size:9.5px;margin-right:2px')}
+              ${b.areas.map((a, j) => html`<button key=${j} onClick=${a.onClick} aria-pressed=${a.on} style=${S(`height:32px;padding:0 11px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;opacity:${a.op};border:${a.on ? '0' : '1px solid rgba(255,255,255,.9)'};background:${a.on ? '#1B3DB8' : 'rgba(255,255,255,.6)'};color:${a.on ? '#fff' : '#10183F'}`)}>${a.name}<span style=${S(`${MONO};font-size:10px;opacity:.7`)}>${a.count}</span></button>`)}
+            </div>`)}
+          </div>`}
+          <div style=${S('display:flex;gap:8px')}>
+            <button onClick=${v.clearExAll} style=${S('flex:1;height:42px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:rgba(255,255,255,.6);color:#10183F;font-weight:800;font-size:13.5px;cursor:pointer')}>Clear All</button>
+            <button onClick=${v.closeExFilters} style=${S('flex:1;height:42px;border-radius:999px;border:0;background:#10183F;color:#fff;font-weight:800;font-size:13.5px;cursor:pointer')}>Show ${v.exCount}</button>
           </div>
-        </div>`)}
+        </div>`}
+        <nav aria-label="Categories" class="noscroll" style=${S('display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:2px 16px 4px')}>
+          ${v.exTiles.map((t, i) => html`
+          <button key=${i} class="lg" onClick=${t.onClick} aria-pressed=${t.on} style=${S(`${GL};flex:none;height:44px;padding:0 12px 0 6px;border-radius:999px;display:flex;align-items:center;gap:8px;color:#10183F;cursor:pointer;white-space:nowrap;${t.on ? 'box-shadow:0 0 0 2px #10183F,inset 0 2px 1px #fff' : ''}`)}>
+            <span style=${S(`width:32px;height:32px;border-radius:50%;background:${t.on ? t.col : t.col + '24'};display:flex;align-items:center;justify-content:center`)}>${CatIcon(t.emoji, 15, t.on ? (t.col === '#FFC425' ? '#10183F' : '#fff') : t.col)}</span>
+            <span style=${S('font-size:13px;font-weight:800')}>${t.name}</span>
+            <span style=${S(`${MONO};font-size:10.5px;font-weight:700;color:#4A5275`)}>${String(t.n).padStart(2, '0')}</span>
+          </button>`)}
+        </nav>
+        <button class="lg" onClick=${v.toggleExFilters} style=${S(`${GL};border-radius:22px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:12px;color:#10183F;text-align:left;cursor:pointer`)}>
+          <span style=${S('font-size:40px;font-weight:200;letter-spacing:-2px;line-height:.9')}>${v.exCount}</span>
+          <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:6px')}>
+            ${mono(`${v.exCount === 1 ? 'MATCH' : 'MATCHES'} · ${v.exHoods} ${v.exHoods === 1 ? 'HOOD' : 'HOODS'}`)}
+            <span aria-hidden="true" style=${S('display:flex;gap:3px;height:8px')}>${v.exBar.length ? v.exBar.map((b, i) => html`<span key=${i} style=${S(`flex:${b.n};border-radius:4px;background:${b.col}`)}></span>`) : html`<span style=${S('flex:1;border-radius:4px;background:rgba(16,24,63,.12)')}></span>`}</span>
+          </span>
+          <span style=${S(`flex:none;height:30px;padding:0 10px;border-radius:999px;background:#10183F;color:#FFC425;${MONO};font-size:10.5px;font-weight:700;display:flex;align-items:center`)}>${v.exPriceLbl}</span>
+        </button>
+        <div style=${S('display:flex;justify-content:space-between;align-items:center;padding:12px 4px 0')}>
+          <div style=${S('font-size:20px;font-weight:900;font-style:italic;letter-spacing:-.6px;white-space:nowrap')}>Shuffle <span style=${S('font-weight:200;font-style:normal')}>The Deck</span></div>
+          ${v.exCount > 0 && html`<button onClick=${v.showResults} style=${S(`border:0;background:none;padding:6px 0;cursor:pointer;${MONO};font-size:11px;font-weight:700;color:#1B3DB8`)}>SEE ALL ${v.exCount} →</button>`}
+        </div>
+        <div style=${S('position:relative;height:340px;margin:2px 8px 0')}>
+          ${v.deckEmpty ? endCard('Nothing', 'Matches Yet', 'Try fewer filters, or save a spot you spotted online.', [pill('Clear Filters', v.clearExAll), pill('Add A Spot', v.openAdd, true)])
+            : v.deckDone ? endCard('That’s All', v.deckTotal, 'You went through every match. Shuffle for a new order, or see them all at once.', [pill('See All', v.showResults), pill('Shuffle Again', v.deckShuffle, true)])
+            : v.deckCards.map((c, i) => DeckCard(c, i, v)).reverse()}
+        </div>
+        ${!v.deckEmpty && !v.deckDone && html`<div style=${S('display:flex;justify-content:center;gap:22px;padding-top:6px')}>${mono('← SKIP', '#E8242C')}${mono('TAP TO OPEN', '#1B3DB8')}${mono('PLAN →', '#1F9D6B')}</div>`}
       </div>
-      <button onClick=${v.toggleHideVisited} role="switch" aria-checked=${v.hvKnob !== '0px'} style=${S('margin-top:26px;width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:18px;border:0;background:#fff;cursor:pointer;color:#10183F')}>
-        <span style=${S('font-weight:700;font-size:15px')}>Hide Places I've Been</span>
-        <span style=${S(`width:48px;height:28px;border-radius:999px;background:${v.hvTrack};padding:3px;display:flex;transition:background .2s`)}><span style=${S(`width:22px;height:22px;border-radius:50%;background:#FFFFFF;transform:translateX(${v.hvKnob});transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)`)}></span></span>
-      </button>
-    </div>
-    <div style=${S(`position:absolute;left:16px;right:16px;bottom:${B(104)};z-index:20;display:${v.exPickDisplay}`)}>
-      <button onClick=${v.showResults} style=${S(`width:100%;height:46px;border-radius:999px;border:0;background:${v.showBtnBg};color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>${v.showBtnLabel}</button>
     </div>
     <div style=${S(`position:absolute;inset:0;display:${v.exResDisplay};flex-direction:column`)}>
-      <div style=${S(`flex:none;padding:${T(54)} 20px 16px;background:#1B3DB8;color:#fff;border-radius:0 0 30px 30px;display:flex;flex-direction:column;gap:10px;z-index:5;box-shadow:0 6px 20px rgba(16,24,63,.2)`)}>
+      <div class="lg" style=${S(`flex:none;margin:${T(52)} 16px 0;${GL};border-radius:28px;padding:12px;display:flex;flex-direction:column;gap:10px;z-index:5`)}>
         <div style=${S('display:flex;justify-content:space-between;gap:8px')}>
-          <button onClick=${v.backToPick} style=${S('border:0;background:rgba(255,255,255,.16);color:#fff;font-weight:700;font-size:13px;height:32px;padding:0 14px;border-radius:999px;cursor:pointer')}>← Change Filters</button>
-          <button onClick=${v.addAllToPlan} style=${S('border:0;background:#FFC425;color:#10183F;font-weight:800;font-size:13px;height:32px;padding:0 14px;border-radius:999px;cursor:pointer')}>+ Add All To Plan</button>
+          <button onClick=${v.backToPick} style=${S('border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:800;font-size:13px;height:34px;padding:0 14px;border-radius:999px;cursor:pointer')}>← Deck</button>
+          <button onClick=${v.addAllToPlan} style=${S('border:0;background:#10183F;color:#FFC425;font-weight:800;font-size:13px;height:34px;padding:0 14px;border-radius:999px;cursor:pointer')}>+ Add All To Plan</button>
         </div>
-        <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:26px;line-height:1;color:#FFC425;text-wrap:pretty')}>${v.exTitle}</div>
-        <div style=${S('font-size:14px;font-weight:600')}>${v.exSub}</div>
-        <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:rgba(0,0,0,.22);border-radius:999px')}>
-          <button onClick=${v.viewList} style=${S(`height:36px;border:0;border-radius:999px;background:${v.listTabBg};color:${v.listTabFg};font-weight:800;font-size:14px;cursor:pointer`)}>List</button>
-          <button onClick=${v.viewMap} style=${S(`height:36px;border:0;border-radius:999px;background:${v.mapTabBg};color:${v.mapTabFg};font-weight:800;font-size:14px;cursor:pointer`)}>Map</button>
+        <div style=${S('padding:0 4px')}>
+          <div style=${S('font-weight:900;font-style:italic;font-size:24px;letter-spacing:-.6px;line-height:1.05;color:#10183F;text-wrap:pretty')}>${v.exTitle}</div>
+          <div style=${S('font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.8px;color:#4A5275;margin-top:5px;text-transform:uppercase')}>${v.exSub}</div>
+        </div>
+        <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:rgba(16,24,63,.07);border-radius:999px')}>
+          <button onClick=${v.viewList} style=${S(`height:36px;border:0;border-radius:999px;background:${v.exView === 'list' ? '#10183F' : 'transparent'};color:${v.exView === 'list' ? '#FFC425' : '#10183F'};font-weight:800;font-size:14px;cursor:pointer`)}>List</button>
+          <button onClick=${v.viewMap} style=${S(`height:36px;border:0;border-radius:999px;background:${v.exView === 'map' ? '#10183F' : 'transparent'};color:${v.exView === 'map' ? '#FFC425' : '#10183F'};font-weight:800;font-size:14px;cursor:pointer`)}>Map</button>
         </div>
       </div>
-      <div style=${S('position:relative;flex:1;min-height:0;margin-top:-30px')}>
-        <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:44px 16px ${B(124)};display:${v.exListDisplay};flex-direction:column;gap:10px`)}>
+      <div style=${S('position:relative;flex:1;min-height:0;margin-top:8px')}>
+        <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:4px 16px ${B(124)};display:${v.exListDisplay};flex-direction:column;gap:10px`)}>
           ${v.resultCards.map((r, i) => html`
           <div key=${i} onClick=${r.onClick} style=${S(`flex:none;display:flex;gap:14px;align-items:stretch;width:100%;background:#fff;border:2px solid ${r.ring};border-radius:24px;padding:12px;cursor:pointer;box-shadow:0 2px 8px rgba(16,24,63,.06)`)}>
             <div style=${S(`position:relative;overflow:hidden;width:62px;flex:none;border-radius:16px;background:${r.catBg};color:${r.catFg};display:flex;align-items:center;justify-content:center;font-weight:900;font-stretch:100%;font-style:italic;font-size:30px`)}>${r.initial}${Photo(r.img)}</div>

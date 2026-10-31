@@ -148,7 +148,7 @@ class Component extends DCLogic {
   state=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LS))}catch(e){}
     return {places:s?.places||SEED,cats:s?.cats||CATS0,home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,layersOpen:false,busState:'',bikeState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -301,7 +301,23 @@ class Component extends DCLogic {
   priced(catId){const c=this.state.cats.find(x=>x.id===catId);return catId==='food'||!!(c&&/restaurant|bar\b|food|brunch|dinner|eats/i.test(c.name));}
   lists(){const s=this.state;
     return {main:s.places.filter(p=>!s.mapCats.length||s.mapCats.includes(p.cat)),
-      ex:s.places.filter(p=>(!s.exCats.length||s.exCats.includes(p.cat))&&(!s.exAreas.length||s.exAreas.includes(p.area))&&!(s.hideVisited&&p.visited)&&(!s.exPrices.length||!this.priced(p.cat)||s.exPrices.includes(p.price||0)))};}
+      ex:s.places.filter(p=>(!s.exCats.length||s.exCats.includes(p.cat))&&(!s.exAreas.length||s.exAreas.includes(p.area))&&!(s.hideVisited&&p.visited)&&(!s.exPrices.length||!this.priced(p.cat)||s.exPrices.includes(p.price||0))&&this.exMatchQ(p))};}
+  // Explore search: every word typed must appear in the spot's name, area, address or note.
+  exMatchQ(p){const q=this.state.exQuery.trim().toLowerCase();if(!q)return true;const t=(p.name+' '+p.area+' '+(p.address||'')+' '+(p.note||'')).toLowerCase();return q.split(/\s+/).every(w=>t.includes(w));}
+  // Explore deck: the matches in a shuffled order (the seed changes with Shuffle Again). The position resets when the filters change.
+  deckList(){const s=this.state,seed=s.deckSeed;const h=id=>{let x=Math.imul(seed,2654435761)>>>0;for(const ch of String(id))x=Math.imul(x^ch.charCodeAt(0),16777619)>>>0;return x;};
+    return [...this.lists().ex].sort((a,b)=>h(a.id)-h(b.id));}
+  deckKeyNow(){const s=this.state;return [s.exCats,s.exAreas,s.exPrices,s.hideVisited,s.exQuery.trim().toLowerCase(),s.deckSeed].map(String).join('|');}
+  deckPos(){const s=this.state;return s.deck.key===this.deckKeyNow()?s.deck.pos:0;}
+  deckAct(kind){if(this.state.deckFly)return;const pos=this.deckPos(),p=this.deckList()[pos];if(!p)return;
+    if(kind==='plan'){if(!this.state.plan.ids.includes(p.id))this.togglePlan(p.id);else this.toast('Already In Your Plan');}
+    this.setState({deckFly:kind==='plan'?'right':'left'});
+    setTimeout(()=>this.setState({deckFly:'',deckDx:0,deck:{key:this.deckKeyNow(),pos:pos+1}}),240);}
+  deckDown(e){if(this.state.deckFly)return;this._dg={x:e.clientX,dx:0,moved:false};try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}}
+  deckMove(e){const g=this._dg;if(!g)return;g.dx=e.clientX-g.x;if(Math.abs(g.dx)>6)g.moved=true;if(g.moved)this.setState({deckDx:g.dx});}
+  deckUp(id){const g=this._dg;this._dg=null;if(!g)return;
+    if(!g.moved){this.setState({deckDx:0,selId:id,confirmDel:false});return;}
+    if(g.dx>90)this.deckAct('plan');else if(g.dx<-90)this.deckAct('skip');else this.setState({deckDx:0});}
   syncMaps(){if(!this.maps)return;const l=this.lists(),s=this.state,f=s.form;let main=l.main;
     if(s.placing==='spot'&&f.lat!=null)main=[...main,{id:'_draft',cat:f.cat,lat:f.lat,lng:f.lng,draft:true}];
     if(s.routeFor){const d=s.places.find(p=>p.id===s.routeFor);main=d?[d]:main;}
@@ -566,10 +582,10 @@ class Component extends DCLogic {
     const mapChips=[{label:'All',emoji:'🗽',count:s.places.length,dot:s.mapCats.length?C.navy:C.yellow,bg:s.mapCats.length?'#fff':C.navy,fg:s.mapCats.length?C.navy:'#fff',border:s.mapCats.length?'#fff':C.navy,onClick:()=>this.setState({mapCats:[]})},
       ...s.cats.map(c=>{const on=s.mapCats.includes(c.id);return {label:c.name,emoji:emo(c),count:s.places.filter(p=>p.cat===c.id).length,dot:on?fgFor(c.color):c.color,bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'#fff',onClick:()=>this.toggle('mapCats',c.id)};})];
     const exTiles=s.cats.map(c=>{const on=s.exCats.includes(c.id),n=s.places.filter(p=>p.cat===c.id).length;
-      return {name:c.name,emoji:emo(c),countLabel:n+(n===1?' Spot Saved':' Spots Saved'),check:on?'✓':'',bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'rgba(16,24,63,.1)',dot:on?fgFor(c.color):c.color,onClick:()=>this.toggle('exCats',c.id)};});
+      return {on,n,col:c.color,name:c.name,emoji:emo(c),countLabel:n+(n===1?' Spot Saved':' Spots Saved'),check:on?'✓':'',bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'rgba(16,24,63,.1)',dot:on?fgFor(c.color):c.color,onClick:()=>this.toggle('exCats',c.id)};});
     const exBoroughs=BOROUGHS.map(b=>({name:b,areas:A.filter(a=>a.b===b&&s.places.some(p=>p.area===a.name)).map(a=>{const on=s.exAreas.includes(a.name);
       const n=s.places.filter(p=>p.area===a.name&&(!s.exCats.length||s.exCats.includes(p.cat))).length;
-      return {name:a.name,count:n,bg:on?C.blue:'#fff',fg:on?'#fff':C.navy,border:on?C.blue:'rgba(16,24,63,.12)',op:(n||on)?1:.45,onClick:()=>this.toggle('exAreas',a.name)};})})).filter(b=>b.areas.length);
+      return {on,name:a.name,count:n,bg:on?C.blue:'#fff',fg:on?'#fff':C.navy,border:on?C.blue:'rgba(16,24,63,.12)',op:(n||on)?1:.45,onClick:()=>this.toggle('exAreas',a.name)};})})).filter(b=>b.areas.length);
     const n=l.ex.length,catNames=s.exCats.map(id=>cat[id]?.name).filter(Boolean);
     const exTitle=(!catNames.length?'Every Kind Of Place':catNames.length>2?catNames.length+' Categories':catNames.join(' + '))+(s.exPrices.length?' · '+[...s.exPrices].sort().map(i=>PRICES[i-1]).join('/'):'');
     const areaTxt=!s.exAreas.length?'Anywhere In NYC':s.exAreas.length>2?s.exAreas.length+' Areas':s.exAreas.join(' & ');
@@ -578,6 +594,16 @@ class Component extends DCLogic {
       return {name:p.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),initial:p.name.replace(/^the\s+/i,'')[0],img:placeImg(p),area:p.area,note:p.note,hasNote:!!p.note,visited:p.visited,
         srcLabel:p.source==='manual'?src.label:'From '+src.label,srcBg:src.bg,ring:p.id===s.selId?C.navy:'transparent',onClick:()=>this.setState({selId:p.id,confirmDel:false}),
         hasPrice:!!p.price,price:PRICES[(p.price||1)-1],planLabel:ip?'In Plan ✓':'+ Plan',planBg:ip?C.navy:'#fff',planFg:ip?C.yellow:C.navy,onPlan:e=>{e.stopPropagation();this.togglePlan(p.id);}};});
+    // Explore deck (hybrid Command Center + Spot Deck)
+    const deck=this.deckList(),dpos=this.deckPos(),dref=s.here||(s.home?[s.home.lat,s.home.lng]:null);
+    const tripMin=p=>{if(!dref||km(dref,[p.lat,p.lng])>60)return null;const e=estimate(dref,[p.lat,p.lng]);return e.subway?e.subway.min:e.walk.min;};
+    const deckCards=deck.slice(dpos,dpos+3).map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=i===0?tripMin(p):null;
+      return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:inPlan(p.id),
+        idx:String(dpos+i+1).padStart(2,'0'),meta:[p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:'',m!=null?Math.max(1,Math.round(m))+' MIN '+(s.here?'AWAY':'FROM HOME'):c.name].filter(Boolean).join(' · ').toUpperCase(),
+        onDown:e=>this.deckDown(e),onMove:e=>this.deckMove(e),onUp:()=>this.deckUp(p.id),onCancel:()=>{this._dg=null;this.setState({deckDx:0});}};});
+    const catCount={};l.ex.forEach(p=>{catCount[p.cat]=(catCount[p.cat]||0)+1;});
+    const exBar=Object.entries(catCount).map(([id,k])=>({col:catOf(id).color,n:k}));
+    const exFilterN=s.exAreas.length+s.exPrices.length+(s.hideVisited?1:0);
     const sp=s.places.find(p=>p.id===s.selId);let sel={};
     if(sp){const c=catOf(sp.cat),src=SRC[sp.source]||SRC.manual,hasUrl=!!sp.url,ns=nearSt([sp.lat,sp.lng],1,2)[0],ip=inPlan(sp.id);
       sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
@@ -649,6 +675,13 @@ class Component extends DCLogic {
       showResults:()=>n&&this.setState({exStage:'results',selId:null}),backToPick:()=>this.setState({exStage:'pick',selId:null}),
       addAllToPlan:()=>{this.setState(st=>({plan:{...st.plan,ids:[...st.plan.ids,...l.ex.map(p=>p.id).filter(id=>!st.plan.ids.includes(id))]}}));this.toast(n+' Spots In Your Plan');},
       exTitle,exSub:`${areaTxt} · ${n} ${n===1?'Place':'Places'}`,
+      exView:s.exView,exCount:n,exSaved:s.places.length,exHoods:new Set(l.ex.map(p=>p.area)).size,exBar,exFilterN,exFiltersOpen:s.exFilters,hideVisited:s.hideVisited,
+      exPriceLbl:s.exPrices.length?[...s.exPrices].sort().map(i=>PRICES[i-1]).join(' · '):'ANY $',
+      exQuery:s.exQuery,onExQuery:e=>this.setState({exQuery:e.target.value}),clearExQuery:()=>this.setState({exQuery:''}),
+      toggleExFilters:()=>this.setState({exFilters:!s.exFilters}),closeExFilters:()=>this.setState({exFilters:false}),
+      clearExAll:()=>this.setState({exCats:[],exAreas:[],exPrices:[],hideVisited:false,exQuery:''}),
+      deckCards,deckDx:s.deckDx,deckFly:s.deckFly,deckDone:!!n&&dpos>=n,deckEmpty:!n,deckTotal:String(n).padStart(2,'0'),
+      deckSkip:()=>this.deckAct('skip'),deckPlan:()=>this.deckAct('plan'),deckShuffle:()=>this.setState({deckSeed:s.deckSeed+1,deckDx:0,deckFly:''}),
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
       viewList:()=>this.setState({exView:'list'}),viewMap:()=>this.setState({exView:'map'}),resultCards,noResults:!n,
       hasSel:!!sp&&!s.placing&&!s.routeFor,sel,spotCount:s.places.length,visitedCount:s.places.filter(p=>p.visited).length,
@@ -739,7 +772,7 @@ class Component extends DCLogic {
       showPrice:!!f.cat&&this.priced(f.cat),priceHint:f.price?PRICE_HINT[f.price-1]+' · Tap Again To Clear':'How Pricey Is It? Optional.',
       priceChips:PRICES.map((lb,i)=>{const on=f.price===i+1;return {label:lb,bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.14)',onClick:()=>this.setForm({price:on?0:i+1})};}),
       exShowPrice:!s.exCats.length||s.exCats.some(id=>this.priced(id)),clearPrices:()=>this.setState({exPrices:[]}),clearPricesLabel:s.exPrices.length?'Clear':'',
-      exPriceChips:PRICES.map((lb,i)=>{const on=s.exPrices.includes(i+1),n=s.places.filter(p=>this.priced(p.cat)&&p.price===i+1).length;return {label:lb,count:n+(n===1?' Spot':' Spots'),bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.12)',onClick:()=>this.toggle('exPrices',i+1)};}),
+      exPriceChips:PRICES.map((lb,i)=>{const on=s.exPrices.includes(i+1),n=s.places.filter(p=>this.priced(p.cat)&&p.price===i+1).length;return {on,label:lb,count:n+(n===1?' Spot':' Spots'),bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.12)',onClick:()=>this.toggle('exPrices',i+1)};}),
       ...this.listVals()};
   }
 }
