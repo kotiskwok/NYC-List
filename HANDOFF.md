@@ -32,6 +32,14 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - Starts from My Location, Home or another saved spot.
 - Buttons open Google Maps for live directions.
 
+**Cities (beta): New York, Singapore, Hong Kong, Toronto**
+- Tap the yellow city button ("NYC ▾") in the map header to pick a city; the welcome pages also ask for it on the Home Base step. The choice is per device (`localStorage nycList.city`).
+- Each spot has a `city` (no city = NYC). The app shows one city at a time: `state.places` is the current city, `state.otherPlaces` the rest; `cityMeta` holds each city's home and Route plan. In the synced data, `home`/`plan` stay NYC's (older versions keep working) and `cities.{sg,hk,to}` hold the others. `sync.js` merges each city on its own.
+- `CITIES` in `logic.js` sets each city's map center, pan limits, search box, regions and transit name. `setCity()` switches; `cityMoved()` re-centers the maps and redraws stations.
+- `data/city-data.js` (`window.CITY_DATA`): neighborhoods (OpenStreetMap place names grouped into regions; the nearest one is used for a spot) and rail stations with line colors: Singapore MRT/LRT (cheeaun/sgraildata), Hong Kong MTR and Toronto TTC lines 1/2/4/5/6 (OpenStreetMap, Oct 2026). Travel times use these like the NYC subway. Toronto streetcars and buses aren't included, so some trips show as walks.
+- Searches (Nominatim, Photon, Google), AI link reading, web search and video transcription all use the current city (`city` in the request; `CITIES`/`localize()` in `api/_shared.js`). Bus routes and Citi Bike are NYC only.
+- Saving a friend's spot that's in another city puts it on that city's map.
+
 **Explore tab ("Where To Today?")**
 - "Command Center + Deck" layout: a search bar (matches name, area, address and note), category chips, and a glass matches card (count, neighborhoods, a color bar by category, the price filter).
 - The navy filter button opens price ($–$$$$, for restaurants) and neighborhoods by borough; **Hide Visited** is the small switch at the top. A badge on the button counts active filters.

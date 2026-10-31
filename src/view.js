@@ -90,7 +90,7 @@ function MapScreen(v) {
       <div class="lg" style=${S(`${GL};pointer-events:auto;border-radius:32px;padding:16px 16px 13px`)}>
         <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <div style=${S('min-width:0')}>
-            <div style=${S('display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#4A5275')}>Spotted In<span style=${S('display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;background:#FFC425;color:#10183F;font-size:10.5px;font-weight:900;font-style:italic;letter-spacing:.4px')}>NYC</span></div>
+            <div style=${S('display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#4A5275')}>Spotted In<button onClick=${v.openCity} aria-label=${'Change City — Now ' + v.cityName} aria-haspopup="dialog" style=${S('display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 6px 0 8px;border-radius:999px;border:0;background:#FFC425;color:#10183F;font-family:inherit;font-size:10.5px;font-weight:900;font-style:italic;letter-spacing:.4px;cursor:pointer;box-shadow:0 2px 6px rgba(255,170,0,.35)')}>${v.cityShort}${Ico('M6 9l6 6 6-6', 11, 'currentColor', 3)}</button></div>
             <div role="img" aria-label=${v.spotCount + (v.spotCount === 1 ? ' Spot To Try' : ' Spots To Try')} style=${S('display:flex;align-items:center;gap:10px;margin-top:6px')}>
               <span style=${S('font-size:58px;font-weight:200;line-height:.78;letter-spacing:-3.5px')}>${v.spotCount}</span>
               <span style=${S('display:flex;flex-direction:column;font-size:21px;line-height:.98;font-weight:900;font-style:italic;letter-spacing:-.4px')}><span>${v.spotCount === 1 ? 'Spot' : 'Spots'}</span><span>To Try</span></span>
@@ -112,7 +112,7 @@ function MapScreen(v) {
       </nav>
     </div>
     <div style=${S(`position:absolute;right:16px;bottom:${B(v.nearest ? 196 : 112)};z-index:600;display:${hide};flex-direction:column;gap:10px`)}>
-      <button class="lg" onClick=${v.toggleLayers} aria-label="Map Layers: Subway, Bus Routes, Citi Bike" aria-expanded=${v.layersOpen} style=${S(`${sideBtn};${v.layersOn ? 'border:1px solid rgba(255,255,255,.5);background:#10183F;box-shadow:0 10px 26px rgba(16,24,63,.3)' : GL};color:${v.layersOn ? '#FFC425' : '#10183F'}`)}>${Ico('M12 3l9 5-9 5-9-5z M3 13l9 5 9-5', 22)}</button>
+      <button class="lg" onClick=${v.toggleLayers} aria-label=${v.isNyc ? 'Map Layers: Subway, Bus Routes, Citi Bike' : 'Map Layers'} aria-expanded=${v.layersOpen} style=${S(`${sideBtn};${v.layersOn ? 'border:1px solid rgba(255,255,255,.5);background:#10183F;box-shadow:0 10px 26px rgba(16,24,63,.3)' : GL};color:${v.layersOn ? '#FFC425' : '#10183F'}`)}>${Ico('M12 3l9 5-9 5-9-5z M3 13l9 5 9-5', 22)}</button>
       <button class="lg" onClick=${v.locateMe} aria-label="My Location" style=${S(`${sideBtn};${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 10px 26px rgba(16,24,63,.3)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg}`)}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg></button>
     </div>
     ${v.layersOpen && !v.hasSel && html`
@@ -127,7 +127,7 @@ function MapScreen(v) {
         <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.label}</span><span style=${S('font-size:11.5px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
         <span aria-hidden="true" style=${S(`width:40px;height:24px;flex:none;border-radius:999px;background:${r.on ? '#1B3DB8' : 'rgba(16,24,63,.15)'};position:relative;transition:background .2s`)}><span style=${S(`position:absolute;top:2px;left:${r.on ? 18 : 2}px;width:20px;height:20px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(16,24,63,.3);transition:left .2s`)}></span></span>
       </button>`)}
-      <div style=${S('padding:4px 10px 4px;font-size:10.5px;color:#6A7090')}>Bus routes: MTA via data.ny.gov · Citi Bike live data</div>
+      <div style=${S('padding:4px 10px 4px;font-size:10.5px;color:#6A7090')}>${v.isNyc ? 'Bus routes: MTA via data.ny.gov · Citi Bike live data' : 'Stations: OpenStreetMap contributors'}</div>
     </div>`}
     ${v.nearest && !v.hasSel && !v.layersOpen && html`
     <button class="lg" onClick=${v.nearest.onClick} style=${S(`position:absolute;left:16px;right:16px;bottom:${B(104)};z-index:600;${GL};border-radius:28px;padding:11px;display:flex;align-items:center;gap:12px;text-align:left;color:#10183F;cursor:pointer`)}>
@@ -206,7 +206,7 @@ function ExploreScreen(v) {
       <div aria-hidden="true" style=${S('position:absolute;left:-90px;top:-70px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,26,.28),rgba(255,107,26,0) 68%);pointer-events:none')}></div>
       <div style=${S('position:relative;display:flex;flex-direction:column;gap:10px')}>
         <div style=${S('display:flex;justify-content:space-between;align-items:center;padding:0 4px')}>
-          ${mono(`EXPLORE · ${v.exSaved} SAVED · NYC`)}
+          ${mono(`EXPLORE · ${v.exSaved} SAVED · ${v.cityShort}`)}
           <button onClick=${v.toggleHideVisited} role="switch" aria-checked=${v.hideVisited} style=${S(`height:26px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;display:flex;align-items:center;gap:5px;${MONO};font-size:10px;font-weight:700;background:${v.hideVisited ? '#1F9D6B' : 'rgba(16,24,63,.07)'};color:${v.hideVisited ? '#fff' : '#4A5275'}`)}>${v.hideVisited ? '✓ ' : ''}HIDE VISITED</button>
         </div>
         <h1 style=${S('margin:0 4px;font-size:38px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-1.6px;white-space:nowrap;color:#10183F')}>Where To <span style=${S('font-weight:200;font-style:normal')}>Today?</span></h1>
@@ -1173,6 +1173,28 @@ function AccountSheet(v) {
 }
 
 // Welcome pages after a first sign-in, styled like a subway ride: a station sign per stop, route bullets for progress.
+// City picker: opened from the yellow city button on the map header.
+function CityPicker(v) {
+  return html`
+  <div style=${S('position:absolute;inset:0;z-index:1150;display:flex;flex-direction:column;justify-content:flex-end')}>
+    <div onClick=${v.closeCity} aria-hidden="true" style=${S('position:absolute;inset:0;background:rgba(16,24,63,.28)')}></div>
+    <div role="dialog" aria-label="Choose A City" class="lg" style=${S(`position:relative;margin:0 8px ${B(8)};${GL2};border-radius:34px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px`)}>
+      ${Grab()}
+      <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:0 4px')}>
+        <div><div style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#4A5275`)}>SPOTTED IN · BETA</div><div style=${S('font-size:26px;font-weight:900;font-style:italic;letter-spacing:-.8px;line-height:1.05')}>Pick <span style=${S('font-weight:200;font-style:normal')}>A City</span></div></div>
+        <button onClick=${v.closeCity} aria-label="Close" style=${S('width:34px;height:34px;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:800;cursor:pointer')}>✕</button>
+      </div>
+      ${v.cityRows.map(c => html`
+      <button key=${c.id} onClick=${c.onClick} aria-pressed=${c.on} style=${S(`display:flex;align-items:center;gap:12px;padding:10px 12px 10px 10px;border-radius:24px;cursor:pointer;text-align:left;color:#10183F;border:${c.on ? '0' : '1px solid rgba(255,255,255,.95)'};background:${c.on ? '#10183F' : 'rgba(255,255,255,.7)'};${c.on ? 'color:#fff;box-shadow:0 10px 24px rgba(16,24,63,.25)' : 'box-shadow:inset 0 2px 1px #fff'}`)}>
+        <span class="emo" aria-hidden="true" style=${S(`width:46px;height:46px;flex:none;border-radius:16px;background:${c.on ? 'rgba(255,255,255,.14)' : '#FFF3DF'};display:flex;align-items:center;justify-content:center;font-size:24px`)}>${c.emoji}</span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:17px;font-weight:900;font-style:italic;letter-spacing:-.3px')}>${c.name}</span><span style=${S(`${MONO};font-size:10px;font-weight:700;color:${c.on ? '#FFC425' : '#4A5275'}`)}>${c.count} ${c.count === 1 ? 'SPOT' : 'SPOTS'} · ${c.transit.toUpperCase()}</span></span>
+        ${c.on ? html`<span style=${S('width:28px;height:28px;border-radius:50%;background:#FFC425;color:#10183F;display:flex;align-items:center;justify-content:center;flex:none')}>${Ico('M5 12l5 5 9-10', 14, 'currentColor', 3)}</span>` : Ico('M9 6l6 6-6 6', 16, '#4A5275', 2.4)}
+      </button>`)}
+      <div style=${S('font-size:11.5px;font-weight:600;color:#5A6080;padding:0 6px;line-height:1.4')}>Each city keeps its own spots, home and day plan. Your lists stay the same everywhere.</div>
+    </div>
+  </div>`;
+}
+
 function Onboarding(v) {
   const step = v.obStep, bullets = [['S', '#808183'], ['1', '#EE352E'], ['2', '#FCCC0A'], ['3', '#00933C']];
   const sign = (txt) => html`
@@ -1213,7 +1235,10 @@ function Onboarding(v) {
       ${sign('Next Stop: Home Base')}
       ${back}
       ${art('🏠', '#FCCC0A')}
-      ${title('Where’s Home, ' + v.obFirst + '?', 'Totally Optional. We’ll Use It To Show How Far Each Spot Is From Your Couch. It Stays Private To Your Account.')}
+      ${title('Where’s Home, ' + v.obFirst + '?', 'Pick Your City, Then Your Address If You Like. We’ll Use It To Show How Far Each Spot Is From Your Couch. It Stays Private To Your Account.')}
+      <div role="radiogroup" aria-label="Your City" style=${S('align-self:stretch;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px')}>
+        ${v.cityRows.map(c => html`<button key=${c.id} type="button" role="radio" aria-checked=${c.on} onClick=${c.onClick} style=${S(`height:62px;border-radius:20px;border:${c.on ? '0' : '1px solid rgba(255,255,255,.95)'};background:${c.on ? '#10183F' : 'rgba(255,255,255,.75)'};color:${c.on ? '#fff' : '#10183F'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:${c.on ? '0 8px 18px rgba(16,24,63,.25)' : 'inset 0 2px 1px #fff'}`)}><span class="emo" aria-hidden="true" style=${S('font-size:20px')}>${c.emoji}</span><span style=${S('font-size:12px;font-weight:900;font-style:italic')}>${c.short}</span></button>`)}
+      </div>
       <form onSubmit=${v.obFind} style=${S('align-self:stretch;display:flex;flex-direction:column;gap:10px;margin-top:auto;text-align:left')}>
         <label for="ob-addr" style=${S('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)')}>Home Address</label>
         <div style=${S('display:flex;gap:8px')}>
@@ -1222,7 +1247,7 @@ function Onboarding(v) {
         </div>
         ${msg}
         ${v.obRes.length > 0 && html`<div class="lg" style=${S(`${GL};border-radius:24px;padding:6px`)}>${v.obRes.map((r, i) => html`
-          <button key=${i} type="button" onClick=${() => v.obPick(r)} style=${S(`display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;border-radius:18px;cursor:pointer;color:#10183F;${i ? 'border-top:1px solid rgba(16,24,63,.08)' : ''}`)}><span style=${S('font-weight:800;font-size:15px')}>${r.label}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.area || 'New York'}</span></button>`)}</div>`}
+          <button key=${i} type="button" onClick=${() => v.obPick(r)} style=${S(`display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;border-radius:18px;cursor:pointer;color:#10183F;${i ? 'border-top:1px solid rgba(16,24,63,.08)' : ''}`)}><span style=${S('font-weight:800;font-size:15px')}>${r.label}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.area || v.cityName}</span></button>`)}</div>`}
         ${v.obHome && html`<div class="lg" style=${S(`${GL};border-radius:24px;padding:12px 16px;display:flex;align-items:center;gap:10px`)}><span style=${S('width:32px;height:32px;border-radius:50%;background:#1F9D6B;color:#fff;display:flex;align-items:center;justify-content:center;flex:none')}>${Ico('M5 12l5 5 9-10', 16, 'currentColor', 3)}</span><span style=${S('display:flex;flex-direction:column;min-width:0')}><span style=${S('font-weight:800;font-size:15px')}>Home Base Set</span><span style=${S('font-size:12.5px;font-weight:600;color:#4A5275;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.obHome.label}${v.obHome.area ? ' · ' + v.obHome.area : ''}</span></span></div>`}
       </form>
       <div style=${S('align-self:stretch;display:flex;flex-direction:column;gap:6px')}>
@@ -1303,6 +1328,7 @@ function App(v) {
         ${v.newTrip && NewTripSheet(v)}
         ${AddSheet(v)}
         ${v.authOpen && AuthScreen(v)}
+        ${v.cityOpen && CityPicker(v)}
         ${v.obOpen && Onboarding(v)}
         ${v.hasToast && html`
         <div role="status" style=${S(`position:absolute;top:${T(54)};left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none`)}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${v.toast}</div></div>`}

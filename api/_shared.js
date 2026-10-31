@@ -49,4 +49,21 @@ async function readJson(req) {
   return JSON.parse(raw.toString('utf8') || '{}');
 }
 
-module.exports = { cors, send, requireUser, readRaw, readJson };
+// Cities the app supports. Prompts are written for NYC; localize() swaps in the chosen city's names and examples.
+const CITIES = {
+  nyc: { name: 'New York City', short: 'NYC', area: 'the five boroughs of New York City', eg: '"Williamsburg", "Nolita"', eg1: '"Midtown East"', addr: '"4 E 43rd St"', box: [40.49, -74.27, 40.93, -73.68] },
+  sg: { name: 'Singapore', short: 'Singapore', area: 'Singapore', eg: '"Tiong Bahru", "Tanjong Pagar"', eg1: '"Tiong Bahru"', addr: '"78 Yong Siak St"', box: [1.2, 103.6, 1.48, 104.05] },
+  hk: { name: 'Hong Kong', short: 'Hong Kong', area: 'Hong Kong (Hong Kong Island, Kowloon, the New Territories and the outlying islands)', eg: '"Sheung Wan", "Mong Kok"', eg1: '"Sheung Wan"', addr: '"18 Hollywood Rd"', box: [22.15, 113.82, 22.57, 114.45] },
+  to: { name: 'Toronto', short: 'Toronto', area: 'the City of Toronto', eg: '"Kensington Market", "Leslieville"', eg1: '"Queen West"', addr: '"100 Queen St W"', box: [43.58, -79.64, 43.86, -79.11] }
+};
+const cityFor = id => CITIES[id] || CITIES.nyc;
+const inCityBox = (lat, lng, c) => !!c && lat > c.box[0] && lat < c.box[2] && lng > c.box[1] && lng < c.box[3];
+function localize(s, c) {
+  if (!c || c === CITIES.nyc) return s;
+  return String(s).replace(/the five boroughs of New York City/g, c.area).replace(/New York City/g, c.name).replace(/\bNYC\b/g, c.short)
+    .replace(/"Williamsburg", "Nolita"/g, c.eg).replace(/"Midtown East"/g, c.eg1).replace(/"4 E 43rd St"/g, c.addr).replace(/"69 Grand St"/g, c.addr);
+}
+// The same for every string inside an object (tool schemas).
+const localizeObj = (o, c) => JSON.parse(JSON.stringify(o), (k, v) => typeof v === 'string' ? localize(v, c) : v);
+
+module.exports = { cors, send, requireUser, readRaw, readJson, CITIES, cityFor, inCityBox, localize, localizeObj };

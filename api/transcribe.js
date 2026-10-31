@@ -5,16 +5,16 @@
 //   OPENAI_API_KEY             (required) from platform.openai.com
 //   OPENAI_TRANSCRIBE_MODEL    (optional) defaults to gpt-4o-mini-transcribe, falls back to whisper-1
 
-const { cors, send, requireUser, readRaw } = require('./_shared');
+const { cors, send, requireUser, readRaw, cityFor, localize } = require('./_shared');
 
 const MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || 'gpt-4o-mini-transcribe';
 const HINT = 'A short New York City food and shopping video. Expect names of restaurants, cafes, bakeries, bars, shops, streets and neighborhoods.';
 
-async function transcribe(buf, model) {
+async function transcribe(buf, model, hint) {
   const form = new FormData();
   form.append('file', new Blob([buf], { type: 'audio/wav' }), 'clip.wav');
   form.append('model', model);
-  form.append('prompt', HINT);
+  form.append('prompt', hint || HINT);
   form.append('response_format', 'json');
   const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST', headers: { authorization: 'Bearer ' + process.env.OPENAI_API_KEY }, body: form
@@ -36,8 +36,9 @@ module.exports = async (req, res) => {
 
   try {
     let text;
-    try { text = await transcribe(buf, MODEL); }
-    catch (e) { if (MODEL !== 'whisper-1' && (e.status === 400 || e.status === 404)) text = await transcribe(buf, 'whisper-1'); else throw e; }
+    const hint = localize(HINT, cityFor(new URL(req.url, 'http://x').searchParams.get('city')));
+    try { text = await transcribe(buf, MODEL, hint); }
+    catch (e) { if (MODEL !== 'whisper-1' && (e.status === 400 || e.status === 404)) text = await transcribe(buf, 'whisper-1', hint); else throw e; }
     return send(res, 200, { text });
   } catch (e) {
     return send(res, 502, { error: 'Couldn’t Listen To The Video Right Now — ' + (e.message || 'Try Again') });

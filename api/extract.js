@@ -12,7 +12,7 @@
 //   ANTHROPIC_MODEL     (optional)  defaults to claude-haiku-5-5
 //   SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY (optional) default to the values in config.js
 
-const { cors, send, requireUser, readJson } = require('./_shared');
+const { cors, send, requireUser, readJson, CITIES, cityFor, inCityBox, localize, localizeObj } = require('./_shared');
 const G = require('./_gmaps');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 const UA_BOT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
@@ -117,7 +117,7 @@ async function readPost(url) {
     if (title.address || qAddr) out.text.push('Address on Google Maps: ' + (title.address || qAddr));
     if (g.query && !qAddr && g.query !== name) out.text.push('Google Maps search: ' + g.query);
     if (desc && !/^find local businesses/i.test(desc)) out.text.push('Google Maps listing: ' + desc);
-    if (g.ll && G.inNyc(g.ll.lat, g.ll.lng)) { out.pin = { ...g.ll, exact: g.exact }; out.text.push(`Pinned at: ${g.ll.lat.toFixed(5)}, ${g.ll.lng.toFixed(5)}`); }
+    if (g.ll && Object.values(CITIES).some(c => inCityBox(g.ll.lat, g.ll.lng, c))) { out.pin = { ...g.ll, exact: g.exact }; out.text.push(`Pinned at: ${g.ll.lat.toFixed(5)}, ${g.ll.lng.toFixed(5)}`); }
     out.image = '';
   } else if (/tiktok\.com$/i.test(host) || /\.tiktok\.com$/i.test(host)) {
     out.source = 'tiktok';
@@ -184,7 +184,7 @@ const TOOL = {
   }
 };
 
-async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage }) {
+async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage, city }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (neighborhoods || []).slice(0, 400).join(', ');
   const isMap = post.source === 'gmaps';
@@ -198,7 +198,7 @@ async function askClaude({ post, notes, transcript, frames, categories, neighbor
   const content = [];
   if (withImage && post.image) content.push({ type: 'image', source: { type: 'url', url: post.image } });
   (frames || []).forEach(b64 => content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }));
-  content.push({ type: 'text', text: isMap ?
+  content.push({ type: 'text', text: localize(isMap ?
 `This is a Google Maps link to one specific NYC place. Identify it so it can be saved to a personal "places to visit" map.
 
 ${lines}
@@ -229,12 +229,12 @@ Rules:
 - Spoken words are often the main source; listen for "this is", "go to", "called", and street names.
 - If the post names a place but not where it is, fill neighborhood and address from your own knowledge only when you are confident; otherwise null.
 - If nothing identifiable is mentioned, return an empty places list.
-Call save_places with the result.` });
+Call save_places with the result.`, city) });
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1500, tools: [TOOL], tool_choice: { type: 'tool', name: 'save_places' }, messages: [{ role: 'user', content }] })
+    body: JSON.stringify({ model: MODEL, max_tokens: 1500, tools: [localizeObj(TOOL, city)], tool_choice: { type: 'tool', name: 'save_places' }, messages: [{ role: 'user', content }] })
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { const err = new Error((j.error && j.error.message) || ('AI request failed (' + r.status + ')')); err.status = r.status; throw err; }
@@ -262,7 +262,7 @@ module.exports = async (req, res) => {
   }
   try {
     let out;
-    const args = { post, notes, transcript, frames, categories: body.categories, neighborhoods: body.neighborhoods };
+    const args = { post, notes, transcript, frames, categories: body.categories, neighborhoods: body.neighborhoods, city: cityFor(body.city) };
     try { out = await askClaude({ ...args, withImage: true }); }
     catch (e) { if (post.image && e.status === 400) out = await askClaude({ ...args, withImage: false }); else throw e; }
     let places = (out.places || []).filter(p => p && p.name).slice(0, 12);

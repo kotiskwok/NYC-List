@@ -3,7 +3,7 @@
 // and returns matching NYC places in the same shape as /api/extract.
 // Only signed-in users of this app can call it. Costs a few cents per call, so the app only calls it on a tap.
 
-const { cors, send, requireUser, readJson } = require('./_shared');
+const { cors, send, requireUser, readJson, cityFor, localize, localizeObj } = require('./_shared');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 
 const TOOL = {
@@ -43,8 +43,9 @@ module.exports = async (req, res) => {
   if (q.length < 2) return send(res, 400, { error: 'Type A Place Name First.' });
   const cats = (body.categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (body.neighborhoods || []).slice(0, 400).join(', ');
+  const city = cityFor(body.city), tool = localizeObj(TOOL, city);
 
-  const prompt = `Someone is saving a place to their personal New York City "places to visit" map and typed this name: "${q}"
+  const prompt = localize(`Someone is saving a place to their personal New York City "places to visit" map and typed this name: "${q}"
 
 Search the web to find the real NYC place(s) with this name (restaurants, cafes, bakeries, bars, shops, markets and similar). The name may be partial or slightly misspelled.
 
@@ -57,7 +58,7 @@ Rules:
 - Only places in the five boroughs of New York City that are open (or not known to be closed).
 - Give the street address you found (street part only). Don't guess an address you didn't find.
 - At most 5 places, best match first. If nothing in NYC matches, return an empty list.
-When you are done, call save_places.`;
+When you are done, call save_places.`, city);
 
   try {
     const messages = [{ role: 'user', content: prompt }];
@@ -66,7 +67,7 @@ When you are done, call save_places.`;
       const r = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, max_tokens: 2000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, TOOL], messages })
+        body: JSON.stringify({ model: MODEL, max_tokens: 2000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, tool], messages })
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return send(res, 502, { error: 'Web Search Didn’t Work Right Now — ' + ((j.error && j.error.message) || 'Try Again') });
@@ -77,7 +78,7 @@ When you are done, call save_places.`;
       messages.push({ role: 'assistant', content: j.content }, { role: 'user', content: 'Now call save_places with what you found (an empty list if nothing).' });
     }
     const places = ((out && out.places) || []).filter(p => p && p.name).slice(0, 5);
-    return send(res, 200, { places, message: places.length ? '' : 'Couldn’t Find "' + q + '" In NYC. Try Pasting Its Google Maps Link.' });
+    return send(res, 200, { places, message: places.length ? '' : localize('Couldn’t Find "' + q + '" In NYC. Try Pasting Its Google Maps Link.', city) });
   } catch (e) {
     return send(res, 502, { error: 'Web Search Didn’t Work Right Now — Try Again.' });
   }

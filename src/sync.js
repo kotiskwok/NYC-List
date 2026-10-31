@@ -22,7 +22,7 @@ const NYCSync = (() => {
   const saveBase = d => { base = d; try { localStorage.setItem(baseKey(), JSON.stringify(d)); } catch (e) {} };
 
   const set = patch => app && app.setState(patch);
-  const norm = d => ({ places: (d && d.places) || [], cats: (d && d.cats) || [], home: (d && d.home) || null, plan: (d && d.plan) || { ids: [], start: 'first' } });
+  const norm = d => ({ places: (d && d.places) || [], cats: (d && d.cats) || [], home: (d && d.home) || null, plan: (d && d.plan) || { ids: [], start: 'first' }, cities: (d && d.cities) || {} });
 
   // Three-way merge of lists keyed by id: start from the cloud copy, then replay this device's
   // additions, edits and deletions relative to the base.
@@ -40,7 +40,13 @@ const NYCSync = (() => {
     const places = mergeList(b.places, l.places, r.places);
     const cats = mergeList(b.cats, l.cats, r.cats);
     const plan = pick('plan'), ids = new Set(places.map(p => p.id));
-    return { places, cats: cats.length ? cats : l.cats, home: pick('home'), plan: { ...plan, ids: (plan.ids || []).filter(id => ids.has(id)) } };
+    // Other cities' home and plan (Singapore, Hong Kong, Toronto): each city merges on its own.
+    const cities = {};
+    new Set([...Object.keys(l.cities), ...Object.keys(r.cities)]).forEach(k => {
+      const lc = l.cities[k], bc = b.cities[k], v = same(lc, bc) ? r.cities[k] : lc;
+      if (v) cities[k] = { ...v, plan: v.plan ? { ...v.plan, ids: (v.plan.ids || []).filter(id => ids.has(id)) } : { ids: [], start: 'first' } };
+    });
+    return { places, cats: cats.length ? cats : l.cats, home: pick('home'), plan: { ...plan, ids: (plan.ids || []).filter(id => ids.has(id)) }, cities };
   }
 
   function attach(a) {

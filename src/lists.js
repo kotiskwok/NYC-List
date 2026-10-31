@@ -196,7 +196,7 @@ const NYCLists = (() => {
       if (stale) edit(t.id, d => ({ ...d, stops: d.stops.map(st => st.by === uid && st.pid && byId.has(st.pid) ? { ...st, p: snap(byId.get(st.pid)) } : st) }));
     });
   }
-  const snap = p => ({ name: p.name, cat: p.cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0, photo: p.photo || '' });
+  const snap = p => ({ name: p.name, cat: p.cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0, photo: p.photo || '', city: p.city || CUR.id });
 
   return { attach, onUser, refresh, create, edit, meta, newCode, removeMember, leave, remove, loadSharedMap, touchPlaces, pendingCode, myName, snap,
     uid: () => uid, setName: n => NYCSync.setName(n) };
@@ -222,7 +222,7 @@ const countdown = (start, days) => { if (!start) return null; const t0 = new Dat
   if (diff > 1) return { top: 'IN', big: diff + ' days' }; if (diff === 1) return { top: 'STARTS', big: 'Tomorrow' };
   if (diff <= 0 && -diff < n) return { top: 'TODAY', big: n > 1 ? 'Day ' + (1 - diff) + ' of ' + n : 'Today' }; return { top: 'WENT', big: 'Done ✓' }; };
 const sid = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const gSearch = p => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.address ? `${p.name}, ${p.address}, New York` : `${p.name}, ${p.area}, New York`);
+const gSearch = p => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(placeQ(p));
 
 Object.assign(Component.prototype, {
   tripCur() { const s = this.state; return s.trips.find(t => t.id === s.tripId) || null; },
@@ -278,7 +278,11 @@ Object.assign(Component.prototype, {
     const s = this.state; let cat = p.cat, newCats = null;
     if (!s.cats.some(c => c.id === cat)) { const c = (cats || {})[cat]; if (c) newCats = [...s.cats, { id: c.id, name: c.name, color: c.color, emoji: emo(c) }]; else cat = (s.cats[0] || {}).id; }
     const np = { id: 'p' + Date.now(), name: p.name, cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0, visited: false };
-    this.setState(st => ({ places: [np, ...st.places], ...(newCats ? { cats: newCats } : {}) })); this.toast('Saved To Your Map!');
+    // A spot in another city goes to that city's map.
+    const home = CITY_ORDER.find(k => inBox([np.lat, np.lng], CITIES[k])) || CUR.id; np.city = home;
+    if (home === CUR.id) this.setState(st => ({ places: [np, ...st.places], ...(newCats ? { cats: newCats } : {}) }));
+    else this.setState(st => ({ otherPlaces: [np, ...(st.otherPlaces || [])], ...(newCats ? { cats: newCats } : {}) }));
+    this.toast(home === CUR.id ? 'Saved To Your Map!' : 'Saved To Your ' + CITIES[home].name + ' Map!');
   },
   openTrip(id) { const t = this.state.trips.find(x => x.id === id); const p = this.tripPerm(t);
     this.setState({ tab: 'lists', tripId: id, tripStopMap: false, tripDay: 'all', tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, tripEditOpen: false, confirmTripDel: false });
@@ -299,7 +303,7 @@ Object.assign(Component.prototype, {
     }
   },
   inviteLink(t) { return SITE() + '/?join=' + encodeURIComponent(t.invite_code); },
-  inviteText(t) { const what = t.share_list && t.share_map ? 'plan “' + t.name + '” and see my NYC map' : t.share_list ? 'plan “' + t.name + '”' : 'see my NYC map';
+  inviteText(t) { const what = t.share_list && t.share_map ? 'plan “' + t.name + '” and see my map' : t.share_list ? 'plan “' + t.name + '”' : 'see my map';
     return `${t.owner_name || NYCLists.myName()} invited you to ${what} on Spotted In 🗽`; },
   async shareInvite(t) { const url = this.inviteLink(t), text = this.inviteText(t);
     if (navigator.share) { try { await navigator.share({ title: t.name, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
@@ -336,7 +340,7 @@ Object.assign(Component.prototype, {
         .on('click', e => { L.DomEvent.stopPropagation(e); this.setState({ tripSel: { kind: p.kind, id: p.id }, confirmStopDel: false }); }).addTo(m.tl); });
     if (force || ids !== m.tids) { m.tids = ids; const pts = pins.map(p => p.ll);
       if (pts.length) setTimeout(() => this.fit(m, pts, view === 'map' ? { paddingTopLeft: [40, 210], paddingBottomRight: [40, 120], maxZoom: 15 } : { paddingTopLeft: [40, 110], paddingBottomRight: [40, 150], maxZoom: 15 }), 30);
-      else m.map.setView([40.722, -73.97], 12); }
+      else m.map.setView(CUR.center, 12); }
   },
 
   // ---- who else has this list open right now (Supabase Realtime presence) ----
@@ -395,7 +399,7 @@ Object.assign(Component.prototype, {
         return { key: 'd' + sec.day, day: sec.day, chip: sec.day ? 'Day ' + sec.day : 'Not On A Day', title: sec.flat ? '' : dayName(d.start, sec.day), hasTitle: !sec.flat, col: dayCol(sec.day), rows, empty: !rows.length,
           count: rows.length ? rows.length + (rows.length === 1 ? ' Spot' : ' Spots') : '',
           canRemove: perm.edit && sec.day > 0 && sec.day === d.days, onRemove: () => this.removeDay(t.id, sec.day),
-          hasDirs: sec.day > 0 && pl.length > 1, onDirs: () => window.open('https://www.google.com/maps/dir/' + pl.slice(0, 10).map(p => encodeURIComponent(p.address ? `${p.name}, ${p.address}, New York` : `${p.name}, ${p.area}, New York`)).join('/'), '_blank') }; }) : [];
+          hasDirs: sec.day > 0 && pl.length > 1, onDirs: () => window.open('https://www.google.com/maps/dir/' + pl.slice(0, 10).map(p => encodeURIComponent(placeQ(p))).join('/'), '_blank') }; }) : [];
       const people = [{ name: ownerName, role: 'Made This List', isMe: t.owner === me, key: t.owner }, ...t.members.map(m => ({ name: m.user_id === me ? 'You' : (m.name || 'Someone'), role: perm.own ? (t.share_list ? 'Can Add & Sort' : 'Can See Your Map') : 'Invited', isMe: m.user_id === me, key: m.user_id,
         canRemove: perm.own, onRemove: () => NYCLists.removeMember(t.id, m.user_id) }))];
       const sm = s.sharedMaps[t.id];
