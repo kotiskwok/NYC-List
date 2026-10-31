@@ -4,10 +4,20 @@ permissions: { contents: write }
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
       - run: |
-          { curl -s -m 30 "https://nyc-lovat.vercel.app/api/extract?probe=1"; echo; curl -s -o /dev/null -w "site %{http_code}\n" https://nyc-lovat.vercel.app/; curl -s -o /dev/null -w "photo-probe %{http_code}\n" "https://nyc-lovat.vercel.app/api/photo?probe=1"; } > /tmp/out.txt 2>&1
+          mkdir -p /tmp/o
+          node -e "
+          const x=require('./api/extract.js'),fs=require('fs');
+          (async()=>{const p=await x.readPost('https://www.instagram.com/reel/DcKKxNZxsxL/?vrfl=bm45dHB5ZWRzZnY5');
+          let o='text: '+JSON.stringify(p.text)+'\nvideo: '+!!p.video+' sec '+p.videoSec+'\n';
+          const w=await x.watchVideo(p.video,p.videoSec); o+='frames '+(w&&w.frames.length)+' spoken '+JSON.stringify(w&&w.spoken)+'\n';
+          (w?w.frames:[]).forEach((f,i)=>fs.writeFileSync('/tmp/o/f'+i+'.jpg',Buffer.from(f,'base64')));
+          fs.writeFileSync('/tmp/o/out.txt',o);})().catch(e=>require('fs').writeFileSync('/tmp/o/out.txt','ERR '+e.stack));" || true
           git config user.name "debug-bot"; git config user.email "debug-bot@users.noreply.github.com"
-          git checkout --orphan debug-out && git rm -rqf . && cp /tmp/out.txt out.txt && git add out.txt && git commit -qm "debug output" && git push -f origin debug-out
+          git checkout --orphan debug-out && git rm -rqf . && cp /tmp/o/* . && git add -A && git commit -qm "debug output" && git push -f origin debug-out

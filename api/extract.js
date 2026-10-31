@@ -375,3 +375,4 @@ module.exports = async (req, res) => {
     return send(res, 502, { error: 'AI Couldn’t Read It Right Now — ' + (e.message || 'Try Again') });
   }
 };
+module.exports.readPost = readPost; module.exports.watchVideo = watchVideo;
