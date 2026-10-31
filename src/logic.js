@@ -148,10 +148,10 @@ class Component extends DCLogic {
   state=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LS))}catch(e){}
     return {places:s?.places||SEED,cats:s?.cats||CATS0,home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,layersOpen:false,busState:'',bikeState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
-      trips:[],tripsState:'',tripsSync:'',tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
+      trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
       newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,authName:'',acctDel:0};})();
 
   // ---- cloud sync hooks (used by sync.js) ----
@@ -175,7 +175,7 @@ class Component extends DCLogic {
       this.setState(st=>({places:st.places.map(p=>names.has(p.area)?p:{...p,area:hoodAt([p.lat,p.lng])||p.area})}));
       this.syncMaps();setTimeout(()=>this.refreshVisible(),80);}
     else setTimeout(go,100);};go();}
-  componentDidUpdate(){const s=this.state;if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
+  componentDidUpdate(){const s=this.state;if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan){this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;
       try{localStorage.setItem(LS,JSON.stringify({places:s.places,cats:s.cats,home:s.home,plan:s.plan}))}catch(e){}
       window.NYCSync&&NYCSync.queue(this.snapshot());
@@ -368,7 +368,9 @@ class Component extends DCLogic {
     if(start)L.marker(start,{interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div style="transform:translate(-50%,-50%);background:#10183F;color:#FFC425;font:italic 900 11px Archivo,sans-serif;padding:4px 9px;border-radius:999px;border:2px solid #fff;white-space:nowrap">Start</div>`})}).addTo(m.planL);
     stops.forEach((p,i)=>{const c=cat[p.cat],col=(c||{}).color||C.orange;L.marker([p.lat,p.lng],{zIndexOffset:500,icon:L.divIcon({className:'',html:this.pinHtml(col,40,false,false,null,c?emo(c):'📍',String(i+1)),iconSize:[40,40],iconAnchor:[20,20]})})
       .on('click',e=>{L.DomEvent.stopPropagation(e);this.toast((i+1)+'. '+p.name);}).addTo(m.planL);});
-    if(pts.length)setTimeout(()=>this.fit(m,pts,{paddingTopLeft:[40,70],paddingBottomRight:[40,50],maxZoom:15.5}),30);}
+    const H=window.innerHeight||800,full=s.planSheet==='full';
+    if(pts.length)setTimeout(()=>this.fit(m,pts,full?{paddingTopLeft:[40,90],paddingBottomRight:[40,Math.round(H*.72)],maxZoom:15}:{paddingTopLeft:[40,250],paddingBottomRight:[40,Math.round(H*.5)],maxZoom:15.5}),30);}
+  setPlanSheet(v){if(v===this.state.planSheet)return;this.setState({planSheet:v},()=>{if(this.maps&&this.maps.plan){this.maps.plan.psig=null;this.syncPlan(true);}});}
   locate(after){if(!navigator.geolocation){this.setState({hereFailed:true,locFail:'This Browser Doesn\u2019t Share Location. Tap The Map Where You Are Instead.'});return;}
     this.setState({locating:true,locFail:null});let first=true;if(this._wid!=null)navigator.geolocation.clearWatch(this._wid);
     const ok=pos=>{const ll=[r5(pos.coords.latitude),r5(pos.coords.longitude)];this.setState({here:ll,hereAcc:Math.round(pos.coords.accuracy||0),hereManual:false,locating:false,hereFailed:false,locFail:null});
@@ -635,15 +637,25 @@ class Component extends DCLogic {
       chip(s.routeMode==='spot','A Saved Spot',()=>this.setState({routeMode:'spot',routePick:0}))];
     // plan
     const stops=this.planStops(),pStart=this.planStartPt();let total=0,walkTot=0,subTot=0;
-    const planRows=stops.map((p,i)=>{const c=catOf(p.cat),from=i===0?pStart:[stops[i-1].lat,stops[i-1].lng];let hasLeg=false,legText='',legBullets=[],legOpen=null;
+    const planRows=stops.map((p,i)=>{const c=catOf(p.cat),from=i===0?pStart:[stops[i-1].lat,stops[i-1].lng];let hasLeg=false,legText='',legBullets=[],legOpen=null,legMin=0,legWalk=false;
       if(from&&km(from,[p.lat,p.lng])<60){hasLeg=true;const e=estimate(from,[p.lat,p.lng]);
-        if(e.subway){total+=e.subway.min;subTot+=e.subway.min;legText='Subway · ~'+fmtMin(e.subway.min);legBullets=[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet);}
-        else{total+=e.walk.min;walkTot+=e.walk.min;legText='Walk · ~'+fmtMin(e.walk.min)+' · '+mi(e.walk.km);}
+        if(e.subway){legMin=e.subway.min;total+=e.subway.min;subTot+=e.subway.min;legText='Subway · ~'+fmtMin(e.subway.min);legBullets=[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet);}
+        else{legMin=e.walk.min;legWalk=true;total+=e.walk.min;walkTot+=e.walk.min;legText='Walk · ~'+fmtMin(e.walk.min)+' · '+mi(e.walk.km);}
         legOpen=()=>window.open(gmaps(from.join(','),placeQ(p),e.subway?'transit':'walking'),'_blank');}
-      return {num:i+1,img:placeImg(p),name:p.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:p.area,hasLeg,legText,legBullets,legOpen,
+      return {id:p.id,catEmoji:emo(c),legMin,legWalk,num:i+1,img:placeImg(p),name:p.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:p.area,hasLeg,legText,legBullets,legOpen,
         onClick:()=>{this.setState({tab:'map',selId:p.id});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([p.lat,p.lng],15.5,{duration:.6}),120);},
         up:e=>{e.stopPropagation();this.move(i,-1);},down:e=>{e.stopPropagation();this.move(i,1);},remove:e=>{e.stopPropagation();this.togglePlan(p.id);},
         upOp:i===0?.3:1,downOp:i===stops.length-1?.3:1};});
+    // Timeline clock: leave at plan.leave, stay plan.stay[id] minutes (45 by default) at each stop.
+    const STAYS=[15,30,45,60,90,120,180],toMin=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?+m[1]*60+ +m[2]:600;};
+    const clock=m=>{m=Math.round(m)%1440;const h=Math.floor(m/60),mm=m%60;return (h%12||12)+':'+String(mm).padStart(2,'0')+(h<12?' AM':' PM');};
+    let tNow=toMin(s.plan.leave||'10:00');const leaveClock=clock(tNow);
+    planRows.forEach(r=>{tNow+=r.hasLeg?r.legMin:0;r.time=clock(tNow);const st=(s.plan.stay||{})[r.id]||45;r.stay=st;r.stayLbl=st<60?st+' MIN':(st/60)+(st===60?' HR':' HRS');
+      r.cycleStay=e=>{e.stopPropagation();const nx=STAYS[(STAYS.indexOf(st)+1)%STAYS.length];this.setState(x=>({plan:{...x.plan,stay:{...(x.plan.stay||{}),[r.id]:nx}}}));};tNow+=st;});
+    let backMin=0,backBul=[],backWalk=false;
+    if(s.plan.start==='home'&&s.home&&stops.length){const last=stops[stops.length-1],a=[last.lat,last.lng],h=[s.home.lat,s.home.lng];
+      if(km(a,h)<60){const e=estimate(a,h);backMin=e.subway?e.subway.min:e.walk.min;backWalk=!e.subway;backBul=e.subway?[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet):[];}}
+    const endClock=clock(tNow+backMin);
     const ps=s.plan.start;const planStartMsg=(ps==='home'&&!s.home)||(ps==='here'&&!s.here);
     const placingTitle=s.placing==='home'?'Tap Where You Live':s.placing==='here'?'Tap Where You Are Now':'Tap To Drop Your Pin';
     let locTitle='',locSub='';if(s.here&&s.tab==='map'&&!s.placing&&!s.routeFor&&!s.selId){const hd=hoodAt(s.here);let nb=null;s.places.forEach(p=>{const d=km(s.here,[p.lat,p.lng]);if(!nb||d<nb.d)nb={p,d};});
@@ -704,6 +716,14 @@ class Component extends DCLogic {
       planStartMsg,planStartMsgText:ps==='home'?'Set Your Home To Start There.':'Waiting For Your Location…',
       autoOrder:()=>this.autoOrder(),openPicker:()=>this.setState({pickerOpen:true}),closePicker:()=>this.setState({pickerOpen:false}),
       planEmpty:!stops.length,planHas:!!stops.length,planRows,planStopsN:stops.length,
+      planSheetFull:s.planSheet==='full',togglePlanSheet:()=>this.setPlanSheet(s.planSheet==='full'?'half':'full'),
+      planSheetDown:e=>{this._ps={y:e.clientY};try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}},
+      planSheetUp:e=>{const g=this._ps;this._ps=null;if(!g)return;const dy=e.clientY-g.y;if(dy<-30)this.setPlanSheet('full');else if(dy>30)this.setPlanSheet('half');else this.setPlanSheet(s.planSheet==='full'?'half':'full');},
+      planLeave:s.plan.leave||'10:00',onPlanLeave:e=>{const v=e.target.value;if(v)this.setState(x=>({plan:{...x.plan,leave:v}}));},leaveClock,endClock,
+      planStartLabel:ps==='home'?(s.home?'Leave Home':'Home (Set It)'):ps==='here'?'Leave From Here':'Start At The First Stop',planFromFirst:ps==='first',
+      planEndLabel:backMin?'Back Home':'Done For The Day',planBack:backMin?{min:fmtShort(backMin),walk:backWalk,bullets:backBul}:null,
+      planHr:Math.floor(Math.round(total)/60),planMin:Math.round(total)%60,planRide:Math.round(subTot),planWalkMin:Math.round(walkTot),
+      startRoute:()=>{const pts=[...(pStart?[pStart.join(',')]:[]),...stops.map(placeQ)];if(pts.length>1)window.open('https://www.google.com/maps/dir/'+pts.map(encodeURIComponent).join('/'),'_blank');},
       planBig:total?(total<60?String(Math.round(total)):Math.floor(total/60)+':'+String(Math.round(total%60)).padStart(2,'0')):'0',planBigUnit:total<60?'min':'hr',
       planWalk:walkTot?fmtShort(walkTot):'—',planSub:subTot?fmtShort(subTot):'—',clearPlan:()=>this.setState(st=>({plan:{...st.plan,ids:[]}})),planCount:s.plan.ids.length,
       pickerOpen:s.pickerOpen,pickerRows:s.places.map(p=>{const c=catOf(p.cat),ip=inPlan(p.id);return {name:p.name,catName:c.name,catBg:c.color,emoji:emo(c),area:p.area,chk:ip?'✓':'',chkBg:ip?C.orange:'#fff',ring:ip?C.orange:'transparent',

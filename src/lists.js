@@ -210,6 +210,17 @@ const dayCol = d => d ? DAYC[(d - 1) % DAYC.length] : '#7A809C';
 const dayDate = (start, d) => { if (!start || !d) return ''; const t = new Date(start + 'T12:00:00'); if (isNaN(t)) return ''; t.setDate(t.getDate() + d - 1);
   return t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
 const dayName = (start, d) => d ? 'Day ' + d + (dayDate(start, d) ? ' · ' + dayDate(start, d) : '') : 'Not On A Day Yet';
+// Wallet cards: each list gets a palette color (in list order), a date range and a countdown.
+const WALLET = [['#F98DBE', '#F45FA0', '#D93F86', '#fff'], ['#FFE38F', '#FFC425', '#F5AE10', '#10183F'], ['#5C78E6', '#1B3DB8', '#142E92', '#fff'], ['#52C496', '#1F9D6B', '#16805A', '#fff'], ['#FFA26A', '#FF6B1A', '#E8561A', '#fff']];
+const walletOf = i => { const w = WALLET[Math.max(0, i) % WALLET.length]; return { bg: `linear-gradient(135deg,${w[0]},${w[1]} 55%,${w[2]})`, fg: w[3], solid: w[1] }; };
+const shortD = (start, d) => { const x = dayDate(start, d); return x ? (x.split(', ')[1] || x) : ''; };
+const dayTag = (start, d) => { const x = dayDate(start, d); if (!x) return ''; const [wd, md] = x.split(', '); return (wd + ' ' + (md || '').split(' ')[1]).toUpperCase(); };
+const dateRange = (start, days) => { const a = shortD(start, 1); if (!a) return ''; if (!days || days < 2) return a; const b = shortD(start, days);
+  return a.split(' ')[0] === b.split(' ')[0] ? a + ' – ' + b.split(' ')[1] : a + ' – ' + b; };
+const countdown = (start, days) => { if (!start) return null; const t0 = new Date(start + 'T00:00:00'); if (isNaN(t0)) return null;
+  const now = new Date(); now.setHours(0, 0, 0, 0); const diff = Math.round((t0 - now) / 864e5), n = Math.max(1, days || 1);
+  if (diff > 1) return { top: 'IN', big: diff + ' days' }; if (diff === 1) return { top: 'STARTS', big: 'Tomorrow' };
+  if (diff <= 0 && -diff < n) return { top: 'TODAY', big: n > 1 ? 'Day ' + (1 - diff) + ' of ' + n : 'Today' }; return { top: 'WENT', big: 'Done ✓' }; };
 const sid = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const gSearch = p => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.address ? `${p.name}, ${p.address}, New York` : `${p.name}, ${p.area}, New York`);
 
@@ -270,7 +281,7 @@ Object.assign(Component.prototype, {
     this.setState(st => ({ places: [np, ...st.places], ...(newCats ? { cats: newCats } : {}) })); this.toast('Saved To Your Map!');
   },
   openTrip(id) { const t = this.state.trips.find(x => x.id === id); const p = this.tripPerm(t);
-    this.setState({ tab: 'lists', tripId: id, tripDay: 'all', tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, tripEditOpen: false, confirmTripDel: false });
+    this.setState({ tab: 'lists', tripId: id, tripStopMap: false, tripDay: 'all', tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, tripEditOpen: false, confirmTripDel: false });
     if (p.map) NYCLists.loadSharedMap(id); NYCLists.refresh(); },
   async createTrip() {
     const s = this.state, name = toTitle((s.newTripName || '').trim()); if (!name || s.newTripBusy) return;
@@ -328,6 +339,21 @@ Object.assign(Component.prototype, {
       else m.map.setView([40.722, -73.97], 12); }
   },
 
+  // ---- who else has this list open right now (Supabase Realtime presence) ----
+  watchPresence() {
+    const s = this.state, key = s.auth === 'signedIn' && s.tab === 'lists' && s.tripId ? s.tripId : '';
+    if (key === this._presKey) return; this._presKey = key;
+    const c = NYCSync.client && NYCSync.client();
+    if (this._pres) { try { c && c.removeChannel(this._pres); } catch (e) {} this._pres = null; }
+    if ((s.tripHere || []).length) this.setState({ tripHere: [] });
+    if (!key || !c || !c.channel) return;
+    const me = NYCLists.uid(), ch = c.channel('nyc-list-' + key, { config: { presence: { key: me } } }); this._pres = ch;
+    ch.on('presence', { event: 'sync' }, () => { if (this._pres !== ch) return; const st = ch.presenceState();
+      this.setState({ tripHere: Object.keys(st).filter(k => k !== me).map(k => ((st[k] || [])[0] || {}).name || 'Someone') }); })
+      .subscribe(status => { if (status === 'SUBSCRIBED') Promise.resolve(ch.track({ name: (NYCSync.displayName && NYCSync.displayName()) || 'Someone' })).catch(() => {}); });
+  },
+  setTripStopMap(on) { this.setState({ tripStopMap: on, tripSel: null }, () => setTimeout(() => { this.refreshVisible && this.refreshVisible(); }, 60)); },
+
   // ---- values for the view ----
   listVals() {
     const s = this.state, me = NYCLists.uid(), signedIn = s.auth === 'signedIn', t = this.tripCur(), perm = this.tripPerm(t);
@@ -339,7 +365,12 @@ Object.assign(Component.prototype, {
       const tags = []; if (own) { if (tr.members.length) { if (tr.share_list) tags.push({ t: 'Shared List', bg: C.blue }); if (tr.share_map) tags.push({ t: 'Shared Map', bg: C.green }); } }
       else { tags.push({ t: pm.list ? 'You Can Add Spots' : 'Map Only', bg: pm.list ? C.pink : C.green }); }
       const firstDate = dayDate(tr.data.start, 1);
-      return { name: tr.name, who: who(tr), meta: (pm.list ? n + (n === 1 ? ' Spot' : ' Spots') : 'View-Only Map') + (d ? ' · ' + d + (d === 1 ? ' Day' : ' Days') : '') + (firstDate ? ' · From ' + firstDate : ''),
+      const ci = s.trips.indexOf(tr), w = walletOf(ci), ppl = [{ n: tr.owner_name || (own ? 'You' : 'Owner'), id: tr.owner }, ...tr.members.map(m => ({ n: m.name || 'Someone', id: m.user_id }))].slice(0, 3);
+      let next = null; if (pm.list && n) { const st = [...tr.data.stops].sort((a, b) => (a.day || 99) - (b.day || 99))[0], pl = this.stopPlace(st);
+        next = { name: pl.name, sub: [st.day ? 'DAY ' + st.day : '', dayTag(tr.data.start, st.day), (pl.area || '').toUpperCase()].filter(Boolean).join(' · '), img: placeImg(pl) }; }
+      return { id: tr.id, wbg: w.bg, wfg: w.fg, spots: pm.list ? n : null, days: d, range: dateRange(tr.data.start, d), cd: countdown(tr.data.start, d), next,
+        ppl: ppl.map((a, i) => ({ key: i, initial: (a.n || '?')[0].toUpperCase(), bg: [C.blue, C.orange, C.purple][i] })), tagMono: tags.map(g => g.t.toUpperCase()).join(' · '),
+        name: tr.name, who: who(tr), meta: (pm.list ? n + (n === 1 ? ' Spot' : ' Spots') : 'View-Only Map') + (d ? ' · ' + d + (d === 1 ? ' Day' : ' Days') : '') + (firstDate ? ' · From ' + firstDate : ''),
         tags, img: tr.data.photo || null, initial: tr.name.replace(/^the\s+/i, '')[0] || '★', bg: own ? C.yellow : C.pink, fg: own ? C.navy : '#fff', onClick: () => this.openTrip(tr.id) }; });
 
     let detail = null;
@@ -378,17 +409,28 @@ Object.assign(Component.prototype, {
       const photo = uid => window.NYCSync && NYCSync.avatarUrl ? NYCSync.avatarUrl(uid, uid === me ? this.state.avatarV : 0) : null;
       const avatars = [{ n: t.owner_name || ownerName, id: t.owner }, ...t.members.map(m => ({ n: m.name || 'Someone', id: m.user_id }))].slice(0, 3).map((a, i) => ({ key: i, initial: (a.n || '?')[0].toUpperCase(), bg: [C.blue, C.pink, C.purple][i], src: a.id === me && !this.state.avatarV ? null : photo(a.id) }));
       const routeSec = shown.length === 1 && shown[0].hasDirs ? shown[0] : null;
+      const ti = s.trips.indexOf(t), w = walletOf(ti), shownRows = shown.flatMap(x => x.rows), travel = shownRows.reduce((a, r) => a + (r.leg ? r.leg.min : 0), 0);
+      const oneDay = dayKey !== 'all' ? sections.find(x => x.key === dayKey) : null;
+      const here = (s.tripHere || []).filter((x, i, a) => a.indexOf(x) === i);
+      const others = s.trips.filter(x => x.id !== t.id).slice(0, 3).map(x => { const ww = walletOf(s.trips.indexOf(x)); return { key: x.id, name: x.name, bg: ww.bg, fg: ww.fg, onClick: () => this.openTrip(x.id) }; });
+      dayChips.forEach(c => { const sec = sections.find(x => x.key === c.key); c.date = c.key === 'all' ? 'ALL' : sec && sec.day ? (dayTag(d.start, sec.day) || 'DAY ' + sec.day) : 'UNSET';
+        c.short = c.key === 'all' ? 'All' : sec && sec.day ? 'Day ' + sec.day : String(sec ? sec.rows.length : 0).padStart(2, '0'); c.pink = !!sec && !sec.day; });
       detail = { name: t.name, isOwner: perm.own, canEdit: perm.edit, showList: view === 'list', showMap: view === 'map',
         sub: perm.list ? `${d.stops.length} ${d.stops.length === 1 ? 'Spot' : 'Spots'}` + (d.days ? ` · ${d.days} ${d.days === 1 ? 'Day' : 'Days'}` : '') + (perm.own ? '' : ' · From ' + (t.owner_name || 'A Friend')) : 'A View-Only Look At ' + (t.owner_name || 'Their') + '’s Map',
         hasToggle: perm.list && perm.map, listTabBg: view === 'list' ? '#FFFFFF' : 'transparent', listTabFg: view === 'list' ? C.blue : '#fff', mapTabBg: view === 'map' ? '#FFFFFF' : 'transparent', mapTabFg: view === 'map' ? C.blue : '#fff',
         mapTabLabel: (t.owner_name ? t.owner_name.split(' ')[0] + '’s' : 'Their') + ' Map',
         viewList: () => this.setState({ tripView: 'list', tripSel: null }), viewMap: () => { this.setState({ tripView: 'map', tripSel: null }); NYCLists.loadSharedMap(t.id); },
         mapNote: !sm ? 'Loading The Map…' : sm.off ? 'This Map Isn’t Shared Anymore.' : sm.places.length ? `${sm.places.length} Spots · Tap A Pin To Add It${perm.list ? ' To The List' : ''} Or Save It` : 'No Spots On This Map Yet.',
+        wbg: w.bg, wfg: w.fg, range: dateRange(d.start, d.days), cd: countdown(d.start, d.days), bigN: shownRows.length,
+        bigLbl: oneDay ? (shownRows.length === 1 ? 'stop' : 'stops') + (oneDay.day ? ' · Day ' + oneDay.day : ' · Not On A Day') : (shownRows.length === 1 ? 'spot' : 'spots'),
+        travel: travel ? fmtShort(travel).toUpperCase() + ' TRAVEL' : '', spotsTop: perm.list ? nSp + (nSp === 1 ? ' SPOT' : ' SPOTS') : 'VIEW ONLY', spotsBot: d.days ? d.days + (d.days === 1 ? ' DAY' : ' DAYS') : '',
+        here: here.length ? (here.length === 1 ? here[0].split(' ')[0].toUpperCase() + ' IS HERE' : here.length + ' OTHERS HERE') : '', others, img: d.photo || null,
+        stopMap: !!s.tripStopMap && view === 'list', openStopMap: () => this.setTripStopMap(true), closeStopMap: () => this.setTripStopMap(false), routeLabel: routeSec ? (routeSec.day ? 'Route Day ' + routeSec.day : 'Route') : '',
         sections: shown, dayChips, metaMono, avatars, routeDirs: routeSec ? routeSec.onDirs : null, empty: perm.list && !d.stops.length, dateVal: d.start || '', onDate: e => NYCLists.edit(t.id, x => ({ ...x, start: e.target.value || '' })), hasDays: !!d.days,
         addDay: () => this.addDay(t.id), dayBtn: d.days ? '+ Add Day ' + (d.days + 1) : '+ Sort Into Days',
         openPick: () => this.setState({ tripPickOpen: true, tripPickQ: '' }), openAddNew: () => this.setState({ addOpen: true, addMode: 'link', addTarget: t.id, placing: false, form: blank(), selId: null, routeFor: null, tripSel: null, lookQ: '', lookResults: [], lookMsg: '', aiMsg: '', aiPlaces: [], aiFor: '', sugg: [], suggBusy: false, suggPicked: '', suggNone: '', webBusy: false, webMsg: '', webFor: '' }),
         openEdit: () => this.setState({ tripEditOpen: true, tripEditName: t.name, tripEditDays: d.days || 0, tripEditStart: d.start || '', tripSel: null }),
-        people, openShare: () => this.setState({ tripShareOpen: true, tripSel: null }), back: () => this.setState({ tripId: null, tripSel: null }),
+        people, openShare: () => this.setState({ tripShareOpen: true, tripSel: null }), back: () => this.setState({ tripId: null, tripSel: null, tripStopMap: false }),
         delLabel: perm.own ? (s.confirmTripDel ? 'Tap Again To Delete This List' : 'Delete List') : (s.confirmTripDel ? 'Tap Again To Leave' : 'Leave This List'),
         onDel: () => { if (!s.confirmTripDel) return this.setState({ confirmTripDel: true }); this.setState({ confirmTripDel: false }); perm.own ? NYCLists.remove(t.id) : NYCLists.leave(t.id); },
         syncNote: ({ saving: 'Saving…', offline: 'Offline — Saves When You’re Back Online' })[s.tripsSync] || '' };
@@ -487,7 +529,7 @@ Object.assign(Component.prototype, {
       listsState: s.tripsState, listsMissing: s.tripsState === 'missing', listsLoading: s.tripsState === 'loading' && !s.trips.length, listsError: s.tripsState === 'error' && !s.trips.length,
       listCards: cards, listsEmpty: s.tripsState === 'ready' && !s.trips.length, retryLists: () => NYCLists.refresh(),
       openNewTrip: () => this.setState({ newTripOpen: true, newTripName: '', newTripDays: 0, newTripStart: '', newTripAddPid: null }),
-      trip: detail, tripMapRef: this.tripMapRef, tripMapH: detail && detail.showMap ? '100%' : 'calc(var(--st) + 330px)', tripEdit: editSheet,
+      trip: detail, tripMapRef: this.tripMapRef, tripMapH: '100%', tripMapOn: !!detail && (detail.showMap || detail.stopMap), tripEdit: editSheet,
       hasTripSel: !!tsel && s.tab === 'lists' && !s.addOpen, tsel, tripShare: share, tripPick: pick, listChoose: choose, newTrip,
       goLists: () => { this.setState({ tab: 'lists', selId: null, placing: false, routeFor: null, tripSel: null }); NYCLists.refresh(); },
       tabListFg: s.tab === 'lists' ? C.blue : '#3A4470', addToListSel: () => s.selId && this.setState({ listChoose: s.selId }),

@@ -39,9 +39,10 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - **See All** shows the results as a list or a map, with **+ Add All To Plan**.
 
 **Route tab (Plan A Day)**
-- An ordered list of stops, shown on a map with a dotted route.
-- Start from the first stop, Home or My Location. Each leg shows an estimated travel time; tap a leg to open it in Google Maps.
-- **Auto-Order Route** (shortest-trip order), up/down reordering, removing stops, and **+ Add Spots**.
+- "Timeline + Map HUD" layout: the map fills the screen with the dotted route and numbered pins. A glass panel on top shows total travel, a ride-vs-walk bar, when you're home/done, and the Start From switch (First Stop / Home / My Location).
+- A glass timeline sheet sits halfway up; drag or tap its handle to pull it up (the panel shrinks to two pills). `planSheet` state, `setPlanSheet()` refits the map.
+- Clock times: tap the navy time to set **Leave At** (`plan.leave`, default 10:00). Each stop has a **STAY** chip (tap to cycle 15 min–3 hrs, `plan.stay[id]`, default 45 min). Arrival times add the travel legs and stays; starting from Home adds the trip back and a "Back Home" time.
+- Each leg shows subway bullets or walking minutes; tap it for live times in Google Maps. **Start Route In Google Maps** opens all stops in order. **Auto-Order**, up/down, ✕, **+** (Add Spots) and Clear are in the sheet.
 
 **Lists tab (shared lists, e.g. "Sonia's Visit")**
 - A list is a collection of spots for a visit or a big day out, separate from the Route plan. **+ New List** takes a name, optional number of days and an optional first date.
@@ -50,6 +51,8 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - **Edit** (next to the list's title): name (owner only), number of days and first date. Lowering the days moves spots from removed days back to "Not On A Day Yet".
 - **Share & Invite** (owner only): pick what invitees get: **Just This List** (they can add, sort and remove spots), **Just My Map** (a view-only look at all your saved spots, without your home) or **Both**. The invite link is `/?join=<code>`. **Make A New Link** retires the old one. The sheet also lists who has joined (with Remove) and renames the list.
 - Invitees open the link, see "Kotis Invited You" on the sign-in screen, make an account (with a name) and land on the list. With the map shared they get a **This List / Kotis's Map** toggle; tapping a pin there offers **+ Add To This List** and **Save To My Map**. Any spot on a list can be saved to your own map.
+- **Wallet look:** the Lists tab is an Apple Wallet–style stack of colored cards (palette color by list order, `walletOf()` in `lists.js`). The newest list is the full card in front with its dates, a countdown ("In 14 days", "Day 2 of 3"), people and sharing; below it, **Up Next** shows the list's first stop.
+- Opening a list lifts its card to the top as the header: stops (for the chosen day), travel time, people, dates/countdown and a live **"Sonia Is Here"** tag when someone else has the list open (Supabase Realtime presence on channel `nyc-list-<id>`, `watchPresence()`; nothing to set up). Below are the day switcher (with dates), the stops and the edit tools; **Map** shows the list's pins full screen; the other lists peek as card edges at the bottom (tap to switch).
 - Changes sync between everyone about a second after each edit, and the open list refreshes every 20 seconds and when the app comes back to the front.
 
 **Add A Spot (the + button)**
