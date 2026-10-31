@@ -19,6 +19,10 @@ module.exports = async (req, res) => {
   const user = await requireUser(req, res);
   if (!user) return;
   try {
+    // Remove their profile photo first (supabase/avatars.sql); a missing photo is fine.
+    await fetch(SUPABASE_URL + '/storage/v1/object/avatars/' + encodeURIComponent(user.id) + '/avatar.jpg', {
+      method: 'DELETE', headers: { apikey: key, authorization: 'Bearer ' + key }
+    }).catch(() => {});
     const r = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + encodeURIComponent(user.id), {
       method: 'DELETE', headers: { apikey: key, authorization: 'Bearer ' + key }
     });

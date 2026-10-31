@@ -61,9 +61,9 @@ const NYCSync = (() => {
     const u = (session && session.user) || null;
     if (u && user && u.id === user.id) return;
     user = u;
-    if (!user) { base = null; set({ auth: 'signedOut', syncEmail: '', syncState: '' }); window.NYCLists && NYCLists.onUser(null); return; }
+    if (!user) { base = null; set({ auth: 'signedOut', syncEmail: '', syncState: '', avatarV: 0 }); window.NYCLists && NYCLists.onUser(null); return; }
     base = loadBase();
-    set({ auth: 'signedIn', syncEmail: user.email || '', syncState: 'syncing', authPass: '', authMsg: '' });
+    set({ auth: 'signedIn', syncEmail: user.email || '', syncState: 'syncing', authPass: '', authMsg: '', avatarV: (user.user_metadata && user.user_metadata.avatar_v) || 0 });
     await sync();
     window.NYCLists && NYCLists.onUser(user);
   }
@@ -160,7 +160,28 @@ const NYCSync = (() => {
     try { const r = await sb.auth.updateUser({ data: { name } }); if (r.error) return false; if (r.data && r.data.user) user = r.data.user; return true; } catch (e) { return false; }
   }
 
+  // Profile photos live in the public Supabase Storage bucket "avatars" at <user id>/avatar.jpg (supabase/avatars.sql),
+  // so anyone on a shared list can show a friend's photo from their user id alone. user_metadata.avatar_v
+  // (a timestamp) marks that you have one and busts the cache after a change.
+  const AVATAR = 'avatars';
+  const avatarUrl = (uid, v) => uid && cfg.supabaseUrl ? cfg.supabaseUrl.replace(/\/$/, '') + '/storage/v1/object/public/' + AVATAR + '/' + encodeURIComponent(uid) + '/avatar.jpg' + (v ? '?v=' + v : '') : null;
+  async function setAvatar(blob) {
+    if (!sb || !user) return { error: 'Sign In First.' };
+    const up = await sb.storage.from(AVATAR).upload(user.id + '/avatar.jpg', blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '300' });
+    if (up.error) return { error: /bucket|not found/i.test(up.error.message || '') ? 'setup' : (up.error.message || 'Upload Failed.') };
+    const v = Date.now();
+    try { const r = await sb.auth.updateUser({ data: { avatar_v: v } }); if (r.data && r.data.user) user = r.data.user; } catch (e) {}
+    set({ avatarV: v }); return { ok: true };
+  }
+  async function removeAvatar() {
+    if (!sb || !user) return { error: 'Sign In First.' };
+    const r = await sb.storage.from(AVATAR).remove([user.id + '/avatar.jpg']);
+    if (r.error) return { error: r.error.message || 'Couldn’t Remove It.' };
+    try { const u = await sb.auth.updateUser({ data: { avatar_v: null } }); if (u.data && u.data.user) user = u.data.user; } catch (e) {}
+    set({ avatarV: 0 }); return { ok: true };
+  }
+
   return { enabled, attach, queue, submit, signOut, getToken, syncNow: () => sync(),
-    client: () => sb, currentUser: () => user, displayName, setName, mergeList, same };
+    client: () => sb, currentUser: () => user, displayName, setName, mergeList, same, avatarUrl, setAvatar, removeAvatar };
 })();
 window.NYCSync = NYCSync;

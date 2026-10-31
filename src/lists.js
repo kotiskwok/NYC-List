@@ -305,7 +305,7 @@ Object.assign(Component.prototype, {
       const cats = this.tripCatMap(t);
       this.tripSections(t).forEach(sec => { const pts = [];
         sec.stops.forEach((st, i) => { const p = this.stopPlace(st), c = cats[p.cat] || {}, numbered = sec.flat || sec.day > 0;
-          pins.push({ id: st.id, ll: [p.lat, p.lng], col: sec.flat ? (c.color || C.orange) : dayCol(sec.day), label: numbered ? String(i + 1) : null, em: numbered ? null : (c.id ? emo(c) : '📍'), sel: st.id === sel, kind: 'stop' });
+          pins.push({ id: st.id, ll: [p.lat, p.lng], col: sec.flat ? (c.color || C.orange) : dayCol(sec.day), label: numbered ? String(i + 1) : null, em: c.id ? emo(c) : '📍', sel: st.id === sel, kind: 'stop' });
           pts.push([p.lat, p.lng]); });
         if (sec.day > 0 && pts.length > 1) lines.push({ pts, col: dayCol(sec.day) }); });
     }
@@ -315,7 +315,7 @@ Object.assign(Component.prototype, {
     lines.forEach(l => { L.polyline(l.pts, { renderer: rend, color: '#fff', weight: 7, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(m.tl);
       L.polyline(l.pts, { renderer: rend, color: l.col, weight: 3.5, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(m.tl); });
     pins.forEach(p => { const z = p.sel ? 56 : 40;
-      L.marker(p.ll, { zIndexOffset: p.sel ? 1000 : p.label ? 500 : 0, icon: L.divIcon({ className: '', html: this.pinHtml(p.col, z, p.sel, p.faded && !p.sel, p.label, p.em), iconSize: [z, z], iconAnchor: [z / 2, z / 2] }) })
+      L.marker(p.ll, { zIndexOffset: p.sel ? 1000 : p.label ? 500 : 0, icon: L.divIcon({ className: '', html: this.pinHtml(p.col, z, p.sel, p.faded && !p.sel, null, p.em, p.label), iconSize: [z, z], iconAnchor: [z / 2, z / 2] }) })
         .on('click', e => { L.DomEvent.stopPropagation(e); this.setState({ tripSel: { kind: p.kind, id: p.id }, confirmStopDel: false }); }).addTo(m.tl); });
     if (force || ids !== m.tids) { m.tids = ids; const pts = pins.map(p => p.ll);
       if (pts.length) setTimeout(() => this.fit(m, pts, view === 'map' ? { paddingTopLeft: [40, 210], paddingBottomRight: [40, 120], maxZoom: 15 } : { paddingTopLeft: [40, 110], paddingBottomRight: [40, 150], maxZoom: 15 }), 30);
@@ -369,7 +369,8 @@ Object.assign(Component.prototype, {
       const shown = dayKey === 'all' ? sections : sections.filter(x => x.key === dayKey);
       const firstDate = dayDate(d.start, 1), nSp = d.stops.length;
       const metaMono = (perm.list ? [d.days ? d.days + (d.days === 1 ? ' DAY' : ' DAYS') : '', nSp + (nSp === 1 ? ' SPOT' : ' SPOTS'), firstDate ? 'STARTS ' + (firstDate.split(', ')[1] || firstDate).toUpperCase() : '', perm.own ? '' : 'FROM ' + (t.owner_name || 'A FRIEND').toUpperCase()] : ['VIEW-ONLY MAP']).filter(Boolean).join(' · ');
-      const avatars = [t.owner_name || ownerName, ...t.members.map(m => m.name || 'Someone')].slice(0, 3).map((n, i) => ({ key: i, initial: (n || '?')[0].toUpperCase(), bg: [C.blue, C.pink, C.purple][i] }));
+      const photo = uid => window.NYCSync && NYCSync.avatarUrl ? NYCSync.avatarUrl(uid, uid === me ? this.state.avatarV : 0) : null;
+      const avatars = [{ n: t.owner_name || ownerName, id: t.owner }, ...t.members.map(m => ({ n: m.name || 'Someone', id: m.user_id }))].slice(0, 3).map((a, i) => ({ key: i, initial: (a.n || '?')[0].toUpperCase(), bg: [C.blue, C.pink, C.purple][i], src: a.id === me && !this.state.avatarV ? null : photo(a.id) }));
       const routeSec = shown.length === 1 && shown[0].hasDirs ? shown[0] : null;
       detail = { name: t.name, isOwner: perm.own, canEdit: perm.edit, showList: view === 'list', showMap: view === 'map',
         sub: perm.list ? `${d.stops.length} ${d.stops.length === 1 ? 'Spot' : 'Spots'}` + (d.days ? ` · ${d.days} ${d.days === 1 ? 'Day' : 'Days'}` : '') + (perm.own ? '' : ' · From ' + (t.owner_name || 'A Friend')) : 'A View-Only Look At ' + (t.owner_name || 'Their') + '’s Map',

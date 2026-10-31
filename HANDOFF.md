@@ -18,6 +18,10 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - Each saved spot is a pin showing its category emoji. Category filter chips sit along the top.
 - A spot counter with a green "saved" sync dot. Tapping it opens **Your Account** (sync status, Sync Now, Sign Out).
 - A **My Location** button at the bottom right. If location fails, you can tap the map where you are.
+- A **Map Layers** button above it: switches for **Subway**, **Bus Routes** (every local, Select Bus and express route in its MTA color; tap a line for its name) and **Citi Bike** (docks with live bike, e-bike and dock counts, refreshed every minute; tap a dock). The choice is remembered on the device and applies to every map.
+- Every pin shows its category's icon. On a day plan or a list's days, a small navy badge on the pin shows the stop number.
+- The spot counter reads "N Spots To Try" (the number as tall as the two-line label) and shows your profile photo with the sync dot on it.
+- **Profile photo:** Your Account → **Add Photo / Change Photo / Remove**. The phone crops it square and shrinks it to 320×320 before uploading. Friends' photos show on shared lists.
 
 **Place card** (tap a pin)
 - Shows the category, neighborhood, price, note, and nearest subway station with its lines and walking time.
@@ -115,6 +119,8 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 | `SUPABASE_SERVICE_ROLE_KEY` | ☐ Not set yet | Delete My Account (required by Apple). Supabase → Project Settings → API Keys → secret key. |
 
 - **Optional overrides:** `ANTHROPIC_MODEL`, `OPENAI_TRANSCRIBE_MODEL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
+- **Supabase Storage:** profile photos need `supabase/avatars.sql` run once in Supabase → SQL Editor. Until then **Add Photo** says so. The app keeps `user_metadata.avatar_v` (a timestamp) to know you have a photo and to refresh it after a change; Delete My Account also deletes the photo.
+- **Citi Bike:** read straight from Citi Bike's public GBFS feed (`gbfs.lyft.com/gbfs/2.3/bkn/en/`), no key.
 - **Supabase:** Authentication → URL Configuration → **Site URL** is the Vercel address. "Allow new users to sign up" (Authentication → Sign In / Providers) must stay **on** for friends to join shared lists. A new account only sees its own empty map plus the lists it was invited to; the AI features cost a little per use for any signed-in account.
 - **Quick check of which keys are live:** a `POST` with no sign-in to `/api/extract`, `/api/places` or `/api/transcribe` answers **401** when that service's key is set and **503** when it isn't.
 
@@ -162,6 +168,7 @@ Vercel Node.js functions, CommonJS `module.exports = async (req, res)`. Files st
 | `POST /api/find` | `{q, categories, neighborhoods}` | Claude with the `web_search` tool (up to 3 searches) finds NYC places by name. Same `places` shape. |
 | `POST /api/places` | `{action:'auto', q, near, session}` or `{action:'detail', id, session}` | Google Places API (New) autocomplete limited to the five boroughs, then details (name, street address, neighborhood, location, types, price level). The same session id is used from typing through the pick, so Google bills it as one session. Answers 503 without the key; the app then uses Photon. |
 | `POST /api/transcribe` | audio/wav body | OpenAI speech-to-text. |
+| `GET /api/bus` | — | NYC bus routes for the Bus layer from data.ny.gov (dataset `bzwk-3hb4`, current GTFS shapes): one simplified line per route, packed as deltas (~150 KB). No sign-in; the CDN caches it for a week. |
 
 How `extract.js` reads each kind of link:
 - **TikTok:** oEmbed (caption and thumbnail), plus TikTok's subtitle tracks from the video page (`__UNIVERSAL_DATA_FOR_REHYDRATION__` / `SIGI_STATE` → `subtitleInfos`, `claInfo.captionInfos`).
@@ -220,6 +227,8 @@ The App Store version is the same website wrapped with Capacitor 8 in `native/`.
 | `config.js` | Supabase URL and publishable key, plus `siteUrl` (the live site the iPhone app calls) | switching Supabase projects or domains |
 | `supabase/schema.sql` | Table `nyc_list` and row-level security | database changes |
 | `supabase/lists.sql` | Shared-list tables, security rules and the join / preview / shared-map functions. Run once (safe to re-run). | shared-list database changes |
+| `supabase/avatars.sql` | Public Storage bucket `avatars` for profile photos (`<user id>/avatar.jpg`, JPEG, 1 MB max), where each person can only write their own folder. Run once (safe to re-run). | photo storage rules |
+| `api/bus.js` | Server: bus routes for the Bus layer | bus data source or simplification |
 | `sw.js` | Offline cache (bump `CACHE` whenever `src/` changes) | — |
 | `manifest.webmanifest`, `icons/` | Home-screen name and icon (yellow "NYC" pill on blue), Android `share_target` | app name, icon, sharing |
 | `vercel.json` | Function time limits and cache headers (use `/path/:path*` patterns; grouped regex patterns fail to deploy) | — |

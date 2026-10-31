@@ -35,6 +35,18 @@ function appleMaps(cb){if(APPLE.state==='ok')return cb(true);if(APPLE.state==='o
       setTimeout(()=>done(false),9000);}catch(e){console.warn('Apple Maps',e);done(false);}};
     document.head.appendChild(sc);});}
 const APPLE_PAD=96;
+// Map layers you turned on (subway, bus routes, Citi Bike) are remembered on this device.
+const LAYERS=(()=>{try{return JSON.parse(localStorage.getItem('nycList.layers'))||{};}catch(e){return {};}})();
+const saveLayers=o=>{try{localStorage.setItem('nycList.layers',JSON.stringify(o));}catch(e){}};
+let BUS=null;const loadBus=()=>BUS||(BUS=fetch(API('/api/bus')).then(r=>r.ok?r.json():null).then(d=>Array.isArray(d)&&d.length?d:(BUS=null,null)).catch(()=>(BUS=null,null)));
+// Citi Bike's GBFS feed (public, open to browsers): where the docks are (fetched once) and live counts.
+const GBFS='https://gbfs.lyft.com/gbfs/2.3/bkn/en/';const BIKE={info:null,status:{},at:0,p:null};
+const loadBikes=fresh=>{if(BIKE.p)return BIKE.p;if(BIKE.info&&!fresh&&Date.now()-BIKE.at<60000)return Promise.resolve(true);
+  const j=u=>fetch(GBFS+u,{cache:'no-store'}).then(r=>r.ok?r.json():null);
+  BIKE.p=Promise.all([BIKE.info?null:j('station_information.json'),j('station_status.json')]).then(([inf,st])=>{
+    if(inf&&inf.data)BIKE.info=inf.data.stations.filter(x=>isFinite(x.lat)&&isFinite(x.lon)).map(x=>({station_id:x.station_id,name:x.name,lat:x.lat,lon:x.lon}));
+    if(st&&st.data){BIKE.status={};st.data.stations.forEach(x=>BIKE.status[x.station_id]=x);BIKE.at=Date.now();}
+    return !!BIKE.info;}).catch(()=>!!BIKE.info).finally(()=>{BIKE.p=null;});return BIKE.p;};
 const PAL={Colorful:{water:'#86C8EE',park:'#7FCB8F',air:'#D8D3C8',line:'rgba(255,255,255,.95)',boro:{Manhattan:'#FFE38F',Brooklyn:'#FFC09A',Queens:'#C4D0FF',Bronx:'#FFB5C9','Staten Island':'#D6C6F4'}},
  Minimal:{water:'#D3E4F0',park:'#CDE5C6',air:'#E6E2DA',line:'#E4DCCD',boro:{}},
  // Apple: the app's own map drawn in Apple Maps colors. It shows while Apple's real map loads and if Apple Maps is ever unavailable.
@@ -125,7 +137,7 @@ class Component extends DCLogic {
     return {places:s?.places||SEED,cats:s?.cats||CATS0,home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
-      showSubway:true,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
+      showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,layersOpen:false,busState:'',bikeState:'',avatarBusy:false,avatarMsg:'',avatarV:0,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
       newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,authName:'',acctDel:0};})();
@@ -158,6 +170,10 @@ class Component extends DCLogic {
       clearTimeout(this._tpt);this._tpt=setTimeout(()=>window.NYCLists&&NYCLists.touchPlaces(this.state.places),1500);}
     if(this.maps&&this._ms!==this.props.mapStyle){const first=this._ms===undefined;this._ms=this.props.mapStyle;if(!first)this.allMaps().forEach(m=>this.drawBase(m));}
     if(this.maps&&this._ss!==s.showSubway){const first=this._ss===undefined;this._ss=s.showSubway;STON=s.showSubway;this.allMaps().forEach(m=>{s.showSubway?m.subway.addTo(m.map):m.subway.remove();if(!first&&m.streets)m.streets.redraw();});}
+    if(this.maps&&(this._sb!==s.showBus||this._sk!==s.showBike)){this._sb=s.showBus;this._sk=s.showBike;saveLayers({sub:s.showSubway,bus:s.showBus,bike:s.showBike});
+      this.allMaps().forEach(m=>{if(s.showBus)this.fillBus(m);else m.bus.remove();if(s.showBike)this.fillBike(m);else m.bike.remove();});
+      clearInterval(this._bikeT);if(s.showBike)this._bikeT=setInterval(()=>this.refreshBikes(),60000);}
+    if(this._ssv!==s.showSubway){this._ssv=s.showSubway;saveLayers({sub:s.showSubway,bus:s.showBus,bike:s.showBike});}
     this.syncMaps();
     const vk=s.tab+s.exView+s.exStage+s.placing+(s.routeFor||'')+(s.tripId||'')+this.tripViewEff(this.tripCur());
     if(this.maps&&vk!==this._vk){this._vk=vk;setTimeout(()=>this.refreshVisible(),60);setTimeout(()=>this.refreshVisible(),300);}}
@@ -172,11 +188,11 @@ class Component extends DCLogic {
     if(s.tab==='lists'&&s.tripId&&this.tripMapRef.current){if(!this.maps.trip){this.maps.trip=this.makeMap(this.tripMapRef.current,'trip');}else kick(this.maps.trip);this.syncTrip(true);}}
   makeMap(el,kind){const L=window.L;
     const map=L.map(el,{zoomControl:false,attributionControl:false,minZoom:10,maxZoom:18,zoomSnap:.5,maxBounds:[[40.42,-74.35],[40.98,-73.6]],maxBoundsViscosity:.8,preferCanvas:true}).setView([40.722,-73.97],12);
-    [['streets',410],['boroLab',450],['hoodBig',450],['hoodSmall',450],['subway',455],['stBul',456],['stLab',457],['route',470]].forEach(([n,z])=>{const p=map.createPane(n);p.style.zIndex=z;if(n!=='subway'&&n!=='route')p.style.pointerEvents='none';p.style.transition='opacity .35s';});
+    [['streets',410],['boroLab',450],['hoodBig',450],['hoodSmall',450],['bus',452],['subway',455],['stBul',456],['stLab',457],['bike',458],['route',470]].forEach(([n,z])=>{const p=map.createPane(n);p.style.zIndex=z;if(n!=='subway'&&n!=='route'&&n!=='bus'&&n!=='bike')p.style.pointerEvents='none';p.style.transition='opacity .35s';});
     const m={map,el,kind,base:L.layerGroup().addTo(map),labels:L.layerGroup().addTo(map),sig:'',ids:'',route:L.layerGroup().addTo(map),me:L.layerGroup().addTo(map)};
-    this.drawBase(m);this.addStreets(m);this.buildSubway(m);if(this.state.showSubway)m.subway.addTo(map);
+    this.drawBase(m);this.addStreets(m);this.buildSubway(m);if(this.state.showSubway)m.subway.addTo(map);m.bus=L.layerGroup();m.bike=L.layerGroup();if(this.state.showBus)this.fillBus(m);if(this.state.showBike)this.fillBike(m);
     m.layer=L.layerGroup().addTo(map);
-    const fade=()=>{const z=map.getZoom();const P=n=>map.getPane(n).style;P('boroLab').opacity=z<12.5?1:0;P('hoodBig').opacity=z>=12.5&&z<15?1:0;P('hoodSmall').opacity=z>=14&&z<15?1:0;P('subway').opacity=z>=12.5?1:0;P('stBul').opacity=z>=13.5&&z<15?1:0;P('stLab').opacity=z>=15?1:0;};
+    const fade=()=>{const z=map.getZoom();const P=n=>map.getPane(n).style;P('boroLab').opacity=z<12.5?1:0;P('hoodBig').opacity=z>=12.5&&z<15?1:0;P('hoodSmall').opacity=z>=14&&z<15?1:0;P('subway').opacity=z>=12.5?1:0;P('stBul').opacity=z>=13.5&&z<15?1:0;P('stLab').opacity=z>=15?1:0;P('bus').opacity=z>=12?1:0;P('bike').opacity=z>=13.5?1:0;};
     map.on('zoomend',fade);fade();map.on('click',e=>this.onMapClick(e,kind));appleMaps(ok=>{if(ok&&this._on)this.attachApple(m);});return m;}
   // Put Apple's map under this Leaflet map and keep it in step. Leaflet's own base (borough colors, labels,
   // streets) is cleared; Leaflet stops snapping zoom so pinches stay smooth and lined up.
@@ -231,6 +247,35 @@ class Component extends DCLogic {
       if(m.kind==='main'){const bl=s.r.slice(0,6).map(r=>{const b=bullet(r);return `<span style="width:14px;height:14px;border-radius:50%;background:${b.bg};color:${b.fg};font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center">${b.t}</span>`;}).join('');
         L.marker(s.c,{pane:'stBul',interactive:false,keyboard:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div style="position:absolute;left:8px;top:-7px;display:flex;gap:1px">${bl}</div>`})}).addTo(m.subway);
         L.marker(s.c,{pane:'stLab',interactive:false,keyboard:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div style="position:absolute;left:8px;top:-8px;display:flex;align-items:center;gap:4px;white-space:nowrap;font-family:Archivo,sans-serif;font-weight:800;font-size:10px;color:#10183F;text-shadow:0 0 3px #fff,0 0 3px #fff"><span>${s.n}</span><span style="display:inline-flex;gap:1px">${bl}</span></div>`})}).addTo(m.subway);}});}
+  // Bus routes (from /api/bus) as thin lines in each route's MTA color; tap one for its name.
+  fillBus(m){const L=window.L;if(m.busOn){m.bus.addTo(m.map);return;}
+    if(!this.state.busState)this.setState({busState:'loading'});
+    loadBus().then(routes=>{if(!this._on||!this.state.showBus)return;if(!routes){this.setState({busState:'error'});this.toast('Bus Routes Aren\u2019t Available Right Now');return;}
+      if(!m.busOn){m.busOn=true;const rend=L.canvas({pane:'bus',tolerance:6});const T={L:'Local',LTD:'Limited',SBS:'Select Bus',X:'Express'};
+        routes.forEach(r=>r.s.forEach(enc=>{const pts=[];let la=enc[0],ln=enc[1];pts.push([la/1e5,ln/1e5]);for(let i=2;i<enc.length;i+=2){la+=enc[i];ln+=enc[i+1];pts.push([la/1e5,ln/1e5]);}
+          L.polyline(pts,{renderer:rend,color:r.c,weight:r.t==='SBS'?3.5:2.6,opacity:r.t==='X'?.55:.8,dashArray:r.t==='X'?'6 5':null,lineCap:'round',lineJoin:'round'})
+            .on('click',e=>{L.DomEvent.stopPropagation(e);this.toast(r.n+' · '+T[r.t]+(r.l?' · '+r.l:''));}).addTo(m.bus);}));}
+      if(this.state.showBus)m.bus.addTo(m.map);if(this.state.busState!=='ok')this.setState({busState:'ok'});});}
+  // Citi Bike docks from Citi Bike's public live feed; tap one for bikes and open docks. Counts refresh every minute.
+  fillBike(m){m.bike.addTo(m.map);if(!this.state.bikeState)this.setState({bikeState:'loading'});
+    loadBikes().then(ok=>{if(!this._on)return;if(!ok){this.setState({bikeState:'error'});this.toast('Citi Bike Isn\u2019t Available Right Now');return;}this.drawBikes(m);if(this.state.bikeState!=='ok')this.setState({bikeState:'ok'});});}
+  drawBikes(m){const L=window.L;if(!BIKE.info)return;m.bike.clearLayers();const rend=m.bikeRend||(m.bikeRend=L.canvas({pane:'bike',tolerance:4}));
+    BIKE.info.forEach(st=>{const q=BIKE.status[st.station_id]||{},bikes=q.num_bikes_available||0,open=q.is_renting!==0&&q.is_installed!==0;
+      L.circleMarker([st.lat,st.lon],{renderer:rend,radius:5,color:'#fff',weight:1.6,fillColor:!open?'#A0A3B1':bikes?'#0A6FD6':'#7FA9DA',fillOpacity:1})
+        .on('click',e=>{L.DomEvent.stopPropagation(e);const eb=q.num_ebikes_available||0,docks=q.num_docks_available||0;
+          this.toast(!open?st.name+' · Closed':st.name+' · '+bikes+(bikes===1?' Bike':' Bikes')+(eb?' ('+eb+' E-Bike'+(eb===1?'':'s')+')':'')+' · '+docks+(docks===1?' Dock':' Docks'));}).addTo(m.bike);});}
+  refreshBikes(){if(!this.state.showBike)return;loadBikes(true).then(ok=>{if(ok&&this._on)this.allMaps().forEach(m=>this.drawBikes(m));});}
+  // Profile photo: crop the middle square, shrink it to 320×320 JPEG on the phone, then upload.
+  pickAvatar(file){if(!file||!window.NYCSync)return;if(!/^image\//.test(file.type||'')&&!/\.(jpe?g|png|heic|heif|webp|gif)$/i.test(file.name||'')){this.setState({avatarMsg:'Pick A Photo.'});return;}
+    this.setState({avatarBusy:true,avatarMsg:''});const url=URL.createObjectURL(file),img=new Image();
+    const fail=msg=>{URL.revokeObjectURL(url);this.setState({avatarBusy:false,avatarMsg:msg});};
+    img.onerror=()=>fail('That Photo Couldn\u2019t Be Opened. Try A JPEG Or PNG.');
+    img.onload=()=>{const n=Math.min(img.naturalWidth,img.naturalHeight),c=document.createElement('canvas');c.width=c.height=320;
+      c.getContext('2d').drawImage(img,(img.naturalWidth-n)/2,(img.naturalHeight-n)/2,n,n,0,0,320,320);URL.revokeObjectURL(url);
+      c.toBlob(b=>{if(!b)return fail('That Photo Couldn\u2019t Be Read.');NYCSync.setAvatar(b).then(r=>{
+        this.setState({avatarBusy:false,avatarMsg:r.ok?'':r.error==='setup'?'Photos Need One Setup Step: Run supabase/avatars.sql In Supabase.':r.error});if(r.ok)this.toast('Photo Saved');}).catch(()=>fail('Couldn\u2019t Upload It. Check Your Connection.'));},'image/jpeg',.86);};
+    img.src=url;}
+  removeAvatar(){if(!window.NYCSync)return;this.setState({avatarBusy:true,avatarMsg:''});NYCSync.removeAvatar().then(r=>this.setState({avatarBusy:false,avatarMsg:r.ok?'':r.error})).catch(()=>this.setState({avatarBusy:false}));}
   onMapClick(e,kind){const s=this.state;
     if(kind==='main'&&s.placing){const ll=[r5(e.latlng.lat),r5(e.latlng.lng)],a=hoodAt(ll);
       if(s.placing==='here'){const ret=s.placingReturn;this.setState({placing:false,here:ll,hereAcc:0,hereManual:true,hereFailed:false,locFail:null,...(ret==='plan'?{tab:'plan'}:{}),...(ret&&ret.startsWith('route:')?{routeFor:ret.slice(6),routeMode:'here'}:{})});this.toast('Got It — You\u2019re In '+(a||'NYC'));return;}
@@ -251,8 +296,9 @@ class Component extends DCLogic {
     this.syncMe();this.syncRoute();if(this.maps.plan)this.syncPlan(false);if(this.maps.trip)this.syncTrip(false);}
   // Glass pin (mockup): a frosted ring around a colored core with the category's line icon or the stop number,
   // centered on the spot. Selected pins grow and get a yellow halo.
-  pinHtml(col,z,sel,faded,label,em){const pad=sel?7:Math.max(4,Math.round(z*.11)),core=z-pad*2,fg=fgFor(col);
-    return `<div style="position:relative;width:${z}px;height:${z}px;opacity:${faded?.55:1}">${sel?`<div style="position:absolute;inset:-${Math.round(z*.28)}px;border-radius:50%;border:2px solid rgba(255,196,37,.9);background:rgba(255,196,37,.18)"></div>`:''}<div style="position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(10px) saturate(180%);backdrop-filter:blur(10px) saturate(180%);border:1px solid rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(16,24,63,.22),inset 0 1px 0 rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center"><div style="width:${core}px;height:${core}px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center">${label?`<span style="color:${fg};font:italic 900 ${Math.round(core*.5)}px Archivo,sans-serif">${label}</span>`:em?iconSvg(em,Math.round(core*.53),fg):`<span style="width:${Math.round(core*.32)}px;height:${Math.round(core*.32)}px;border-radius:50%;background:${fg}"></span>`}</div></div></div>`;}
+  // num: a stop's place in a plan or day, shown as a small badge so the pin can still show the category icon.
+  pinHtml(col,z,sel,faded,label,em,num){const pad=sel?7:Math.max(4,Math.round(z*.11)),core=z-pad*2,fg=fgFor(col);
+    return `<div style="position:relative;width:${z}px;height:${z}px;opacity:${faded?.55:1}">${sel?`<div style="position:absolute;inset:-${Math.round(z*.28)}px;border-radius:50%;border:2px solid rgba(255,196,37,.9);background:rgba(255,196,37,.18)"></div>`:''}<div style="position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(10px) saturate(180%);backdrop-filter:blur(10px) saturate(180%);border:1px solid rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(16,24,63,.22),inset 0 1px 0 rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center"><div style="width:${core}px;height:${core}px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center">${label?`<span style="color:${fg};font:italic 900 ${Math.round(core*.5)}px Archivo,sans-serif">${label}</span>`:em?iconSvg(em,Math.round(core*.53),fg):`<span style="width:${Math.round(core*.32)}px;height:${Math.round(core*.32)}px;border-radius:50%;background:${fg}"></span>`}</div></div>${num?`<div style="position:absolute;top:-5px;right:-6px;min-width:19px;height:19px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#10183F;color:#fff;border:2px solid #fff;font:800 10.5px Archivo,sans-serif;display:flex;align-items:center;justify-content:center">${num}</div>`:''}</div>`;}
   syncOne(m,list,fit){const L=window.L,s=this.state,cat=Object.fromEntries(s.cats.map(c=>[c.id,c]));
     const sig=list.map(p=>p.id+p.cat+(p.visited?'v':'')+(p.id===s.selId||p.id===s.routeFor?'s':'')+p.lat+p.lng).join()+s.cats.map(c=>c.color+emo(c)).join();
     if(sig===m.sig)return;const ids=list.map(p=>p.id).join();const refit=fit&&ids!==m.ids;m.sig=sig;m.ids=ids;m.layer.clearLayers();
@@ -291,7 +337,7 @@ class Component extends DCLogic {
     const pts=[...(start?[start]:[]),...stops.map(p=>[p.lat,p.lng])];
     if(pts.length>1){const rend=L.svg({pane:'route'});L.polyline(pts,{renderer:rend,color:'#fff',weight:8,lineCap:'round',lineJoin:'round',interactive:false}).addTo(m.planL);L.polyline(pts,{renderer:rend,color:C.orange,weight:4,dashArray:'2 8',lineCap:'round',interactive:false}).addTo(m.planL);}
     if(start)L.marker(start,{interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div style="transform:translate(-50%,-50%);background:#10183F;color:#FFC425;font:italic 900 11px Archivo,sans-serif;padding:4px 9px;border-radius:999px;border:2px solid #fff;white-space:nowrap">Start</div>`})}).addTo(m.planL);
-    stops.forEach((p,i)=>{const col=(cat[p.cat]||{}).color||C.orange;L.marker([p.lat,p.lng],{zIndexOffset:500,icon:L.divIcon({className:'',html:this.pinHtml(col,40,false,false,String(i+1)),iconSize:[40,40],iconAnchor:[20,20]})})
+    stops.forEach((p,i)=>{const c=cat[p.cat],col=(c||{}).color||C.orange;L.marker([p.lat,p.lng],{zIndexOffset:500,icon:L.divIcon({className:'',html:this.pinHtml(col,40,false,false,null,c?emo(c):'📍',String(i+1)),iconSize:[40,40],iconAnchor:[20,20]})})
       .on('click',e=>{L.DomEvent.stopPropagation(e);this.toast((i+1)+'. '+p.name);}).addTo(m.planL);});
     if(pts.length)setTimeout(()=>this.fit(m,pts,{paddingTopLeft:[40,70],paddingBottomRight:[40,50],maxZoom:15.5}),30);}
   locate(after){if(!navigator.geolocation){this.setState({hereFailed:true,locFail:'This Browser Doesn\u2019t Share Location. Tap The Map Where You Are Instead.'});return;}
@@ -570,6 +616,14 @@ class Component extends DCLogic {
       mainMapRef:this.mainMapRef,exMapRef:this.exMapRef,planMapRef:this.planMapRef,
       statsText:`${s.places.length} ${s.places.length===1?'Spot':'Spots'} · ${vis} Visited`,mapChips,exTiles,exBoroughs,
       subBtnBg:s.showSubway?C.navy:'#fff',subBtnFg:s.showSubway?'#fff':C.navy,toggleSubway:()=>this.setState({showSubway:!s.showSubway}),
+      layersOpen:s.layersOpen,layersOn:s.showSubway||s.showBus||s.showBike,toggleLayers:()=>this.setState({layersOpen:!s.layersOpen}),closeLayers:()=>this.setState({layersOpen:false}),
+      layerRows:[{key:'sub',label:'Subway',sub:'Stations & Lines',on:s.showSubway,col:'#EE352E',onClick:()=>this.setState({showSubway:!s.showSubway})},
+        {key:'bus',label:'Bus Routes',sub:s.showBus&&s.busState==='loading'?'Loading…':s.showBus&&s.busState==='error'?'Not Available Right Now':'Local, Select Bus & Express',on:s.showBus,col:'#006CB7',onClick:()=>this.setState({showBus:!s.showBus,busState:s.busState==='error'?'':s.busState})},
+        {key:'bike',label:'Citi Bike',sub:s.showBike&&s.bikeState==='loading'?'Loading…':s.showBike&&s.bikeState==='error'?'Not Available Right Now':'Docks With Live Bike Counts',on:s.showBike,col:'#0A6FD6',onClick:()=>this.setState({showBike:!s.showBike,bikeState:s.bikeState==='error'?'':s.bikeState})}],
+      avatarSrc:s.auth==='signedIn'&&s.avatarV&&window.NYCSync&&NYCSync.currentUser()?NYCSync.avatarUrl(NYCSync.currentUser().id,s.avatarV):null,
+      avatarInitial:((window.NYCSync&&NYCSync.displayName())||s.syncEmail||'?').trim().charAt(0).toUpperCase()||'?',
+      avatarBusy:s.avatarBusy,avatarMsg:s.avatarMsg,hasAvatar:!!s.avatarV,
+      onAvatarFile:e=>{const f=e.target.files&&e.target.files[0];e.target.value='';this.pickAvatar(f);},removeAvatar:()=>this.removeAvatar(),
       locateMe:()=>{this.setState({tab:'map',selId:null,routeFor:null});if(s.here&&!s.locating&&this.maps&&!s.locFail){this.maps.main.map.flyTo(s.here,16,{duration:.6});}this.locate(ll=>this.maps&&this.maps.main.map.flyTo(ll,16,{duration:.7}));},
       locBg:s.locating?C.yellow:s.here?C.blue:'#fff',locFg:s.here&&!s.locating?'#fff':C.navy,
       locLine:!!locTitle,locTitle,locSub,locFailOpen:!!s.locFail&&s.tab==='map'&&!s.placing,locFailMsg:s.locFail||'',closeLocFail:()=>this.setState({locFail:null}),

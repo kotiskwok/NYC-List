@@ -65,6 +65,12 @@ const Logo = (big) => big ? html`
     <span style=${S('display:flex;align-items:center;gap:6px;font-size:19.5px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-.4px;color:#10183F;white-space:nowrap')}>Spotted In<span style=${S('display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:999px;background:#FFC425;color:#10183F;font-size:15px;letter-spacing:.5px')}>NYC</span></span>
   </div>`;
 
+// A round profile photo, or the person's initial when they have none (or it fails to load).
+const Avatar = (src, initial, px, bg, extra) => html`
+  <span style=${S(`position:relative;flex:none;width:${px}px;height:${px}px;border-radius:50%;overflow:hidden;background:${bg || '#1B3DB8'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(px * .42)}px;font-weight:900;${extra || ''}`)}>
+    <span aria-hidden="true">${initial}</span>
+    ${src && html`<img key=${src} src=${src} alt="" onError=${e => { e.currentTarget.style.display = 'none'; }} style=${S('position:absolute;inset:0;width:100%;height:100%;object-fit:cover')}/>`}
+  </span>`;
 const Bul = (b, i) => html`<span key=${i} style=${S(`width:20px;height:20px;border-radius:50%;background:${b.bg};color:${b.fg};font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center`)}>${b.t}</span>`;
 const H3 = (title, onClear, clearLabel, mt) => html`
   <div style=${S(`display:flex;align-items:baseline;justify-content:space-between;margin:${mt}`)}>
@@ -81,10 +87,10 @@ function MapScreen(v) {
     <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:500;display:${hide};flex-direction:column;gap:16px;pointer-events:none`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
         ${Logo(false)}
-        <button class="lg" onClick=${v.openAcct} aria-label=${v.syncOn ? 'Your Account: ' + v.syncLabel : v.statsText} style=${S(`${GL};display:flex;align-items:center;gap:8px;height:46px;padding:0 14px;border-radius:999px;color:#10183F;white-space:nowrap;pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>
-          <span style=${S('font-size:28px;font-weight:200;letter-spacing:-1px;line-height:1')}>${v.spotCount}</span>
-          <span style=${S('font-size:12px;font-weight:800;font-style:italic;color:#10183F')}>${v.spotCount === 1 ? 'Spot' : 'Spots'}</span>
-          ${v.syncOn && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${v.syncDot};box-shadow:0 0 0 3px ${v.syncDot}40`)}></span>`}
+        <button class="lg" onClick=${v.openAcct} aria-label=${(v.syncOn ? 'Your Account: ' + v.syncLabel + '. ' : '') + v.spotCount + (v.spotCount === 1 ? ' Spot To Try' : ' Spots To Try')} style=${S(`${GL};display:flex;align-items:center;gap:7px;height:52px;padding:0 ${v.syncOn ? 6 : 14}px 0 14px;border-radius:999px;color:#10183F;white-space:nowrap;pointer-events:auto;cursor:${v.syncOn ? 'pointer' : 'default'}`)}>
+          <span aria-hidden="true" style=${S('font-size:37px;font-weight:200;letter-spacing:-1.5px;line-height:.8')}>${v.spotCount}</span>
+          <span aria-hidden="true" style=${S('display:flex;flex-direction:column;font-size:13.5px;line-height:.98;font-weight:800;font-style:italic;color:#10183F')}><span>${v.spotCount === 1 ? 'Spot' : 'Spots'}</span><span>To Try</span></span>
+          ${v.syncOn && html`<span style=${S('position:relative;display:flex;margin-left:3px')}>${Avatar(v.avatarSrc, v.avatarInitial, 40, '#1B3DB8', 'border:2px solid #FFFFFF')}<span style=${S(`position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;background:${v.syncDot};border:2px solid #FFFFFF`)}></span></span>`}
         </button>
       </div>
       <nav aria-label="Categories" class="noscroll" style=${S('display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;pointer-events:auto')}>
@@ -94,9 +100,23 @@ function MapScreen(v) {
       </nav>
     </div>
     <div style=${S(`position:absolute;right:16px;bottom:${B(112)};z-index:600;display:${hide};flex-direction:column;gap:10px`)}>
-      <button class="lg" onClick=${v.toggleSubway} aria-label="Subway Layer" aria-pressed=${v.subBtnBg !== '#fff'} style=${S(`${sideBtn};${v.subBtnBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:#10183F;box-shadow:0 10px 26px rgba(16,24,63,.3)'};color:${v.subBtnBg === '#fff' ? '#10183F' : '#FFC425'}`)}>${Ico('M12 3l9 5-9 5-9-5z M3 13l9 5 9-5', 22)}</button>
+      <button class="lg" onClick=${v.toggleLayers} aria-label="Map Layers: Subway, Bus Routes, Citi Bike" aria-expanded=${v.layersOpen} style=${S(`${sideBtn};${v.layersOn ? 'border:1px solid rgba(255,255,255,.5);background:#10183F;box-shadow:0 10px 26px rgba(16,24,63,.3)' : GL};color:${v.layersOn ? '#FFC425' : '#10183F'}`)}>${Ico('M12 3l9 5-9 5-9-5z M3 13l9 5 9-5', 22)}</button>
       <button class="lg" onClick=${v.locateMe} aria-label="My Location" style=${S(`${sideBtn};${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 10px 26px rgba(16,24,63,.3)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg}`)}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg></button>
     </div>
+    ${v.layersOpen && !v.hasSel && html`
+    <div role="dialog" aria-label="Map Layers" class="lg" style=${S(`position:absolute;right:76px;bottom:${B(112)};z-index:700;width:236px;${GL};border-radius:26px;padding:8px;display:flex;flex-direction:column;gap:4px`)}>
+      <div style=${S('display:flex;align-items:center;justify-content:space-between;padding:6px 8px 4px')}>
+        <span style=${S('font-weight:900;font-style:italic;font-size:17px')}>Map Layers</span>
+        <button onClick=${v.closeLayers} aria-label="Close" style=${S('width:30px;height:30px;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:800;cursor:pointer')}>✕</button>
+      </div>
+      ${v.layerRows.map(r => html`
+      <button key=${r.key} onClick=${r.onClick} role="switch" aria-checked=${r.on} style=${S(`display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 10px;border-radius:18px;border:0;background:${r.on ? 'rgba(255,255,255,.85)' : 'transparent'};color:#10183F;text-align:left;cursor:pointer;box-shadow:${r.on ? '0 4px 12px rgba(16,24,63,.1)' : 'none'}`)}>
+        <span style=${S(`width:30px;height:30px;flex:none;border-radius:10px;background:${r.col};color:#fff;display:flex;align-items:center;justify-content:center`)}>${r.key === 'sub' ? Ico('M8 3h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z M5 10h14 M8 21l2-4 M16 21l-2-4', 17, '#fff', 2) : r.key === 'bus' ? Ico('M6 3h12a2 2 0 0 1 2 2v11H4V5a2 2 0 0 1 2-2z M4 10h16 M7 19v2 M17 19v2 M4 16v3h16v-3', 17, '#fff', 2) : Ico('M5.5 17.5a3.5 3.5 0 1 0 0-.01z M18.5 17.5a3.5 3.5 0 1 0 0-.01z M5.5 17.5L9 9h6l3.5 8.5 M9 9l3 8.5 M8 6h3', 17, '#fff', 2)}</span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}><span style=${S('font-weight:800;font-size:14px')}>${r.label}</span><span style=${S('font-size:11.5px;font-weight:600;color:#4A5275')}>${r.sub}</span></span>
+        <span aria-hidden="true" style=${S(`width:40px;height:24px;flex:none;border-radius:999px;background:${r.on ? '#1B3DB8' : 'rgba(16,24,63,.15)'};position:relative;transition:background .2s`)}><span style=${S(`position:absolute;top:2px;left:${r.on ? 18 : 2}px;width:20px;height:20px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(16,24,63,.3);transition:left .2s`)}></span></span>
+      </button>`)}
+      <div style=${S('padding:4px 10px 4px;font-size:10.5px;color:#6A7090')}>Bus routes: MTA via data.ny.gov · Citi Bike live data</div>
+    </div>`}
     ${v.locLine && html`
     <div class="lg" style=${S(`position:absolute;left:16px;right:76px;bottom:${B(116)};z-index:600;${GL};border-radius:18px;padding:8px 12px;display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>
       <span style=${S('font-size:12px;font-weight:800;color:#1B3DB8')}>${v.locTitle}</span><span style=${S('font-size:12px;font-weight:600;color:#3C4466;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.locSub}</span>
@@ -436,7 +456,7 @@ function ListsScreen(v) {
     <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:600;display:flex;flex-direction:column;gap:10px;pointer-events:none`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:8px')}>
         <button class="lg" onClick=${t.back} aria-label="All Lists" style=${S(`pointer-events:auto;width:46px;height:46px;border-radius:50%;${GL};color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico(BACK, 20, 'currentColor', 2.4)}</button>
-        ${(() => { const av = html`<span style=${S('display:flex')}>${t.avatars.map((a, i) => html`<span key=${a.key} style=${S(`width:32px;height:32px;${i ? 'margin-left:-10px;' : ''}border-radius:50%;background:${a.bg};color:#fff;border:2px solid #FFFFFF;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center`)}>${a.initial}</span>`)}</span>`;
+        ${(() => { const av = html`<span style=${S('display:flex')}>${t.avatars.map((a, i) => html`<span key=${a.key} style=${S('display:flex')}>${Avatar(a.src, a.initial, 32, a.bg, `${i ? 'margin-left:-10px;' : ''}border:2px solid #FFFFFF`)}</span>`)}</span>`;
           return t.isOwner ? html`<button class="lg" onClick=${t.openShare} style=${S(`pointer-events:auto;display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 14px;border-radius:999px;${GL};color:#10183F;font-size:13px;font-weight:800;cursor:pointer`)}>Share & Invite${av}</button>`
             : html`<div style=${S(`pointer-events:auto;display:flex;align-items:center;height:46px;padding:0 6px;border-radius:999px;${GL}`)}>${av}</div>`; })()}
       </div>
@@ -891,6 +911,20 @@ function AccountSheet(v) {
         <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:24px;color:#1B3DB8')}>Your Account</div>
         <button onClick=${v.closeAcct} style=${S('height:38px;padding:0 16px;border-radius:999px;border:0;background:#10183F;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>Done</button>
       </div>
+      <div style=${S(`${ROW};border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:14px`)}>
+        ${Avatar(v.avatarSrc, v.avatarInitial, 64, '#1B3DB8', 'box-shadow:0 6px 16px rgba(16,24,63,.18)')}
+        <div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:8px')}>
+          <span style=${S('font-weight:800;font-size:15px')}>Profile Photo</span>
+          <div style=${S('display:flex;gap:8px;flex-wrap:wrap')}>
+            <label class=${v.avatarBusy ? 'ai-busy' : ''} style=${S('display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:999px;background:#10183F;color:#fff;font-weight:800;font-size:13px;cursor:pointer')}>
+              ${v.avatarBusy ? 'Saving…' : v.hasAvatar ? 'Change Photo' : 'Add Photo'}
+              <input type="file" accept="image/*" onChange=${v.onAvatarFile} disabled=${v.avatarBusy} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')}/>
+            </label>
+            ${v.hasAvatar && !v.avatarBusy && html`<button onClick=${v.removeAvatar} style=${S('height:36px;padding:0 12px;border-radius:999px;border:1.5px solid rgba(16,24,63,.14);background:transparent;color:#10183F;font-weight:700;font-size:13px;cursor:pointer')}>Remove</button>`}
+          </div>
+        </div>
+      </div>
+      ${v.avatarMsg && html`<div role="status" style=${S('font-size:12.5px;font-weight:700;color:#E8242C;margin-top:-6px')}>${v.avatarMsg}</div>`}
       <div style=${S('background:#fff;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:6px')}>
         <span style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Signed In As</span>
         <span style=${S('font-weight:800;font-size:15px;word-break:break-all')}>${v.syncEmail}</span>
