@@ -338,6 +338,8 @@ Call save_places with the result.`, city) });
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
+  // GET ?probe=1: is video watching available (ffmpeg bundled, speech-to-text set up)? No sign-in needed; reveals nothing secret.
+  if (req.method === 'GET' && /[?&]probe=1/.test(req.url || '')) { let ff = false; try { ff = require('fs').existsSync(require('ffmpeg-static')); } catch (e) {} return send(res, 200, { ffmpeg: ff, speech: !!process.env.OPENAI_API_KEY }); }
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI Isn’t Set Up Yet — Add ANTHROPIC_API_KEY In Vercel.' });
 
