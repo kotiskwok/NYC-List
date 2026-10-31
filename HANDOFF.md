@@ -39,6 +39,9 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 - `data/city-data.js` (`window.CITY_DATA`): neighborhoods (OpenStreetMap place names grouped into regions; the nearest one is used for a spot) and rail stations with line colors: Singapore MRT/LRT (cheeaun/sgraildata), Hong Kong MTR and Toronto TTC lines 1/2/4/5/6 (OpenStreetMap, Oct 2026). Travel times use these like the NYC subway. Toronto streetcars and buses aren't included, so some trips show as walks.
 - Searches (Nominatim, Photon, Google), AI link reading, web search and video transcription all use the current city (`city` in the request; `CITIES`/`localize()` in `api/_shared.js`). Bus routes and Citi Bike are NYC only.
 - Saving a friend's spot that's in another city puts it on that city's map.
+- The picked city syncs with the account (`city` in the synced data); other devices follow when they sync.
+- Map layers per city (`CITIES[..].layers`): NYC subway, buses, Citi Bike · Singapore MRT, buses · Hong Kong MTR, buses, trams, ferries · Toronto subway/LRT, streetcars, buses, Bike Share Toronto. Route lines for the non-NYC layers come from OpenStreetMap through `/api/bus?city=&kind=bus|tram|ferry` (`api/_osmroutes.js`: one line per route number, joined and simplified; ~35 s to build, then cached a week at Vercel's CDN). Bike Share Toronto uses its public GBFS feed straight from the app.
+- Travel times also use Toronto streetcar stops and Hong Kong tram stops and ferry piers (`k:1` stops in `city-data.js`, with slower speeds `v` and longer waits `w` per line). Buses aren't used for travel times.
 
 **Explore tab ("Where To Today?")**
 - "Command Center + Deck" layout: a search bar (matches name, area, address and note), category chips, and a glass matches card (count, neighborhoods, a color bar by category, the price filter).
