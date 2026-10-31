@@ -32,11 +32,12 @@ const SITE = () => (NATIVE && window.NYC_CONFIG && NYC_CONFIG.siteUrl) || locati
 const API = p => (NATIVE ? SITE() : '') + p;
 
 // Options that were editable props in the design tool. Defaults match the design;
-// override with ?style=Minimal or ?tab=Explore|Plan (or #explore / #plan).
+// The map uses Apple Maps colors (?style=Colorful or ?style=Minimal for the old looks); ?tab=Explore|Plan (or #explore / #plan).
 const APP_PROPS = (() => {
   let q = null; try { q = new URLSearchParams(location.search); } catch (e) {}
   const h = (location.hash || '').slice(1).toLowerCase();
-  const style = q && /^minimal$/i.test(q.get('style') || '') ? 'Minimal' : 'Colorful';
+  const st = (q && q.get('style')) || '';
+  const style = /^minimal$/i.test(st) ? 'Minimal' : /^colorful$/i.test(st) ? 'Colorful' : 'Apple';
   const t = ((q && q.get('tab')) || h || '').toLowerCase();
   const startTab = t === 'explore' ? 'Explore' : t === 'plan' ? 'Plan' : 'Map';
   return { mapStyle: style, startTab };

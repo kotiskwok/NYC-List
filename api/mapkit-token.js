@@ -5,7 +5,7 @@
 //   MAPKIT_TEAM_ID      your 10-character Team ID (top right of the developer site)
 //   MAPKIT_KEY_ID       the key's 10-character Key ID
 //   MAPKIT_PRIVATE_KEY  the whole text of the downloaded AuthKey_XXXXXXXXXX.p8 file
-// Without them this answers 503 and the app keeps its own colorful map.
+// Without them this answers 503 and the app keeps its own map, drawn in Apple Maps colors.
 
 const crypto = require('crypto');
 const { cors, send } = require('./_shared');

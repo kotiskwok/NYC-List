@@ -19,9 +19,9 @@ const CAT_ICON={'☕':'M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z M16 9h2a2 2 0 0 
 const iconSvg=(em,px,col)=>CAT_ICON[em]?`<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CAT_ICON[em]}"/></svg>`:`<span style="font-size:${Math.round(px*.95)}px;line-height:1">${em}</span>`;
 const EMOJIS=['⭐','🍵','🧋','🍜','🍣','🍕','🌮','🥯','🍦','🍷','🍸','📚','🌿','🎨','🧘','🖼️'];
 const BOROUGHS=['Manhattan','Brooklyn','Queens','Bronx','Staten Island'];
-// Apple Maps (MapKit JS). Each map draws the colorful map first. Once /api/mapkit-token answers and MapKit loads,
+// Apple Maps (MapKit JS). Each map draws its own Apple-colored map first. Once /api/mapkit-token answers and MapKit loads,
 // the map swaps its base for Apple's map, drawn underneath Leaflet: pins, subway, routes and taps stay on Leaflet
-// and Apple's map follows every move and pinch. If Apple Maps isn't set up or fails, the colorful map stays.
+// and Apple's map follows every move and pinch. If Apple Maps isn't set up or fails, that Apple-colored map stays.
 const APPLE={state:'',cbs:[],fail:null};
 function appleMaps(cb){if(APPLE.state==='ok')return cb(true);if(APPLE.state==='off')return cb(false);APPLE.cbs.push(cb);if(APPLE.state)return;APPLE.state='loading';
   const done=ok=>{if(APPLE.state!=='loading')return;APPLE.state=ok?'ok':'off';const c=APPLE.cbs;APPLE.cbs=[];c.forEach(f=>{try{f(ok);}catch(e){console.error(e);}});};
@@ -36,7 +36,9 @@ function appleMaps(cb){if(APPLE.state==='ok')return cb(true);if(APPLE.state==='o
     document.head.appendChild(sc);});}
 const APPLE_PAD=96;
 const PAL={Colorful:{water:'#86C8EE',park:'#7FCB8F',air:'#D8D3C8',line:'rgba(255,255,255,.95)',boro:{Manhattan:'#FFE38F',Brooklyn:'#FFC09A',Queens:'#C4D0FF',Bronx:'#FFB5C9','Staten Island':'#D6C6F4'}},
- Minimal:{water:'#D3E4F0',park:'#CDE5C6',air:'#E6E2DA',line:'#E4DCCD',boro:{}}};
+ Minimal:{water:'#D3E4F0',park:'#CDE5C6',air:'#E6E2DA',line:'#E4DCCD',boro:{}},
+ // Apple: the app's own map drawn in Apple Maps colors. It shows while Apple's real map loads and if Apple Maps is ever unavailable.
+ Apple:{water:'#A6D1F0',park:'#C3E5B8',air:'#E4E1DA',line:'rgba(255,255,255,.9)',land:'#F4F2EE',boroLine:'rgba(120,118,112,.45)',boroW:1.2,label:'#6E6D69',boroLabel:'#5B5A57',boro:{}}};
 const RC={'1':'#EE352E','2':'#EE352E','3':'#EE352E','4':'#00933C','5':'#00933C','6':'#00933C','7':'#B933AD','A':'#0039A6','C':'#0039A6','E':'#0039A6','B':'#FF6319','D':'#FF6319','F':'#FF6319','M':'#FF6319','G':'#6CBE45','J':'#996633','Z':'#996633','L':'#A7A9AC','N':'#FCCC0A','Q':'#FCCC0A','R':'#FCCC0A','W':'#FCCC0A','S':'#808183','SIR':'#0039A6'};
 const bullet=r=>({t:r==='SIR'?'SI':r,bg:RC[r]||'#808183',fg:['N','Q','R','W'].includes(r)?C.navy:'#fff'});
 const r5=n=>Math.round(n*1e5)/1e5;
@@ -195,15 +197,15 @@ class Component extends DCLogic {
     m.appleDiv&&m.appleDiv.remove();m.apple=null;m.appleDiv=null;const o=m.appleOpt;map.options.zoomSnap=o.snap;map.options.zoomAnimation=o.anim;map._zoomAnimated=o.za;
     this.drawBase(m);this.addStreets(m);}
 
-  drawBase(m){const L=window.L,d=window.NYC_MAP,pal=PAL[this.props.mapStyle]||PAL.Colorful;if(m.apple)return;
+  drawBase(m){const L=window.L,d=window.NYC_MAP,pal=PAL[this.props.mapStyle]||PAL.Apple;if(m.apple)return;
     m.el.style.background=pal.water;m.base.clearLayers();m.labels.clearLayers();
-    d.hoods.forEach(h=>{L.polygon(h.p,{fillColor:h.t==='park'?pal.park:h.t==='air'?pal.air:(pal.boro[h.b]||'#FBF6EC'),fillOpacity:1,color:pal.line,weight:.8,interactive:false}).addTo(m.base);
+    d.hoods.forEach(h=>{L.polygon(h.p,{fillColor:h.t==='park'?pal.park:h.t==='air'?pal.air:(pal.boro[h.b]||pal.land||'#FBF6EC'),fillOpacity:1,color:pal.line,weight:.8,interactive:false}).addTo(m.base);
       if(h.t==='air')return;const park=h.t==='park';
       L.marker(h.c,{pane:h.a>0.0005||park?'hoodBig':'hoodSmall',interactive:false,keyboard:false,icon:L.divIcon({className:'',iconSize:[0,0],
-        html:`<div style="transform:translate(-50%,-50%);width:max-content;max-width:110px;text-align:center;font-family:Archivo,sans-serif;font-weight:800;font-size:10.5px;line-height:1.1;color:${park?'#14532D':'#10183F'};text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff">${h.n}</div>`})}).addTo(m.labels);});
-    d.boros.forEach(b=>{L.polygon(b.p,{fill:false,color:C.navy,weight:2.2,opacity:.9,interactive:false}).addTo(m.base);
+        html:`<div style="transform:translate(-50%,-50%);width:max-content;max-width:110px;text-align:center;font-family:Archivo,sans-serif;font-weight:800;font-size:10.5px;line-height:1.1;color:${park?'#14532D':(pal.label||'#10183F')};text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff">${h.n}</div>`})}).addTo(m.labels);});
+    d.boros.forEach(b=>{L.polygon(b.p,{fill:false,color:pal.boroLine||C.navy,weight:pal.boroW||2.2,opacity:.9,interactive:false}).addTo(m.base);
       L.marker(b.c,{pane:'boroLab',interactive:false,keyboard:false,icon:L.divIcon({className:'',iconSize:[0,0],
-        html:`<div style="transform:translate(-50%,-50%);white-space:nowrap;font-family:Archivo,sans-serif;font-weight:900;font-style:italic;font-stretch:100%;font-size:16px;color:#10183F;text-shadow:0 0 4px #fff,0 0 4px #fff">${b.b}</div>`})}).addTo(m.labels);});}
+        html:`<div style="transform:translate(-50%,-50%);white-space:nowrap;font-family:Archivo,sans-serif;font-weight:900;font-style:italic;font-stretch:100%;font-size:16px;color:${pal.boroLabel||'#10183F'};text-shadow:0 0 4px #fff,0 0 4px #fff">${b.b}</div>`})}).addTo(m.labels);});}
   addStreets(m){const L=window.L;if(m.apple||m.streets)return;if(!streetIndex()){setTimeout(()=>this.addStreets(m),400);return;}
     const Layer=L.GridLayer.extend({createTile(co){const t=document.createElement('canvas'),sz=this.getTileSize(),dpr=Math.min(2,window.devicePixelRatio||1);
       t.width=sz.x*dpr;t.height=sz.y*dpr;t.style.width=sz.x+'px';t.style.height=sz.y+'px';const ctx=t.getContext('2d');ctx.scale(dpr,dpr);

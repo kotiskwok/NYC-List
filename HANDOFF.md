@@ -14,7 +14,7 @@ Attach this file (and `nyc-list.zip`, or point Claude at the GitHub repo) to a n
 ### Screens and features
 
 **Map tab**
-- A custom illustrated NYC map: color-coded boroughs, neighborhood labels, street names when zoomed in, and an optional subway layer (station dots and route bullets).
+- Apple Maps as the base map, with an optional subway layer (station dots and route bullets). While Apple's map loads, or if it's ever unavailable, the app draws its own NYC map in Apple Maps colors (neighborhood labels, street names when zoomed in).
 - Each saved spot is a pin showing its category emoji. Category filter chips sit along the top.
 - A spot counter with a green "saved" sync dot. Tapping it opens **Your Account** (sync status, Sync Now, Sign Out).
 - A **My Location** button at the bottom right. If location fails, you can tap the map where you are.
@@ -82,7 +82,8 @@ New accounts start with an empty list. The 14 example spots only appear when no 
 - **Notes** show one sentence per line (`noteLines` in `view.js`; abbreviations like Ave., St., a.m. don't break a line).
 - **Layout follows the Claude Design canvas "NYC List Glass Redesign"** (Map, Place Card, Add A Spot, Shared List). Categories show line icons (`CAT_ICON` in `logic.js`, one per default category and per New Category emoji; others fall back to the emoji). Pins are frosted rings centered on the spot. Add A Spot has three modes (`addMode`: link, video, name) and found places are checkable (`aiSkip`). Lists have day tabs (`tripDay`) and estimated travel legs between stops. Delete Spot lives in Edit Spot.
 - **Font:** **Archivo** (Google Fonts). Headings are 900 weight and italic. All UI text uses Title Case On Every Word.
-- **Map palette "Colorful":** Manhattan `#FFE38F`, Brooklyn `#FFC09A`, Queens `#C4D0FF`, Bronx `#FFB5C9`, Staten Island `#D6C6F4`, water `#86C8EE`, parks `#7FCB8F`.
+- **Map palette "Apple" (default):** land `#F4F2EE`, water `#A6D1F0`, parks `#C3E5B8`, thin grey borough lines. The old "Colorful" palette (Manhattan `#FFE38F`, Brooklyn `#FFC09A`, Queens `#C4D0FF`, Bronx `#FFB5C9`, Staten Island `#D6C6F4`, water `#86C8EE`, parks `#7FCB8F`) is still available with `?style=Colorful`.
+- **V5 glass look (Oct 2026):** deep frosted panels (`GL`, `GL2`, `TILE`, `ROW` in `view.js`), cream backdrop with soft orange/pink/blue/yellow glows (`--bgfx`), headings with a bold italic first line and a thin second line, and a clear deep-glass tab bar (`GLX`) with a separate light glass + button (`GLX_LIGHT`).
 - **Source badge colors:** TikTok navy, Instagram `#D9367F`, Threads `#2B2B2B`, Google Maps green, Website blue, Added By Name grey.
 
 ---
