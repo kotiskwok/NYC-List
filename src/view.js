@@ -160,6 +160,26 @@ function MapScreen(v) {
 // Explore: the hybrid "Command Center + Deck" design. Search, category chips and a glass matches card on top
 // (filters live behind the navy button), then the matches as a swipeable deck: right adds to the plan, left skips,
 // a tap opens the spot. "See All" still opens the full results list and map.
+// What shows on the card while you swipe it: a tinted glow on the side it's heading, and a liquid-glass readout
+// (lens icon, mono label, and a bar that fills until the swipe will count). Full at the 90px threshold.
+function DeckStamp(p, kind) {
+  p = Math.min(1, p); if (p <= 0) return null;
+  const plan = kind === 'plan', col = plan ? '#1F9D6B' : '#E8242C', rgb = plan ? '31,157,107' : '232,36,44', armed = p >= 1;
+  return html`
+  <span aria-hidden="true" style=${S(`position:absolute;inset:0;pointer-events:none;opacity:${p};background:linear-gradient(${plan ? '90deg' : '270deg'},rgba(${rgb},.55),rgba(${rgb},.12) 45%,rgba(${rgb},0) 70%)`)}></span>
+  <span aria-hidden="true" style=${S(`position:absolute;top:50%;${plan ? 'left:18px' : 'right:18px'};transform:translateY(-50%) scale(${.82 + .18 * p}) rotate(${plan ? -6 : 6}deg);transform-origin:${plan ? 'left' : 'right'} center;opacity:${Math.min(1, p * 1.6)};display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:999px;${GLX};background:linear-gradient(150deg,rgba(255,255,255,.72),rgba(255,255,255,.34) 55%,rgba(255,255,255,.55));box-shadow:inset 0 1.5px 0 #fff,inset 0 -1px 1px rgba(255,255,255,.4),0 0 0 ${armed ? 3 : 0}px rgba(${rgb},.55),0 14px 30px rgba(${rgb},.35);transition:box-shadow .15s`)}>
+    <span style=${S('position:absolute;left:10%;right:10%;top:1px;height:45%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,0))')}></span>
+    <span style=${S(`position:relative;width:38px;height:38px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.5),${col} 62%);border:1px solid rgba(255,255,255,.7);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),0 4px 10px rgba(${rgb},.45)`)}>${Ico(plan ? 'M12 5v14M5 12h14' : 'M6 6l12 12M18 6L6 18', 18, '#fff', 3)}</span>
+    <span style=${S('position:relative;display:flex;flex-direction:column;gap:5px')}>
+      <span style=${S(`${MONO};font-size:13px;font-weight:800;letter-spacing:1.6px;color:#10183F;white-space:nowrap`)}>${plan ? 'ADD TO PLAN' : 'SKIP'}</span>
+      <span style=${S('display:flex;align-items:center;gap:6px')}>
+        <span style=${S('position:relative;width:64px;height:4px;border-radius:2px;background:rgba(16,24,63,.12);overflow:hidden')}><span style=${S(`position:absolute;left:0;top:0;bottom:0;width:${Math.round(p * 100)}%;border-radius:2px;background:${col}`)}></span></span>
+        <span style=${S(`${MONO};font-size:8.5px;font-weight:800;letter-spacing:1px;color:${armed ? col : '#4A5275'}`)}>${armed ? 'LET GO' : plan ? 'SWIPE →' : '← SWIPE'}</span>
+      </span>
+    </span>
+  </span>`;
+}
+
 function DeckCard(c, i, v) {
   const front = i === 0, dx = front ? v.deckDx : 0;
   const fly = front && v.deckFly ? (v.deckFly === 'right' ? 'translateX(130%) rotate(22deg)' : 'translateX(-130%) rotate(-22deg)') : '';
@@ -176,40 +196,21 @@ function DeckCard(c, i, v) {
       ${front && html`
       <span class="lg" style=${S(`position:absolute;left:10px;top:10px;${GLX};height:26px;padding:0 9px;border-radius:999px;display:flex;align-items:center;${MONO};font-size:10.5px;font-weight:700;color:#10183F;background:rgba(255,255,255,.55)`)}>${c.idx} / ${v.deckTotal}</span>
       ${(c.inPlan || c.visited) && html`<span style=${S(`position:absolute;right:10px;top:10px;height:26px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;${MONO};font-size:10.5px;font-weight:700;background:rgba(255,255,255,.85);color:${c.inPlan ? '#1B3DB8' : '#1F9D6B'}`)}>${c.inPlan ? 'IN PLAN ✓' : 'BEEN HERE ✓'}</span>`}
-      <span aria-hidden="true" style=${S(`position:absolute;left:16px;top:44px;transform:rotate(-14deg);padding:4px 12px;border-radius:12px;border:3px solid #1F9D6B;background:rgba(255,255,255,.9);color:#1F9D6B;font-size:24px;font-weight:900;font-style:italic;opacity:${Math.max(0, Math.min(1, (dx - 20) / 70)) + (v.deckFly === 'right' ? 1 : 0)}`)}>PLAN +</span>
-      <span aria-hidden="true" style=${S(`position:absolute;right:16px;top:44px;transform:rotate(14deg);padding:4px 12px;border-radius:12px;border:3px solid #E8242C;background:rgba(255,255,255,.9);color:#E8242C;font-size:24px;font-weight:900;font-style:italic;opacity:${Math.max(0, Math.min(1, (-dx - 20) / 70)) + (v.deckFly === 'left' ? 1 : 0)}`)}>SKIP</span>`}
+      ${DeckStamp(Math.max(0, Math.min(1, (dx - 20) / 70)) + (v.deckFly === 'right' ? 1 : 0), 'plan')}
+      ${DeckStamp(Math.max(0, Math.min(1, (-dx - 20) / 70)) + (v.deckFly === 'left' ? 1 : 0), 'skip')}`}
     </div>
     <div style=${S(`display:flex;align-items:center;gap:8px;padding:10px 4px 2px 8px;min-height:52px;visibility:${front ? 'visible' : 'hidden'}`)}>
       <div style=${S('flex:1;min-width:0')}>
         <div style=${S('font-size:21px;letter-spacing:-.6px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900')}>${c.bold}</span> <span style=${S('font-weight:200')}>${c.light}</span></div>
         <div style=${S(`${MONO};font-size:10px;font-weight:700;color:#4A5275;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${c.meta}</div>
       </div>
+      ${front && html`
+      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" class="lg" style=${S(`${GL};width:46px;height:46px;flex:none;border-radius:50%;color:#E8242C;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
+      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckPlan} aria-label="Add To Plan" style=${S('width:50px;height:50px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 2px 1px rgba(255,255,255,.55),0 10px 22px rgba(255,107,26,.38)')}>${Ico('M12 5v14M5 12h14', 20, 'currentColor', 2.8)}</button>`}
     </div>
   </div>`;
 }
 
-// The deck's controls: a liquid-glass dock under the cards. Skip (left swipe), Open (tap) and Plan (right swipe),
-// each a glass key with a tinted lens icon and a mono label; Plan is the lit orange key.
-const SPEC = 'position:absolute;left:8%;right:8%;top:1px;height:46%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));pointer-events:none';
-function DeckDock(v) {
-  const lens = (d, tint, col, lit) => html`<span style=${S(`position:relative;width:34px;height:34px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:${col};background:${lit ? 'radial-gradient(circle at 35% 28%,rgba(255,255,255,.55),rgba(255,255,255,.12) 62%)' : `radial-gradient(circle at 35% 28%,rgba(255,255,255,.95),${tint} 70%)`};border:1px solid ${lit ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.9)'};box-shadow:inset 0 1.5px 0 rgba(255,255,255,.9),inset 0 -2px 4px ${lit ? 'rgba(160,50,0,.25)' : 'rgba(16,24,63,.08)'},0 3px 8px ${lit ? 'rgba(150,40,0,.25)' : 'rgba(16,24,63,.1)'}`)}>${Ico(d, 16, 'currentColor', 2.8)}</span>`;
-  const label = (t, k, col, kcol) => html`<span style=${S('display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1')}><span style=${S(`${MONO};font-size:11.5px;font-weight:800;letter-spacing:1.4px;color:${col}`)}>${t}</span><span style=${S(`${MONO};font-size:8.5px;font-weight:700;letter-spacing:1px;color:${kcol}`)}>${k}</span></span>`;
-  const key = 'position:relative;overflow:hidden;height:54px;border-radius:999px;display:flex;align-items:center;gap:9px;padding:0 14px 0 9px;cursor:pointer;font-family:inherit';
-  return html`
-  <div class="lg" role="group" aria-label="Deck Controls" style=${S(`position:relative;margin:2px 0 0;padding:6px;border-radius:999px;${GLX};background:linear-gradient(150deg,rgba(255,255,255,.62),rgba(255,255,255,.22) 55%,rgba(255,255,255,.42));display:grid;grid-template-columns:1fr auto 1.15fr;gap:6px`)}>
-    <span aria-hidden="true" style=${S(SPEC)}></span>
-    <button onClick=${v.deckSkip} aria-label="Skip" class="press" style=${S(`${key};border:1px solid rgba(255,255,255,.9);background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,255,255,.34));box-shadow:inset 0 1.5px 0 #fff,inset 0 -1px 0 rgba(16,24,63,.05),0 6px 16px rgba(16,24,63,.08)`)}>
-      ${lens('M6 6l12 12M18 6L6 18', 'rgba(232,36,44,.22)', '#E8242C')}${label('SKIP', '← SWIPE', '#10183F', '#E8242C')}
-    </button>
-    <button onClick=${v.deckOpen} aria-label="Open This Spot" class="press" style=${S(`${key};padding:0 9px;border:1px solid rgba(255,255,255,.9);background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,255,255,.34));box-shadow:inset 0 1.5px 0 #fff,0 6px 16px rgba(16,24,63,.08)`)}>
-      ${lens(ARROW_NE, 'rgba(27,61,184,.2)', '#1B3DB8')}
-    </button>
-    <button onClick=${v.deckPlan} aria-label="Add To Plan" class="press" style=${S(`${key};justify-content:space-between;padding:0 9px 0 16px;border:1px solid rgba(255,255,255,.6);background:linear-gradient(160deg,rgba(255,170,110,.96),rgba(255,107,26,.92) 55%,rgba(232,86,26,.95));box-shadow:inset 0 1.5px 0 rgba(255,255,255,.65),inset 0 -2px 6px rgba(150,40,0,.25),0 10px 24px rgba(255,107,26,.38)`)}>
-      <span aria-hidden="true" style=${S(SPEC + ';opacity:.55')}></span>
-      ${label('PLAN', 'SWIPE →', '#fff', 'rgba(255,255,255,.82)')}${lens('M12 5v14M5 12h14', '', '#fff', true)}
-    </button>
-  </div>`;
-}
 
 function ExploreScreen(v) {
   const mono = (t, col, extra) => html`<span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:${col || '#4A5275'};${extra || ''}`)}>${t}</span>`;
@@ -289,7 +290,7 @@ function ExploreScreen(v) {
             : v.deckDone ? endCard('That’s All', v.deckTotal, 'You went through every match. Shuffle for a new order, or see them all at once.', [pill('See All', v.showResults), pill('Shuffle Again', v.deckShuffle, true)])
             : v.deckCards.map((c, i) => DeckCard(c, i, v)).reverse()}
         </div>
-        ${!v.deckEmpty && !v.deckDone && DeckDock(v)}
+        ${!v.deckEmpty && !v.deckDone && html`<div style=${S('display:flex;justify-content:center;gap:22px;padding-top:6px')}>${mono('← SKIP', '#E8242C')}${mono('TAP TO OPEN', '#1B3DB8')}${mono('PLAN →', '#1F9D6B')}</div>`}
       </div>
     </div>
     <div style=${S(`position:absolute;inset:0;display:${v.exResDisplay};flex-direction:column`)}>
