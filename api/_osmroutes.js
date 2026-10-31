@@ -3,6 +3,8 @@
 // OSM keeps each route as a relation of road pieces ("ways"). This keeps one relation per route number,
 // joins its pieces into whole lines, simplifies them and packs each as [lat0, lng0, dLat, dLng, …] in 1e-5 degrees,
 // the same shape as /api/bus for NYC: [{ n: route number, t: kind, c: color, l: name, s: [lines] }].
+// Building takes ~35 s per layer (too long for a Vercel function), so scripts/build-routes.js runs it in a GitHub Action
+// and saves the results to data/routes/<city>-<kind>.json, which the app loads directly.
 
 const BOX = { sg: [1.2, 103.6, 1.48, 104.05], hk: [22.15, 113.82, 22.57, 114.45], to: [43.58, -79.64, 43.86, -79.11] };
 // Which relations make up each layer.
@@ -105,14 +107,15 @@ function process(d, city, kind) {
   return routes.sort((a, b) => a.n.localeCompare(b.n, 'en', { numeric: true }));
 }
 
-async function build(city, kind) {
+async function build(city, kind, opt) {
+  const wait = (opt && opt.timeout) || 52000, qt = Math.round(wait / 1000) - 2;
   const f = FILTER[city + ':' + kind], b = BOX[city];
   if (!f || !b) return null;
-  const q = `[out:json][timeout:50];rel${f}(${b.join(',')});out body;way(r);out skel geom qt;`;
+  const q = `[out:json][timeout:${qt}];rel${f}(${b.join(',')});out body;way(r);out skel geom qt;`;
   let last = null;
   for (const url of MIRRORS) {
     try {
-      const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 52000);
+      const ac = new AbortController(), timer = setTimeout(() => ac.abort(), wait);
       const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'SpottedIn/1.0 (nyc-lovat.vercel.app)' }, signal: ac.signal });
       const txt = await r.text(); clearTimeout(timer);
       if (txt[0] !== '{') { last = new Error('overpass ' + r.status); continue; }
@@ -124,4 +127,4 @@ async function build(city, kind) {
   throw last || new Error('overpass');
 }
 
-module.exports = { build, process, FILTER };
+module.exports = { build, process, FILTER, BOX };

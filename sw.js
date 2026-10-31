@@ -1,7 +1,7 @@
 // Offline support: map data and libraries come from the cache first (they rarely change);
 // the page, app code and config always try the network first so updates arrive right away.
 // Requests to other sites (Supabase, Google Maps, fonts) are never touched.
-const CACHE = 'nyc-list-v32';
+const CACHE = 'nyc-list-v33';
 const CORE = ['/', '/index.html', '/config.js', '/manifest.webmanifest',
   '/src/runtime.js', '/src/native.js', '/src/sync.js', '/src/video.js', '/src/logic.js', '/src/lists.js', '/src/view.js',
   '/vendor/react.production.min.js', '/vendor/react-dom.production.min.js', '/vendor/htm.umd.js',
@@ -17,7 +17,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return;
-  const cacheFirst = url.pathname.startsWith('/data/') || url.pathname.startsWith('/vendor/') || url.pathname.startsWith('/icons/');
+  const cacheFirst = (url.pathname.startsWith('/data/') && !url.pathname.startsWith('/data/routes/')) || url.pathname.startsWith('/vendor/') || url.pathname.startsWith('/icons/');
   if (cacheFirst) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
       const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res;

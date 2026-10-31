@@ -68,26 +68,9 @@ async function build() {
   }).filter(r => r.s.length);
 }
 
-// Other cities and kinds (?city=sg|hk|to&kind=bus|tram|ferry) come from OpenStreetMap, see _osmroutes.js.
-const OSM = require('./_osmroutes');
-const memoOsm = {};
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
-  const url = new URL(req.url, 'http://x'), city = url.searchParams.get('city') || 'nyc', kind = url.searchParams.get('kind') || 'bus';
-  if (city !== 'nyc') {
-    if (!OSM.FILTER[city + ':' + kind]) return send(res, 400, { error: 'Unknown Layer.' });
-    try {
-      const k = city + ':' + kind, m = memoOsm[k];
-      if (!m || Date.now() - m.at > 864e5) memoOsm[k] = { at: Date.now(), data: await OSM.build(city, kind) };
-      res.statusCode = 200;
-      res.setHeader('content-type', 'application/json');
-      res.setHeader('cache-control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800');
-      return res.end(JSON.stringify(memoOsm[k].data));
-    } catch (e) {
-      return send(res, 502, { error: 'Routes Aren’t Available Right Now.' });
-    }
-  }
   try {
     if (!memo || Date.now() - memoAt > 864e5) { memo = await build(); memoAt = Date.now(); }
     // send() marks answers no-store, so this one is written by hand to let the CDN cache it.

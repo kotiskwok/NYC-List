@@ -63,8 +63,9 @@ const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&i
 // Map layers you turned on (subway, bus routes, Citi Bike) are remembered on this device.
 const LAYERS=(()=>{try{return JSON.parse(localStorage.getItem('nycList.layers'))||{};}catch(e){return {};}})();
 const saveLayers=o=>{try{localStorage.setItem('nycList.layers',JSON.stringify(o));}catch(e){}};
-// Route lines for the map layers, per city and kind: NYC buses from MTA data, the rest from OpenStreetMap (both via /api/bus).
-const RT={};const loadRoutes=(city,kind)=>{const k=city+':'+kind;return RT[k]||(RT[k]=fetch(API('/api/bus'+(city==='nyc'?'':'?city='+city+'&kind='+kind))).then(r=>r.ok?r.json():null).then(d=>Array.isArray(d)&&d.length?d:(delete RT[k],null)).catch(()=>(delete RT[k],null)));};
+// Route lines for the map layers, per city and kind: NYC buses from MTA data (/api/bus); the rest are OpenStreetMap files
+// built by a GitHub Action (scripts/build-routes.js) into data/routes/<city>-<kind>.json.
+const RT={};const loadRoutes=(city,kind)=>{const k=city+':'+kind;return RT[k]||(RT[k]=fetch(city==='nyc'?API('/api/bus'):API('/data/routes/'+city+'-'+kind+'.json')).then(r=>r.ok?r.json():null).then(d=>Array.isArray(d)&&d.length?d:(delete RT[k],null)).catch(()=>(delete RT[k],null)));};
 // Bike share GBFS feeds (public, open to browsers): Citi Bike in NYC, Bike Share Toronto. Where the docks are (fetched once) and live counts.
 const BIKES={};const bikeOf=()=>BIKES[CUR.id]||(BIKES[CUR.id]={info:null,status:{},at:0,p:null});
 const loadBikes=fresh=>{const BIKE=bikeOf(),cfg=CUR.bike;if(!cfg)return Promise.resolve(false);if(BIKE.p)return BIKE.p;if(BIKE.info&&!fresh&&Date.now()-BIKE.at<60000)return Promise.resolve(true);
