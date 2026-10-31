@@ -251,7 +251,7 @@ async function watchVideo(url, sec) {
   const frames = [];
   let audio = buf.length <= 24e6 ? { data: buf, type: 'video/mp4', name: 'clip.mp4' } : null;
   if (ff) {
-    const n = 6, d = sec > 1 ? sec : 30;
+    const d = sec > 1 ? sec : 30, n = Math.max(6, Math.min(12, Math.round(d / 5)));   // about one frame every 5 seconds
     await Promise.all([
       run(['-y', '-i', mp4, '-vf', `fps=${(n / d).toFixed(4)},scale=512:-2`, '-frames:v', String(n), '-q:v', '5', path.join(dir, 'f%02d.jpg')]),
       run(['-y', '-i', mp4, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '48k', path.join(dir, 'a.mp3')])
