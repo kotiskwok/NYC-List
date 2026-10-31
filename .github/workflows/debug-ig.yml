@@ -1,0 +1,11 @@
+name: Debug Instagram post
+on: { workflow_dispatch: { inputs: { code: { required: true }, kind: { default: reel } } } }
+jobs:
+  look:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/debug-ig.js "${{ inputs.code }}" "${{ inputs.kind }}"
