@@ -280,7 +280,7 @@ The App Store version is the same website wrapped with Capacitor 8 in `native/`.
 - **Server-side fetches to Google:** request as a phone or a plain client, not desktop Chrome (see Google Maps above).
 
 ### App icon
-- Design "E2a" (Oct 2026): SPOTTED with a map pin as the O (yellow, stacked red-orange shadow) over a navy pill with a you-are-here dot and an upright yellow "in", on the app blue. Source: `native/design/app-icon.html` (open it in a browser; the options canvas lives in the claude.ai artifact "Spotted In Icon Options"). Files: `icons/` (192, 512, maskable 512 at 80%, apple-touch 180) and `native/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` (1024, no alpha).
+- Design "E2a" (Oct 2026): SPOTTED with a map pin as the O (yellow, stacked red-orange shadow) over a navy pill with a you-are-here dot and an upright yellow "in", on the app blue. Source: `native/design/app-icon.html` (open it in a browser; the options canvas lives in the claude.ai artifact "Spotted In Icon Options"). In-app logo: `Logo()` / `Wordmark` / `InPill` in `view.js` (sign-in screen). Launch splash: `Splash.imageset` (2732², logo at 1.4×). Files: `icons/` (192, 512, maskable 512 at 80%, apple-touch 180) and `native/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` (1024, no alpha).
 
 ### Build 5 additions
 - **Swipe stamps** (`DeckStamp(p, kind)` in `view.js`): while a deck card is dragged, a tinted glow on that side plus a "Colour Wash": the card floods green or red from that side, a big Plan / Skip slides in, and a light bar on the edge fills to the 90 px threshold (then LET GO ✓). The card's own Skip and + buttons are unchanged. (Build 6.)

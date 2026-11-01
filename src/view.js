@@ -53,16 +53,20 @@ const noteLines = txt => {
 };
 const Note = (txt, extra) => html`<div style=${S(`display:flex;flex-direction:column;gap:3px;${extra || ''}`)}>${noteLines(txt).map((l, i) => html`<span key=${i}>${l}</span>`)}</div>`;
 
-// The Spotted In wordmark, poster style like the app icon: chunky yellow SPOTTED with a stacked
-// red-orange shadow and a yellow "in NYC" label. On the map it sits on a blue sign so it stays readable.
+// The Spotted In logo (design "E2a", same as the app icon): SPOTTED in chunky yellow with a stacked red-orange
+// shadow and a map pin for the O, over a navy "in" pill with a you-are-here dot. Logo(true) is the big one
+// (sign-in screen); Logo() a compact glass badge.
 const stackShadow = (n, step) => Array.from({ length: n }, (_, i) => `${(i + 1) * step}px ${(i + 1) * step}px 0 #E5402B`).join(',');
+const PIN_D = 'M50 148 C50 148 6 92 6 50 A44 44 0 1 1 94 50 C94 92 50 148 50 148 Z';
+const PinO = (h, step) => html`<svg width=${Math.round(h * 0.635)} height=${h} viewBox="0 0 100 150" aria-hidden="true" style=${S(`overflow:visible;flex:none;margin:0 ${Math.max(1, h / 52)}px ${Math.max(1, h / 52)}px`)}><path d=${PIN_D} fill="#E5402B" transform=${`translate(${step * 4 * 150 / h} ${step * 4 * 150 / h})`}></path><path d=${PIN_D} fill="#FFC425"></path><circle cx="50" cy="50" r="19" fill="#1B3DB8"></circle></svg>`;
+const Wordmark = (px, step) => html`<span style=${S(`display:flex;align-items:flex-end;color:#FFC425;font-weight:900;font-stretch:72%;font-size:${px}px;line-height:.86;letter-spacing:-.01em;white-space:nowrap;text-shadow:${stackShadow(4, step)}`)}><span>SP</span>${PinO(Math.round(px * 0.88), step)}<span>TTED</span></span>`;
+const InPill = (px) => html`<span style=${S(`display:inline-flex;align-items:center;gap:${Math.round(px * .27)}px;background:#10183F;color:#FFC425;border-radius:999px;padding:${Math.round(px * .13)}px ${Math.round(px * .6)}px ${Math.round(px * .2)}px ${Math.round(px * .37)}px;font-weight:900;font-stretch:90%;font-size:${px}px;line-height:1;box-shadow:inset 0 2px 0 rgba(255,255,255,.18)`)}><span aria-hidden="true" style=${S(`width:${Math.round(px * .57)}px;height:${Math.round(px * .57)}px;margin-top:${Math.round(px * .1)}px;border-radius:50%;background:rgba(229,64,43,.35);display:flex;align-items:center;justify-content:center`)}><span style=${S(`width:${Math.round(px * .3)}px;height:${Math.round(px * .3)}px;border-radius:50%;background:#E5402B;border:${Math.max(2, Math.round(px * .05))}px solid #FFFFFF;box-sizing:border-box`)}></span></span>in</span>`;
 const Logo = (big) => big ? html`
-  <div aria-label="Spotted In NYC" role="img" style=${S('display:flex;flex-direction:column;align-items:center;flex:none;pointer-events:auto')}>
-    <span style=${S(`color:#FFC425;font-weight:900;font-stretch:72%;font-size:54px;line-height:.9;letter-spacing:-.005em;white-space:nowrap;text-shadow:${stackShadow(5, 1.2)}`)}>SPOTTED</span>
-    <span style=${S('margin-top:8px;background:#FFC425;color:#1B3DB8;border-radius:7px;padding:3px 12px 4px;font-weight:900;font-style:italic;font-stretch:90%;font-size:20px;line-height:1.05;white-space:nowrap')}>in NYC</span>
+  <div aria-label="Spotted In" role="img" style=${S('display:flex;flex-direction:column;align-items:center;gap:16px;flex:none;pointer-events:auto')}>
+    ${Wordmark(56, 1.2)}${InPill(28)}
   </div>` : html`
-  <div class="lg" aria-label="Spotted In NYC" role="img" style=${S(`${GL};display:flex;align-items:center;flex:none;pointer-events:auto;border-radius:999px;padding:7px 7px 7px 14px`)}>
-    <span style=${S('display:flex;align-items:center;gap:6px;font-size:19.5px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-.4px;color:#10183F;white-space:nowrap')}>Spotted In<span style=${S('display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:999px;background:#FFC425;color:#10183F;font-size:15px;letter-spacing:.5px')}>NYC</span></span>
+  <div class="lg" aria-label="Spotted In" role="img" style=${S(`${GL};display:flex;align-items:center;gap:8px;flex:none;pointer-events:auto;border-radius:999px;padding:7px 7px 7px 14px;background:#1B3DB8`)}>
+    ${Wordmark(22, .6)}${InPill(14)}
   </div>`;
 
 // A round profile photo, or the person's initial when they have none (or it fails to load).
