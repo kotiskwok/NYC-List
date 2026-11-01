@@ -195,7 +195,7 @@ class Component extends DCLogic {
     this.setState({places:all.filter(p=>cityOf(p)===id),otherPlaces:all.filter(p=>cityOf(p)!==id),cityMeta:cm,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},city:id,cityOpen:false,
       selId:null,routeFor:null,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',exStage:'pick',placing:false,layersOpen:false,obRes:[],obHome:null,obMsg:'',busState:'',tramState:'',ferryState:'',bikeState:''},()=>this.cityMoved());
     this.toast('Welcome To '+CUR.name+' '+CUR.emoji);}
-  cityMoved(){if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip')m.map.setMaxBounds(CUR.bounds);m.map.setView(CUR.center,12,{animate:false});}catch(e){}
+  cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip')m.map.setMaxBounds(CUR.bounds);m.map.setView(CUR.center,12,{animate:false});}catch(e){}
       if(m.subway){const on=m.map.hasLayer(m.subway);m.subway.remove();this.buildSubway(m);if(on)m.subway.addTo(m.map);}
       if(!m.apple)this.drawBase(m);if(m.streets)try{m.streets.redraw();}catch(e){}m.sig='';m.ids='';m.psig=null;});
     this.allMaps().forEach(m=>this.fillLayers(m));this.syncMaps();setTimeout(()=>this.refreshVisible(),60);}
@@ -205,7 +205,7 @@ class Component extends DCLogic {
   takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;if(this._shareQ&&this._shareQ.length)setTimeout(()=>this.toast(this._shareQ.length+' More Shared '+(this._shareQ.length===1?'Link':'Links')+' Waiting'),900);
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link Added — Tap ✨ Fill From Link To Read It.'});else this.aiAuto(u,true);}},400);}
-  componentDidMount(){this._on=true;fetch(API('/api/photo?probe=1'),{cache:'no-store'}).then(r=>{if(r.status===204&&this._on){GPHOTO.on=true;this.setState({gphoto:true});}}).catch(()=>{});APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
+  componentDidMount(){this._on=true;window.NYCNative&&NYCNative.setCity(CUR.short);fetch(API('/api/photo?probe=1'),{cache:'no-store'}).then(r=>{if(r.status===204&&this._on){GPHOTO.on=true;this.setState({gphoto:true});}}).catch(()=>{});APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
     window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;

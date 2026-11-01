@@ -2,7 +2,7 @@
 // saved from the share sheet. Does nothing on the website.
 "use strict";
 const NYCNative = (() => {
-  if (!NATIVE) return { tap() {} };
+  if (!NATIVE) return { tap() {}, setCity() {} };
   const C = window.Capacitor;
   const plug = name => (C.Plugins && C.Plugins[name]) || (C.registerPlugin && C.registerPlugin(name));
   const Geo = plug('Geolocation'), Share = plug('Share'), App = plug('App'), Haptics = plug('Haptics'), StatusBar = plug('StatusBar'), Inbox = plug('AppGroup');
@@ -56,6 +56,10 @@ const NYCNative = (() => {
   }
   window.addEventListener('load', () => setTimeout(takeInbox, 600));
 
-  return { tap(style) { try { Haptics && Haptics.impact({ style: style || 'LIGHT' }); } catch (e) {} } };
+  return {
+    tap(style) { try { Haptics && Haptics.impact({ style: style || 'LIGHT' }); } catch (e) {} },
+    // Tells the share card which city's map new spots go to.
+    setCity(short) { try { Inbox && Inbox.setCity && Inbox.setCity({ city: short }); } catch (e) {} }
+  };
 })();
 window.NYCNative = NYCNative;

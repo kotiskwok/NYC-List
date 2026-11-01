@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 class ShareViewController: UIViewController {
     private let suite = "group.com.kotiskwok.nyclist"
     private let key = "pendingLinks"
+    private let cityKey = "currentCity"   // written by the app (AppGroupPlugin.setCity)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,10 +27,22 @@ class ShareViewController: UIViewController {
         defaults?.set(links, forKey: key)
     }
 
+    /// Undo: take the link back out of the inbox before the app picks it up.
+    private func remove(_ link: String) {
+        let defaults = UserDefaults(suiteName: suite)
+        let links = (defaults?.stringArray(forKey: key) ?? []).filter { $0 != link }
+        defaults?.set(links, forKey: key)
+    }
+
     private func show(saved: Bool, link: String) {
-        let card = ShareCard(saved: saved, link: link) { [weak self] in
+        let city = UserDefaults(suiteName: suite)?.string(forKey: cityKey) ?? ""
+        let close: () -> Void = { [weak self] in
             self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
         }
+        let card = ShareCard(saved: saved, link: link, city: city, done: close, undo: { [weak self] in
+            self?.remove(link)
+            close()
+        })
         let host = UIHostingController(rootView: card)
         host.view.backgroundColor = .clear
         addChild(host)
@@ -72,149 +85,161 @@ class ShareViewController: UIViewController {
 
 fileprivate func rgb(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(red: r / 255, green: g / 255, blue: b / 255) }
 
-// The card shown after "Share → Spotted In": the app's look (blue + yellow + red-orange, the pin-O SPOTTED
-// logo and navy "in" pill, frosted glass, mono labels, orange Done button). iOS 15+ APIs only.
-private struct ShareCard: View {
+/// Design "C1 · Ticket Toast": a dark liquid-glass ticket that drops in at the top of the screen. A blue stub on
+/// the left (yellow pin with a check, SAVED), a dashed tear line, then the title, FROM (where the link came from)
+/// and TO (My Map · the app's city), with Undo and a yellow Done. It closes by itself after a few seconds.
+/// iOS 15+ APIs only.
+struct ShareCard: View {
     let saved: Bool
     let link: String
+    let city: String
     let done: () -> Void
+    let undo: () -> Void
+    var preview = false   // design previews only: show the ticket without the drop-in animation
+
+    @State private var shown = false
+    @State private var closing = false
 
     private let blue = rgb(27, 61, 184)
     private let navy = rgb(16, 24, 63)
     private let yellow = rgb(255, 196, 37)
     private let red = rgb(229, 64, 43)
-    private let orange = rgb(255, 107, 26)
-    private let green = rgb(31, 157, 107)
-    private let cream = rgb(255, 243, 223)
-    private let mono = Font.system(size: 11, weight: .bold, design: .monospaced)
+    private let mono9 = Font.system(size: 9.5, weight: .bold, design: .monospaced)
 
     /// Where the link is from, like the app's source badges.
-    private var source: (label: String, color: Color) {
-        let host = URL(string: link)?.host?.lowercased() ?? ""
-        if host.contains("tiktok") { return ("TIKTOK", navy) }
-        if host.contains("instagram") || host.contains("instagr.am") { return ("INSTAGRAM", rgb(217, 54, 127)) }
-        if host.contains("threads") { return ("THREADS", rgb(43, 43, 43)) }
-        if host.contains("goo.gl") || host.contains("google") { return ("GOOGLE MAPS", green) }
-        return ("WEBSITE", blue)
+    private var source: String {
+        let host = (URL(string: link)?.host?.lowercased() ?? "").replacingOccurrences(of: "www.", with: "")
+        if host.contains("tiktok") { return "TikTok" }
+        if host.contains("instagram") || host.contains("instagr.am") { return "Instagram" }
+        if host.contains("threads") { return "Threads" }
+        if host.contains("goo.gl") || host.contains("google") { return "Google Maps" }
+        return host.isEmpty ? "A Website" : host
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture { done() }
-            VStack(spacing: 16) {
-                Capsule().fill(navy.opacity(0.18)).frame(width: 40, height: 5)
-                logo
-                HStack(alignment: .center, spacing: 14) {
-                    lens
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(saved ? "SAVED · READY TO FILL IN" : "NOTHING TO SAVE")
-                            .font(mono).tracking(1.2).foregroundColor(saved ? green : red)
-                        Text(saved ? "Saved To Spotted In" : "No Link Found")
-                            .font(.system(size: 24, weight: .black)).italic()
-                            .foregroundColor(navy).lineLimit(1).minimumScaleFactor(0.7)
-                    }
-                    Spacer(minLength: 0)
-                }
-                Text(saved ? "Open Spotted In And AI Will Fill In The Spot For You To Check."
-                           : "Share A TikTok, Instagram, Threads Or Google Maps Post That Has A Link.")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(navy.opacity(0.75))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                if !link.isEmpty {
-                    HStack(spacing: 10) {
-                        Text(source.label).font(mono).tracking(1).foregroundColor(.white)
-                            .padding(.horizontal, 10).frame(height: 26)
-                            .background(source.color).clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                        Text(link).font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundColor(navy.opacity(0.6)).lineLimit(1).truncationMode(.middle)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(8)
-                    .background(Color.white.opacity(0.7))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(navy.opacity(0.08), lineWidth: 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                Button(action: done) {
-                    Text("Done")
-                        .font(.system(size: 19, weight: .black)).italic()
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity).frame(height: 54)
-                        .background(
-                            LinearGradient(colors: [rgbOrangeLight, orange], startPoint: .top, endPoint: .bottom)
-                        )
-                        .overlay(Capsule().stroke(Color.white.opacity(0.45), lineWidth: 1))
-                        .clipShape(Capsule())
-                        .shadow(color: orange.opacity(0.35), radius: 12, x: 0, y: 8)
-                }
-                .buttonStyle(.plain)
+        ZStack(alignment: .top) {
+            Color.black.opacity(shown || preview ? 0.12 : 0).ignoresSafeArea().onTapGesture { close(done) }
+            VStack(spacing: 10) {
+                ticket
+                Text(saved ? "CLOSES BY ITSELF IN A FEW SECONDS" : "TAP ANYWHERE TO CLOSE")
+                    .font(mono9).tracking(1.2).foregroundColor(.white.opacity(0.85))
+                    .shadow(color: navy.opacity(0.5), radius: 4, x: 0, y: 1)
             }
-            .padding(EdgeInsets(top: 10, leading: 20, bottom: 22, trailing: 20))
-            .background(
-                ZStack {
-                    Rectangle().fill(.ultraThinMaterial)
-                    LinearGradient(colors: [Color.white.opacity(0.86), cream.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                }
-            )
-            .overlay(RoundedRectangle(cornerRadius: 34, style: .continuous).stroke(Color.white.opacity(0.95), lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
-            .shadow(color: navy.opacity(0.25), radius: 30, x: 0, y: 12)
-            .padding(.horizontal, 10)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .offset(y: shown || preview ? 0 : -220)
+            .opacity(shown || preview ? 1 : 0)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { shown = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + (saved ? 3.2 : 4.5)) { close(done) }
         }
     }
 
-    private var rgbOrangeLight: Color { rgb(255, 150, 90) }
+    /// Slide the ticket back up, then finish.
+    private func close(_ then: @escaping () -> Void) {
+        if closing { return }
+        closing = true
+        withAnimation(.easeIn(duration: 0.22)) { shown = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) { then() }
+    }
 
-    /// The app logo: SPOTTED with a map pin for the O (yellow, stacked red-orange shadow) and a navy "in" pill,
-    /// on the app blue.
-    private var logo: some View {
-        HStack(spacing: 10) {
-            HStack(alignment: .bottom, spacing: 1) {
-                shadowed(Text("SP"))
-                ZStack {
-                    PinShape().fill(red).offset(x: 2.4, y: 2.4)
-                    PinShape().fill(yellow)
-                    Circle().fill(blue).frame(width: 9, height: 9).offset(y: -6.5)
+    private var ticket: some View {
+        HStack(spacing: 0) {
+            stub
+            DashedLine().stroke(Color.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5, 4]))
+                .frame(width: 2).padding(.vertical, 12)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(saved ? "Saved To Spotted In" : "No Link Found")
+                    .font(.system(size: 19, weight: .black)).italic()
+                    .foregroundColor(.white).lineLimit(1).minimumScaleFactor(0.75)
+                if saved {
+                    HStack(alignment: .top, spacing: 8) {
+                        field("FROM", source)
+                        field("TO", city.isEmpty ? "My Map" : "My Map · " + city)
+                    }
+                    HStack(spacing: 8) {
+                        pill("Undo", filled: false) { close(undo) }
+                        pill("Done", filled: true) { close(done) }
+                    }
+                } else {
+                    Text("Share A TikTok, Instagram, Threads Or Google Maps Post That Has A Link.")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                    pill("Done", filled: true) { close(done) }
                 }
-                .frame(width: 17, height: 27).padding(.bottom, 1)
-                shadowed(Text("TTED"))
             }
-            HStack(spacing: 6) {
-                ZStack {
-                    Circle().fill(red.opacity(0.35)).frame(width: 16, height: 16)
-                    Circle().fill(red).frame(width: 9, height: 9).overlay(Circle().stroke(Color.white, lineWidth: 1.5))
-                }
-                Text("in").font(.system(size: 16, weight: .black)).foregroundColor(yellow)
-            }
-            .padding(EdgeInsets(top: 3, leading: 8, bottom: 5, trailing: 12))
-            .background(navy).clipShape(Capsule())
+            .padding(EdgeInsets(top: 14, leading: 14, bottom: 12, trailing: 14))
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 16).frame(height: 50)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                LinearGradient(colors: [navy.opacity(0.78), navy.opacity(0.56)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(Color.white.opacity(0.22), lineWidth: 1))
+        .shadow(color: navy.opacity(0.45), radius: 24, x: 0, y: 14)
+        .environment(\.colorScheme, .dark)
+    }
+
+    /// The blue stub: a yellow pin with a check (or a red one with a cross) and SAVED.
+    private var stub: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                PinShape().fill(red).offset(x: 3, y: 3)
+                PinShape().fill(saved ? yellow : red.opacity(0.9))
+                Image(systemName: saved ? "checkmark" : "xmark")
+                    .font(.system(size: 13, weight: .black))
+                    .foregroundColor(saved ? blue : .white)
+                    .offset(y: -6)
+            }
+            .frame(width: 30, height: 45)
+            Text(saved ? "SAVED" : "NO LINK").font(mono9).tracking(1.4).foregroundColor(yellow)
+        }
+        .frame(width: 88)
+        .frame(maxHeight: .infinity)
         .background(blue)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 1))
     }
 
-    private func shadowed(_ t: Text) -> some View {
-        let f = Font.system(size: 30, weight: .black)
-        return ZStack {
-            ForEach(1..<4) { i in t.font(f).foregroundColor(red).offset(x: CGFloat(i) * 0.8, y: CGFloat(i) * 0.8) }
-            t.font(f).foregroundColor(yellow)
+    private func field(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(mono9).tracking(1.2).foregroundColor(.white.opacity(0.6))
+            Text(value).font(.system(size: 14, weight: .heavy)).foregroundColor(.white)
+                .lineLimit(1).minimumScaleFactor(0.8)
         }
-        .fixedSize()
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// A glass lens with a check (saved) or a cross (no link).
-    private var lens: some View {
-        let c = saved ? green : red
-        return ZStack {
-            Circle().fill(RadialGradient(colors: [Color.white.opacity(0.6), c], center: UnitPoint(x: 0.35, y: 0.28), startRadius: 1, endRadius: 30))
-            Circle().stroke(Color.white.opacity(0.8), lineWidth: 1)
-            Image(systemName: saved ? "checkmark" : "xmark").font(.system(size: 22, weight: .heavy)).foregroundColor(.white)
+    private func pill(_ title: String, filled: Bool, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: filled ? .black : .heavy))
+                .italicIf(filled)
+                .foregroundColor(filled ? navy : .white)
+                .frame(maxWidth: .infinity).frame(height: 38)
+                .background(Capsule().fill(filled ? yellow : Color.white.opacity(0.12)))
+                .overlay(Capsule().stroke(Color.white.opacity(filled ? 0.5 : 0.25), lineWidth: 1))
         }
-        .frame(width: 52, height: 52)
-        .shadow(color: c.opacity(0.4), radius: 8, x: 0, y: 5)
+        .buttonStyle(.plain)
+    }
+}
+
+private extension Text {
+    /// `.italic()` only when asked (iOS 15 has no italic(Bool)).
+    func italicIf(_ on: Bool) -> Text { on ? self.italic() : self }
+}
+
+/// A vertical dashed tear line.
+private struct DashedLine: Shape {
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: r.midX, y: r.minY))
+        p.addLine(to: CGPoint(x: r.midX, y: r.maxY))
+        return p
     }
 }
 

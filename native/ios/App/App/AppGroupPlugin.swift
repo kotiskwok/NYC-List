@@ -8,16 +8,25 @@ public class AppGroupPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "AppGroupPlugin"
     public let jsName = "AppGroup"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "takeLinks", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "takeLinks", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setCity", returnType: CAPPluginReturnPromise)
     ]
 
     static let suite = "group.com.kotiskwok.nyclist"
     static let key = "pendingLinks"
+    static let cityKey = "currentCity"
 
     @objc func takeLinks(_ call: CAPPluginCall) {
         let defaults = UserDefaults(suiteName: AppGroupPlugin.suite)
         let links = defaults?.stringArray(forKey: AppGroupPlugin.key) ?? []
         defaults?.removeObject(forKey: AppGroupPlugin.key)
         call.resolve(["links": links])
+    }
+
+    /// The city the map is set to ("NYC", "SG", "HKG", "TO"), so the share card can say "To My Map · NYC".
+    @objc func setCity(_ call: CAPPluginCall) {
+        let city = call.getString("city") ?? ""
+        UserDefaults(suiteName: AppGroupPlugin.suite)?.set(city, forKey: AppGroupPlugin.cityKey)
+        call.resolve()
     }
 }

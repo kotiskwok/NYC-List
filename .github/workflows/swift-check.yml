@@ -1,0 +1,17 @@
+name: Swift typecheck
+on: { workflow_dispatch: {} }
+permissions: { contents: write }
+jobs:
+  check:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p /tmp/r
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          { xcrun swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios15.0 native/ios/App/ShareExtension/ShareViewController.swift && echo TYPECHECK_OK; } > /tmp/err.txt 2>&1 || true
+          { echo 'import SwiftUI'; echo 'import AppKit'; sed -n '/^fileprivate func rgb/,$p' native/ios/App/ShareExtension/ShareViewController.swift; cat scripts/render-share.swift; } > /tmp/r/main.swift
+          (cd /tmp/r && swiftc -parse-as-library -o r main.swift && ./r) >> /tmp/err.txt 2>&1 || true
+          git config user.name "debug-bot"; git config user.email "debug-bot@users.noreply.github.com"
+          git checkout --orphan debug-out5 && git rm -rqf . && cp /tmp/err.txt err.txt && (cp /tmp/r/*.png . || true) && git add -A && git commit -qm out && git push -f origin debug-out5
