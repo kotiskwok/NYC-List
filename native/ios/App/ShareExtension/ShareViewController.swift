@@ -170,16 +170,14 @@ private struct ShareCard: View {
     /// on the app blue.
     private var logo: some View {
         HStack(spacing: 10) {
-            // The pin is capital height (0.71 × the 30pt font) and stands on the baseline, like an O.
-            HStack(alignment: .firstTextBaseline, spacing: 1) {
+            HStack(alignment: .bottom, spacing: 1) {
                 shadowed(Text("SP"))
                 ZStack {
                     PinShape().fill(red).offset(x: 2.4, y: 2.4)
                     PinShape().fill(yellow)
-                    Circle().fill(blue).frame(width: 5.5, height: 5.5).offset(y: -3.5)
+                    Circle().fill(blue).frame(width: 9, height: 9).offset(y: -6.5)
                 }
-                .frame(width: 14, height: 21)
-                .alignmentGuide(.firstTextBaseline) { d in d[.bottom] }
+                .frame(width: 17, height: 27).padding(.bottom, 1)
                 shadowed(Text("TTED"))
             }
             HStack(spacing: 6) {
@@ -226,11 +224,11 @@ private struct PinShape: Shape {
         let sx = r.width / 100, sy = r.height / 150
         func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: r.minX + x * sx, y: r.minY + y * sy) }
         var path = Path()
-        path.move(to: p(50, 150))
-        path.addCurve(to: p(6, 50), control1: p(50, 150), control2: p(6, 94))
+        path.move(to: p(50, 148))
+        path.addCurve(to: p(6, 50), control1: p(50, 148), control2: p(6, 92))
         path.addCurve(to: p(50, 6), control1: p(6, 25.7), control2: p(25.7, 6))     // top half of the pin's circle
         path.addCurve(to: p(94, 50), control1: p(74.3, 6), control2: p(94, 25.7))
-        path.addCurve(to: p(50, 150), control1: p(94, 94), control2: p(50, 150))
+        path.addCurve(to: p(50, 148), control1: p(94, 92), control2: p(50, 148))
         path.closeSubpath()
         return path
     }
