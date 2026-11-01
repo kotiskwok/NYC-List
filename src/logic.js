@@ -23,7 +23,7 @@ const BOROUGHS=['Manhattan','Brooklyn','Queens','Bronx','Staten Island'];
 // transit for travel times, search area, AI and photo lookups, plus that city's home and Route plan.
 // box = [south, west, north, east] for searches; bounds = how far the map can pan. Data for the others is in data/city-data.js.
 const CITIES={
-  nyc:{id:'nyc',name:'New York City',short:'NYC',emoji:'🗽',q:'New York',qc:'New York City',center:[40.722,-73.97],box:[40.49,-74.27,40.93,-73.68],bounds:[[40.42,-74.35],[40.98,-73.6]],regions:BOROUGHS,transit:'Subway',layerSub:'Stations & Lines',layers:['bus','bike'],busSub:'Local, Select Bus & Express',bike:{name:'Citi Bike',url:'https://gbfs.lyft.com/gbfs/2.3/bkn/en/',ext:'.json'}},
+  nyc:{id:'nyc',name:'New York City',short:'NYC',emoji:'🗽',q:'New York',qc:'New York City',center:[40.722,-73.97],box:[38.85,-79.8,45.05,-71.75],core:[40.49,-74.27,40.93,-73.68],bounds:[[38.3,-80.8],[45.6,-70.9]],minZ:6,regions:[...BOROUGHS,...((window.NYS||{}).regions||[])],transit:'Subway',layerSub:'Stations & Lines',layers:['bus','bike'],busSub:'Local, Select Bus & Express',bike:{name:'Citi Bike',url:'https://gbfs.lyft.com/gbfs/2.3/bkn/en/',ext:'.json'}},
   sg:{id:'sg',name:'Singapore',short:'SG',emoji:'🦁',q:'Singapore',qc:'Singapore',center:[1.3,103.84],box:[1.2,103.6,1.48,104.05],bounds:[[1.12,103.55],[1.52,104.12]],regions:['Central','East','North-East','North','West'],transit:'MRT',layerSub:'MRT & LRT Stations',layers:['bus'],busSub:'SBS, SMRT, Tower Transit & Go-Ahead'},
   hk:{id:'hk',name:'Hong Kong',short:'HKG',emoji:'🌃',q:'Hong Kong',qc:'Hong Kong',center:[22.3,114.17],box:[22.15,113.82,22.57,114.45],bounds:[[22.08,113.75],[22.62,114.5]],regions:['Hong Kong Island','Kowloon','New Territories','Lantau & Islands'],transit:'MTR',layerSub:'MTR Stations',layers:['bus','tram','ferry'],busSub:'KMB, Citybus, NLB & Minibus',tram:{label:'Trams',sub:'Ding Ding Lines On The Island',col:'#007F3D'},ferry:{label:'Ferries',sub:'Star Ferry & Outlying Islands',col:'#0B7BC1'}},
   to:{id:'to',name:'Toronto',short:'TO',emoji:'🍁',q:'Toronto',qc:'Toronto, Ontario, Canada',center:[43.66,-79.39],box:[43.58,-79.64,43.86,-79.11],bounds:[[43.5,-79.78],[43.92,-79.0]],regions:['Downtown','Midtown','East End','West End & York','North York','Scarborough','Etobicoke'],transit:'TTC',layerSub:'Subway & LRT Stations',layers:['tram','bus','bike'],busSub:'TTC Bus Routes',tram:{label:'Streetcars',sub:'TTC Streetcar Routes',col:'#DA251D'},bike:{name:'Bike Share Toronto',url:'https://toronto.publicbikesystem.net/customer/gbfs/v2/en/',ext:''}}};
@@ -31,7 +31,11 @@ const CITY_ORDER=['nyc','sg','hk','to'];
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
 const cityOf=p=>(p&&p.city&&CITIES[p.city])?p.city:'nyc';
 const CDATA=()=>(window.CITY_DATA||{})[CUR.id]||{};
-const inBox=(ll,c)=>{const b=(c||CUR).box;return ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3];};
+// The NYC map stretches over New York State (plus New Jersey and Connecticut): its outline is in data/nys-data.js.
+// core = the five boroughs, where subway estimates apply; beyond it travel is by car or regional train.
+const inBox=(ll,c)=>{c=c||CUR;const b=c.box;if(!(ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]))return false;return c.id==='nyc'&&window.NYS?inRing(ll,NYS.area):true;};
+const inCore=ll=>{const b=CUR.core;return !b||(ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]);};
+const reach=(a,b)=>CUR.id==='nyc'?inBox(a)&&inBox(b):km(a,b)<60;
 function setCityData(id){CUR=CITIES[id]||CITIES.nyc;_A=null;_RC.clear();for(const k in _LP)delete _LP[k];}
 // Apple Maps (MapKit JS). Each map draws its own Apple-colored map first. Once /api/mapkit-token answers and MapKit loads,
 // the map swaps its base for Apple's map, drawn underneath Leaflet: pins, subway, routes and taps stay on Leaflet
@@ -92,7 +96,7 @@ const lineSp=rs=>{if(CUR.id==='nyc')return {v:0.45,w:4};const L=CDATA().lines||{
 const ST=()=>CUR.id==='nyc'?(window.NYC_SUBWAY||[]):(CDATA().st||[]);
 const nearSt=(p,n=CUR.id==='nyc'?6:10,max=1.2,rail)=>ST().filter(s=>!rail||!s.k).map(s=>({s,d:km(p,s.c)})).filter(x=>x.d<=max).sort((a,b)=>a.d-b.d).slice(0,n);
 const _RC=new Map();
-function estimate(a,b){const key=a.join()+'|'+b.join();if(_RC.has(key))return _RC.get(key);
+function transitEst(a,b){
  const walk={min:walkMin(a,b),km:km(a,b)*1.3};let best=null;const NA=nearSt(a),NB=nearSt(b);
  for(const x of NA)for(const y of NB){if(x.s.id===y.s.id)continue;const wa=walkMin(a,x.s.c),wb=walkMin(y.s.c,b);
   const sh=x.s.r.filter(r=>y.s.r.includes(r));
@@ -100,9 +104,33 @@ function estimate(a,b){const key=a.join()+'|'+b.join();if(_RC.has(key))return _R
   else for(const z of ST()){if(z.id===x.s.id||z.id===y.s.id)continue;const r1=x.s.r.filter(r=>z.r.includes(r));if(!r1.length)continue;const r2=z.r.filter(r=>y.s.r.includes(r));if(!r2.length)continue;
    const s1=lineSp(r1),s2=lineSp(r2),m1=rideMin(x.s.c,z.c,s1.v),m2=rideMin(z.c,y.s.c,s2.v),t=wa+s1.w+m1+Math.max(5,s2.w)+m2+wb;
    if(!best||t<best.min)best={min:t,legs:[{k:'walk',to:x.s,min:wa},{k:'ride',from:x.s,to:z,r:r1,min:m1+s1.w},{k:'xfer',at:z,min:5},{k:'ride',from:z,to:y.s,r:r2,min:m2},{k:'walk',min:wb}]};}}
- const out={walk,subway:best&&best.min<walk.min-2?best:null};_RC.set(key,out);return out;}
+ return {walk,subway:best&&best.min<walk.min-2?best:null};}
+// Beyond the five boroughs (NYC map only): a driving estimate, and a regional train (Metro-North, LIRR, Amtrak) from
+// Grand Central or Penn Station when the trip starts in the city. Rough numbers; Google Maps has the real ones.
+const CAR={t:'🚗',bg:'#FFF3DF',fg:'#10183F'};
+const driveMin=k=>{const r=k*1.25;return 6+(r<=12?r/0.5:24+(r-12)/1.6);};
+let _RAILS=null;const RAILS=()=>_RAILS||(_RAILS=((window.NYS||{}).rail||[]).map(([n,l,lat,lng,t])=>({n,l,c:[lat,lng],t})));
+const railLine=l=>((window.NYS||{}).lines||{})[l]||{t:'RR',bg:'#555',fg:'#fff',name:'Train',hub:'penn'};
+const railBul=l=>{const x=railLine(l);return {t:x.t,bg:x.bg,fg:x.fg};};
+const nearRail=(b,max)=>RAILS().map(s=>({s,d:km(b,s.c)})).filter(x=>x.d<=max).sort((x,y)=>x.d-y.d);
+const lastMile=(c,b,name)=>{const d=km(c,b);return d<1.3?{k:'walk',min:walkMin(c,b)}:{k:'car',min:4+driveMin(d),km:d*1.25};};
+function estimate(a,b){const key=a.join()+'|'+b.join();if(_RC.has(key))return _RC.get(key);
+ const d=km(a,b),ny=CUR.id==='nyc',far=ny&&(d>12||!inCore(a)||!inCore(b));
+ const out=!ny||(inCore(a)&&inCore(b)&&d<40)?transitEst(a,b):{walk:{min:walkMin(a,b),km:d*1.3},subway:null};
+ if(far){out.drive={min:driveMin(d),km:d*1.25};out.walk.hide=out.walk.min>150;
+  if(inCore(a)&&!inCore(b)){let rb=null;const hubs=(window.NYS||{}).hubs||{},toHub={};
+   for(const x of nearRail(b,25)){const ln=railLine(x.s.l),hub=hubs[ln.hub];if(!hub)continue;
+    const h=toHub[ln.hub]||(toHub[ln.hub]=transitEst(a,hub.c)),hMin=h.subway?h.subway.min:h.walk.min,lm=lastMile(x.s.c,b),t=hMin+8+x.s.t+lm.min;
+    if(!rb||t<rb.min){const hl=h.subway?h.subway.legs.map((l,i,A)=>i===A.length-1&&l.k==='walk'?{...l,to:hub}:l):[{k:'walk',to:hub,min:h.walk.min}];
+     rb={min:t,st:x.s,line:ln.name,legs:[...hl,{k:'ride',from:hub,to:x.s,r:[x.s.l],bul:[railBul(x.s.l)],col:ln.bg,min:8+x.s.t,line:ln.name},lm]};}}
+   if(rb&&rb.min<out.drive.min*2.5)out.rail=rb;}}
+ _RC.set(key,out);return out;}
+// The quickest way: subway, then train or car, else walking. noRail for day plans, where hopping on a regional train between stops isn't realistic.
+const bestOf=(e,noRail)=>{const o=[];if(e.subway)o.push({mode:'subway',min:e.subway.min});if(e.rail&&!noRail)o.push({mode:'rail',min:e.rail.min});if(e.drive)o.push({mode:'drive',min:e.drive.min});
+ if(!e.walk.hide||!o.length)o.push({mode:'walk',min:e.walk.min});return o.sort((x,y)=>x.min-y.min)[0];};
 let _A=null;
-const areas=()=>{if(_A)return _A;if(CUR.id!=='nyc'){_A=(CDATA().hoods||[]).map(h=>({name:h.n,b:h.b,c:h.c}));return _A;}const d=window.NYC_MAP;if(!d)return [];_A=d.hoods.filter(h=>h.t!=='air').map(h=>({name:h.n,b:h.b,c:h.c})).sort((a,b)=>a.name.localeCompare(b.name));return _A;};
+const areas=()=>{if(_A)return _A;if(CUR.id!=='nyc'){_A=(CDATA().hoods||[]).map(h=>({name:h.n,b:h.b,c:h.c}));return _A;}const d=window.NYC_MAP;if(!d)return [];_A=d.hoods.filter(h=>h.t!=='air').map(h=>({name:h.n,b:h.b,c:h.c})).sort((a,b)=>a.name.localeCompare(b.name));
+  if(window.NYS)_A=_A.concat(NYS.towns.map(t=>({name:t[0],b:t[1],c:[t[2],t[3]]})));return _A;};
 const inRing=(pt,r)=>{let ins=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const yi=r[i][0],xi=r[i][1],yj=r[j][0],xj=r[j][1];if(((yi>pt[0])!==(yj>pt[0]))&&(pt[1]<(xj-xi)*(pt[0]-yi)/(yj-yi)+xi))ins=!ins;}return ins;};
 const hoodAt=ll=>{if(CUR.id!=='nyc'){const A=areas();if(!A.length)return null;const n=A.reduce((m,a)=>km(ll,a.c)<km(ll,m.c)?a:m);return km(ll,n.c)<6?n.name:null;}const d=window.NYC_MAP;if(!d)return null;for(const h of d.hoods){if(h.t==='air')continue;for(const poly of h.p){if(inRing(ll,poly[0])&&!poly.slice(1).some(r=>inRing(ll,r)))return h.n;}}
  const A=areas();return A.length?A.reduce((m,a)=>km(ll,a.c)<km(ll,m.c)?a:m).name:null;};
@@ -195,7 +223,7 @@ class Component extends DCLogic {
     this.setState({places:all.filter(p=>cityOf(p)===id),otherPlaces:all.filter(p=>cityOf(p)!==id),cityMeta:cm,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},city:id,cityOpen:false,
       selId:null,routeFor:null,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',exStage:'pick',placing:false,layersOpen:false,obRes:[],obHome:null,obMsg:'',busState:'',tramState:'',ferryState:'',bikeState:''},()=>this.cityMoved());
     this.toast('Welcome To '+CUR.name+' '+CUR.emoji);}
-  cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip')m.map.setMaxBounds(CUR.bounds);m.map.setView(CUR.center,12,{animate:false});}catch(e){}
+  cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip'){m.map.setMinZoom(CUR.minZ||10);m.map.setMaxBounds(CUR.bounds);}m.map.setView(CUR.center,12,{animate:false});}catch(e){}
       if(m.subway){const on=m.map.hasLayer(m.subway);m.subway.remove();this.buildSubway(m);if(on)m.subway.addTo(m.map);}
       if(!m.apple)this.drawBase(m);if(m.streets)try{m.streets.redraw();}catch(e){}m.sig='';m.ids='';m.psig=null;});
     this.allMaps().forEach(m=>this.fillLayers(m));this.syncMaps();setTimeout(()=>this.refreshVisible(),60);}
@@ -237,12 +265,12 @@ class Component extends DCLogic {
     if(s.tab==='plan'){if(!this.maps.plan){this.maps.plan=this.makeMap(this.planMapRef.current,'plan');}else kick(this.maps.plan);this.maps.plan.psig=null;this.syncPlan(true);}
     if(s.tab==='lists'&&s.tripId&&this.tripMapRef.current){if(!this.maps.trip){this.maps.trip=this.makeMap(this.tripMapRef.current,'trip');}else kick(this.maps.trip);this.syncTrip(true);}}
   makeMap(el,kind){const L=window.L;
-    const map=L.map(el,{zoomControl:false,attributionControl:false,minZoom:kind==='trip'?3:10,maxZoom:18,zoomSnap:.5,...(kind==='trip'?{}:{maxBounds:CUR.bounds,maxBoundsViscosity:.8}),preferCanvas:true}).setView(CUR.center,12);
+    const map=L.map(el,{zoomControl:false,attributionControl:false,minZoom:kind==='trip'?3:(CUR.minZ||10),maxZoom:18,zoomSnap:.5,...(kind==='trip'?{}:{maxBounds:CUR.bounds,maxBoundsViscosity:.8}),preferCanvas:true}).setView(CUR.center,12);
     [['streets',410],['boroLab',450],['hoodBig',450],['hoodSmall',450],['bus',452],['subway',455],['stBul',456],['stLab',457],['bike',458],['route',470]].forEach(([n,z])=>{const p=map.createPane(n);p.style.zIndex=z;if(n!=='subway'&&n!=='route'&&n!=='bus'&&n!=='bike')p.style.pointerEvents='none';p.style.transition='opacity .35s';});
     const m={map,el,kind,base:L.layerGroup().addTo(map),labels:L.layerGroup().addTo(map),sig:'',ids:'',route:L.layerGroup().addTo(map),me:L.layerGroup().addTo(map)};
     this.drawBase(m);this.addStreets(m);this.buildSubway(m);if(this.state.showSubway)m.subway.addTo(map);m.bus=L.layerGroup();m.tram=L.layerGroup();m.ferry=L.layerGroup();m.bike=L.layerGroup();this.fillLayers(m);
     m.layer=L.layerGroup().addTo(map);
-    const fade=()=>{const z=map.getZoom();const P=n=>map.getPane(n).style;P('boroLab').opacity=z<12.5?1:0;P('hoodBig').opacity=z>=12.5&&z<15?1:0;P('hoodSmall').opacity=z>=14&&z<15?1:0;P('subway').opacity=z>=12.5?1:0;P('stBul').opacity=z>=13.5&&z<15?1:0;P('stLab').opacity=z>=15?1:0;P('bus').opacity=z>=12?1:0;P('bike').opacity=z>=13.5?1:0;};
+    const fade=()=>{const z=map.getZoom();const P=n=>map.getPane(n).style;P('boroLab').opacity=z<12.5&&z>=9.5?1:0;P('hoodBig').opacity=z>=12.5&&z<15?1:0;P('hoodSmall').opacity=z>=14&&z<15?1:0;P('subway').opacity=z>=12.5?1:0;P('stBul').opacity=z>=13.5&&z<15?1:0;P('stLab').opacity=z>=15?1:0;P('bus').opacity=z>=12?1:0;P('bike').opacity=z>=13.5?1:0;};
     map.on('zoomend',fade);fade();map.on('click',e=>this.onMapClick(e,kind));appleMaps(ok=>{if(ok&&this._on)this.attachApple(m);});return m;}
   // Put Apple's map under this Leaflet map and keep it in step. Leaflet's own base (borough colors, labels,
   // streets) is cleared; Leaflet stops snapping zoom so pinches stay smooth and lined up.
@@ -391,17 +419,19 @@ class Component extends DCLogic {
   originPt(){const s=this.state;if(s.routeMode==='here')return s.here;if(s.routeMode==='home')return s.home?[s.home.lat,s.home.lng]:null;
     const p=s.places.find(x=>x.id===s.routeSpot);return p?[p.lat,p.lng]:null;}
   routeData(){const s=this.state;if(!s.routeFor)return null;const d=s.places.find(p=>p.id===s.routeFor);if(!d)return null;const a=this.originPt(),b=[d.lat,d.lng];
-    if(!a)return {d,a:null,b};if(km(a,b)>60)return {d,a,b,far:true};const e=estimate(a,b);
-    const opts=[];if(e.subway)opts.push({mode:'subway',min:e.subway.min,legs:e.subway.legs});opts.push({mode:'walk',min:e.walk.min,km:e.walk.km});
+    if(!a)return {d,a:null,b};if(!reach(a,b))return {d,a,b,far:true};const e=estimate(a,b);
+    const opts=[];if(e.subway)opts.push({mode:'subway',min:e.subway.min,legs:e.subway.legs});if(e.rail)opts.push({mode:'rail',min:e.rail.min,legs:e.rail.legs});
+    if(e.drive)opts.push({mode:'drive',min:e.drive.min,km:e.drive.km});if(!e.walk.hide||!opts.length)opts.push({mode:'walk',min:e.walk.min,km:e.walk.km});
     opts.sort((x,y)=>x.min-y.min);return {d,a,b,opts};}
   syncRoute(){const m=this.maps&&this.maps.main;if(!m)return;const L=window.L,r=this.routeData(),s=this.state;
     const o=r&&r.opts?r.opts[Math.min(s.routePick,r.opts.length-1)]:null;const sig=r&&o?JSON.stringify([r.a,r.b,o.mode,o.min]):'';if(sig===m.rsig)return;m.rsig=sig;m.route.clearLayers();if(!o)return;
     const rend=L.svg({pane:'route'});const dash=(p,q)=>L.polyline([p,q],{renderer:rend,color:C.navy,weight:4,dashArray:'1 9',lineCap:'round',interactive:false}).addTo(m.route);
     const pts=[r.a,r.b];
     if(o.mode==='walk')dash(r.a,r.b);
-    else{let cur=r.a;o.legs.forEach(l=>{if(l.k==='walk'){const to=l.to?l.to.c:r.b;dash(cur,to);cur=to;}
+    else if(o.mode==='drive'){L.polyline([r.a,r.b],{renderer:rend,color:'#fff',weight:9,lineCap:'round',interactive:false}).addTo(m.route);L.polyline([r.a,r.b],{renderer:rend,color:C.orange,weight:5,lineCap:'round',interactive:false}).addTo(m.route);}
+    else{let cur=r.a;o.legs.forEach(l=>{if(l.k==='walk'||l.k==='car'){const to=l.to?l.to.c:r.b;dash(cur,to);cur=to;}
       else if(l.k==='ride'){L.polyline([l.from.c,l.to.c],{renderer:rend,color:'#fff',weight:10,lineCap:'round',interactive:false}).addTo(m.route);
-        L.polyline([l.from.c,l.to.c],{renderer:rend,color:RC[l.r[0]]||C.navy,weight:6,lineCap:'round',interactive:false}).addTo(m.route);
+        L.polyline([l.from.c,l.to.c],{renderer:rend,color:l.col||RC[l.r[0]]||C.navy,weight:6,lineCap:'round',interactive:false}).addTo(m.route);
         [l.from,l.to].forEach(st=>{L.circleMarker(st.c,{renderer:rend,radius:6,color:C.navy,weight:3,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(m.route);pts.push(st.c);});cur=l.to.c;}});}
     L.circleMarker(r.a,{renderer:rend,radius:8,color:'#fff',weight:3,fillColor:C.navy,fillOpacity:1,interactive:false}).addTo(m.route);
     setTimeout(()=>{try{const map=m.map,b=L.latLngBounds(pts),sz=map.getSize();if(!sz.y)return;const top=150,bot=Math.min(sz.y*.6,500)+10,aH=Math.max(120,sz.y-top-bot),aW=sz.x-70;
@@ -661,7 +691,7 @@ class Component extends DCLogic {
         hasPrice:!!p.price,price:PRICES[(p.price||1)-1],planLabel:ip?'In Plan ✓':'+ Plan',planBg:ip?C.navy:'#fff',planFg:ip?C.yellow:C.navy,onPlan:e=>{e.stopPropagation();this.togglePlan(p.id);}};});
     // Explore deck (hybrid Command Center + Spot Deck)
     const deck=this.deckList(),dpos=this.deckPos(),dref=s.here||(s.home?[s.home.lat,s.home.lng]:null);
-    const tripMin=p=>{if(!dref||km(dref,[p.lat,p.lng])>60)return null;const e=estimate(dref,[p.lat,p.lng]);return e.subway?e.subway.min:e.walk.min;};
+    const tripMin=p=>{if(!dref||!reach(dref,[p.lat,p.lng]))return null;return bestOf(estimate(dref,[p.lat,p.lng])).min;};
     const deckCards=deck.slice(dpos,dpos+3).map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=i===0?tripMin(p):null;
       return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:inPlan(p.id),
         idx:String(dpos+i+1).padStart(2,'0'),meta:[p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:'',m!=null?Math.max(1,Math.round(m))+' MIN '+(s.here?'AWAY':'FROM HOME'):c.name].filter(Boolean).join(' · ').toUpperCase(),
@@ -670,16 +700,18 @@ class Component extends DCLogic {
     const exBar=Object.entries(catCount).map(([id,k])=>({col:catOf(id).color,n:k}));
     const exFilterN=s.exAreas.length+s.exPrices.length+(s.hideVisited?1:0);
     const sp=s.places.find(p=>p.id===s.selId);let sel={};
-    if(sp){const c=catOf(sp.cat),src=SRC[sp.source]||SRC.manual,hasUrl=!!sp.url,ns=nearSt([sp.lat,sp.lng],1,2,true)[0],ip=inPlan(sp.id);
+    if(sp){const c=catOf(sp.cat),src=SRC[sp.source]||SRC.manual,hasUrl=!!sp.url,ip=inPlan(sp.id);let ns=nearSt([sp.lat,sp.lng],1,2,true)[0];
+      // Outside the subway's reach: the nearest Metro-North, LIRR or Amtrak station, with the walk or a short drive to it.
+      if(!ns&&CUR.id==='nyc'){const r=nearRail([sp.lat,sp.lng],15)[0];if(r){const lm=lastMile(r.s.c,[sp.lat,sp.lng]);ns={s:{n:r.s.n+(lm.k==='car'?' · Drive':''),r:[],c:r.s.c},rb:[railBul(r.s.l)],min:lm.min};}}
       sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
-        hasStation:!!ns,stName:ns?ns.s.n:'',stRoutes:ns?ns.s.r.slice(0,6).map(bullet):[],stWalk:ns?fmtMin(walkMin([sp.lat,sp.lng],ns.s.c))+' Walk':'',
+        hasStation:!!ns,stName:ns?ns.s.n:'',stRoutes:ns?(ns.rb||ns.s.r.slice(0,6).map(bullet)):[],stWalk:ns?fmtMin(ns.min!=null?ns.min:walkMin([sp.lat,sp.lng],ns.s.c))+' Walk':'',
         cols:hasUrl?'1fr 1fr 1fr':'1fr 1fr',visBg:sp.visited?C.green:'#fff',visFg:sp.visited?'#fff':C.green,visLabel:sp.visited?'Been Here ✓':'Mark Visited',
         planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1],
         srcBadge:hasUrl?'Saved From '+src.label:'',catEmoji:emo(c),catColor:c.color,img:placeImg(sp),ownPhoto:!!sp.photo,photoBusy:s.spotPhotoBusy,
         onPhoto:e=>{const f=e.target.files&&e.target.files[0];e.target.value='';this.pickSpotPhoto(sp.id,f);},removePhoto:()=>this.removeSpotPhoto(sp.id)};
-      if(s.home&&km([s.home.lat,s.home.lng],[sp.lat,sp.lng])<60){const e=estimate([s.home.lat,s.home.lng],[sp.lat,sp.lng]),sub=e.subway;
+      if(s.home&&reach([s.home.lat,s.home.lng],[sp.lat,sp.lng])){const e=estimate([s.home.lat,s.home.lng],[sp.lat,sp.lng]),bo=bestOf(e),sub=bo.mode==='subway'?e.subway:null;
         const xf=sub?sub.legs.filter(x=>x.k==='xfer').length:0;
-        sel.homeMin=Math.max(1,Math.round(sub?sub.min:e.walk.min));sel.homeHow=sub?(xf?xf+(xf>1?' Transfers':' Transfer'):'No Transfers'):'Walk';}}
+        sel.homeMin=Math.max(1,Math.round(bo.min));sel.homeHow=sub?(xf?xf+(xf>1?' Transfers':' Transfer'):'No Transfers'):bo.mode==='rail'?'Train':bo.mode==='drive'?'Drive':'Walk';}}
     // route
     const rd=this.routeData();let routeOpts=[],routeMsg='',routeNeedsHome=false;
     if(rd){if(!rd.a){if(s.routeMode==='home'){routeMsg='Save Your Home Once And Every Route Can Start There.';routeNeedsHome=true;}
@@ -689,22 +721,26 @@ class Component extends DCLogic {
       else{const aStr=rd.a.join(','),bStr=placeQ(rd.d),pick=Math.min(s.routePick,rd.opts.length-1);
         routeOpts=rd.opts.map((o,i)=>{const on=i===pick;
           const steps=o.mode==='walk'?[{text:'Walk '+mi(o.km)+' To '+rd.d.name,min:fmtMin(o.min),walkDisp:'block',xferDisp:'none',bullets:[]}]:
+            o.mode==='drive'?[{text:'Drive '+mi(o.km)+' To '+rd.d.name,min:fmtMin(o.min),walkDisp:'none',xferDisp:'none',bullets:[CAR]}]:
             o.legs.map(lg=>lg.k==='walk'?{text:lg.to?'Walk To '+lg.to.n:'Walk To '+rd.d.name,min:fmtMin(lg.min),walkDisp:'block',xferDisp:'none',bullets:[]}:
+              lg.k==='car'?{text:'Drive Or Taxi To '+rd.d.name,min:fmtMin(lg.min),walkDisp:'none',xferDisp:'none',bullets:[CAR]}:
               lg.k==='xfer'?{text:'Transfer At '+lg.at.n,min:fmtMin(lg.min),walkDisp:'none',xferDisp:'block',bullets:[]}:
-              {text:'Ride To '+lg.to.n,min:fmtMin(lg.min),walkDisp:'none',xferDisp:'none',bullets:lg.r.slice(0,4).map(bullet)});
-          return {title:o.mode==='walk'?'Walk':CUR.id==='nyc'?'Subway':'Transit',mins:'~'+fmtMin(o.min),color:o.mode==='walk'?C.navy:C.blue,best:i===0&&rd.opts.length>1,border:on?C.navy:'transparent',steps,
-            onPick:()=>this.setState({routePick:i}),gLabel:o.mode==='walk'?'Walking Route In Google Maps ↗':'Exact Transit Times In Google Maps ↗',
-            onGoogle:e=>{e.stopPropagation();window.open(gmaps(aStr,bStr,o.mode==='walk'?'walking':'transit'),'_blank');}};});}}
+              {text:lg.line?lg.line+' To '+lg.to.n:'Ride To '+lg.to.n,min:fmtMin(lg.min),walkDisp:'none',xferDisp:'none',bullets:lg.bul||lg.r.slice(0,4).map(bullet)});
+          const gm=o.mode==='walk'?'walking':o.mode==='drive'?'driving':'transit';
+          return {title:o.mode==='walk'?'Walk':o.mode==='drive'?'Drive':o.mode==='rail'?'Train':CUR.id==='nyc'?'Subway':'Transit',mins:'~'+fmtMin(o.min),color:o.mode==='walk'?C.navy:o.mode==='drive'?C.orange:C.blue,best:i===0&&rd.opts.length>1,border:on?C.navy:'transparent',steps,
+            onPick:()=>this.setState({routePick:i}),gLabel:o.mode==='walk'?'Walking Route In Google Maps ↗':o.mode==='drive'?'Driving Route In Google Maps ↗':o.mode==='rail'?'Train Times In Google Maps ↗':'Exact Transit Times In Google Maps ↗',
+            onGoogle:e=>{e.stopPropagation();window.open(gmaps(aStr,bStr,gm),'_blank');}};});}}
     const originChips=[chip(s.routeMode==='here',s.locating?'Finding You…':'My Location',()=>{this.setState({routeMode:'here',routePick:0});if(!s.here)this.locate();}),
       chip(s.routeMode==='home',s.home?'Home':'Home (Set It)',()=>this.setState({routeMode:'home',routePick:0})),
       chip(s.routeMode==='spot','A Saved Spot',()=>this.setState({routeMode:'spot',routePick:0}))];
     // plan
     const stops=this.planStops(),pStart=this.planStartPt();let total=0,walkTot=0,subTot=0;
     const planRows=stops.map((p,i)=>{const c=catOf(p.cat),from=i===0?pStart:[stops[i-1].lat,stops[i-1].lng];let hasLeg=false,legText='',legBullets=[],legOpen=null,legMin=0,legWalk=false;
-      if(from&&km(from,[p.lat,p.lng])<60){hasLeg=true;const e=estimate(from,[p.lat,p.lng]);
-        if(e.subway){legMin=e.subway.min;total+=e.subway.min;subTot+=e.subway.min;legText='Subway · ~'+fmtMin(e.subway.min);legBullets=[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet);}
+      if(from&&reach(from,[p.lat,p.lng])){hasLeg=true;const e=estimate(from,[p.lat,p.lng]),bo=bestOf(e,true);
+        if(bo.mode==='subway'){legMin=e.subway.min;total+=e.subway.min;subTot+=e.subway.min;legText='Subway · ~'+fmtMin(e.subway.min);legBullets=[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet);}
+        else if(bo.mode==='drive'){legMin=e.drive.min;total+=e.drive.min;subTot+=e.drive.min;legText='Drive · ~'+fmtMin(e.drive.min)+' · '+mi(e.drive.km);legBullets=[CAR];}
         else{legMin=e.walk.min;legWalk=true;total+=e.walk.min;walkTot+=e.walk.min;legText='Walk · ~'+fmtMin(e.walk.min)+' · '+mi(e.walk.km);}
-        legOpen=()=>window.open(gmaps(from.join(','),placeQ(p),e.subway?'transit':'walking'),'_blank');}
+        legOpen=()=>window.open(gmaps(from.join(','),placeQ(p),bo.mode==='subway'?'transit':bo.mode==='drive'?'driving':'walking'),'_blank');}
       return {id:p.id,catEmoji:emo(c),legMin,legWalk,num:i+1,img:placeImg(p),name:p.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:p.area,hasLeg,legText,legBullets,legOpen,
         onClick:()=>{this.setState({tab:'map',selId:p.id});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([p.lat,p.lng],15.5,{duration:.6}),120);},
         up:e=>{e.stopPropagation();this.move(i,-1);},down:e=>{e.stopPropagation();this.move(i,1);},remove:e=>{e.stopPropagation();this.togglePlan(p.id);},
@@ -717,7 +753,7 @@ class Component extends DCLogic {
       r.cycleStay=e=>{e.stopPropagation();const nx=STAYS[(STAYS.indexOf(st)+1)%STAYS.length];this.setState(x=>({plan:{...x.plan,stay:{...(x.plan.stay||{}),[r.id]:nx}}}));};tNow+=st;});
     let backMin=0,backBul=[],backWalk=false;
     if(s.plan.start==='home'&&s.home&&stops.length){const last=stops[stops.length-1],a=[last.lat,last.lng],h=[s.home.lat,s.home.lng];
-      if(km(a,h)<60){const e=estimate(a,h);backMin=e.subway?e.subway.min:e.walk.min;backWalk=!e.subway;backBul=e.subway?[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet):[];}}
+      if(reach(a,h)){const e=estimate(a,h),bo=bestOf(e,true);backMin=bo.min;backWalk=bo.mode==='walk';backBul=bo.mode==='subway'?[...new Set(e.subway.legs.filter(x=>x.k==='ride').flatMap(x=>x.r.slice(0,2)))].slice(0,4).map(bullet):bo.mode==='drive'?[CAR]:[];}}
     const endClock=clock(tNow+backMin);
     const ps=s.plan.start;const planStartMsg=(ps==='home'&&!s.home)||(ps==='here'&&!s.here);
     const placingTitle=s.placing==='home'?'Tap Where You Live':s.placing==='here'?'Tap Where You Are Now':'Tap To Drop Your Pin';

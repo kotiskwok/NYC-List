@@ -214,8 +214,8 @@ async function pinPlace(p, city) {
   // Chains have several branches: when the post gives a street address, the match must be at that street number,
   // otherwise pin the address itself.
   const num = (String(p.address || '').match(/^\s*(\d+[A-Za-z]?)\b/) || [])[1];
-  let g = await search([p.name, p.address || p.neighborhood, c.name].filter(Boolean).join(', '));
-  if (g && num && !new RegExp('(^|[\\s,])' + num + '\\b').test(g.formattedAddress || '')) g = await search(p.address + ', ' + c.name);
+  let g = await search([p.name, p.address, p.neighborhood, c.pin || c.name].filter(Boolean).join(', '));
+  if (g && num && !new RegExp('(^|[\\s,])' + num + '\\b').test(g.formattedAddress || '')) g = await search([p.address, p.neighborhood, c.pin || c.name].filter(Boolean).join(', '));
   if (g) { p.lat = +g.location.latitude.toFixed(6); p.lng = +g.location.longitude.toFixed(6); }
 }
 
@@ -303,10 +303,10 @@ async function watchVideo(url, sec, headers) {
 
 // The person's map may be set to another city than the post's (someone in NYC saving a Hong Kong trip, or the
 // picker left on Toronto). Then still list the places and say which city, so the app can offer to switch.
-const OTHER_CITY = c => `\n\nThe person's map is currently set to ${(c && c.name) || 'New York City'}. The app also supports New York City, Singapore, Hong Kong and Toronto. If the places in this post are clearly in one of those other cities, list them anyway (overriding any rule above that limits places to ${(c && c.name) || 'New York City'}) and set post_city to that city. Always set post_city.`;
+const OTHER_CITY = c => `\n\nThe person's map is currently set to ${(c && c.name) || 'New York City'}. The app also supports New York City (its map covers all of New York State and nearby New Jersey and Connecticut), Singapore, Hong Kong and Toronto. If the places in this post are clearly in one of those other cities, list them anyway (overriding any rule above that limits places to ${(c && c.name) || 'New York City'}) and set post_city to that city. Always set post_city.`;
 
 // Added after localizing, so the city names in it stay as written.
-const withPostCity = t => { t.input_schema.properties.post_city = { type: 'string', enum: ['nyc', 'sg', 'hk', 'to', 'other', 'unknown'], description: 'Which city the places are in: nyc (New York City), sg (Singapore), hk (Hong Kong), to (Toronto), other, or unknown.' }; t.input_schema.required = [...t.input_schema.required, 'post_city']; return t; };
+const withPostCity = t => { t.input_schema.properties.post_city = { type: 'string', enum: ['nyc', 'sg', 'hk', 'to', 'other', 'unknown'], description: 'Which city the places are in: nyc (New York City, or anywhere in New York State, New Jersey or Connecticut), sg (Singapore), hk (Hong Kong), to (Toronto), other, or unknown.' }; t.input_schema.required = [...t.input_schema.required, 'post_city']; return t; };
 
 async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage, city }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');

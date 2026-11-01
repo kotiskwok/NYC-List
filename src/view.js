@@ -400,7 +400,7 @@ function PlanScreen(v) {
         </label>
         ${v.planRows.map((p, i) => html`
         <div key=${p.id} style=${S('display:flex;flex-direction:column')}>
-          ${p.hasLeg ? leg('l', legBody(p.legBullets, p.legWalk, p.legText.replace(/^(Subway|Walk) · ~/, '').replace(/ · .*$/, '').toUpperCase() + (p.legWalk ? ' WALK' : ''), true), p.legOpen) : i > 0 && html`<div style=${S('height:8px')}></div>`}
+          ${p.hasLeg ? leg('l', legBody(p.legBullets, p.legWalk, p.legText.replace(/^(Subway|Walk|Drive) · ~/, '').replace(/ · .*$/, '').toUpperCase() + (p.legWalk ? ' WALK' : ''), true), p.legOpen) : i > 0 && html`<div style=${S('height:8px')}></div>`}
           <div style=${S('display:flex;gap:8px;align-items:center')}>
             <span style=${S(`${TC};${MONO};font-size:10.5px;font-weight:700;color:#10183F`)}>${p.time}</span>
             <div class="lg" onClick=${p.onClick} style=${S(`${GL};flex:1;min-width:0;border-radius:22px;padding:8px 8px 8px 8px;display:flex;align-items:center;gap:10px;cursor:pointer`)}>
@@ -510,11 +510,11 @@ function PlaceCard(v) {
       <h1 style=${S('margin:0;font-size:48px;line-height:.9;font-weight:900;font-style:italic;font-stretch:100%;letter-spacing:-2px;text-wrap:balance;overflow-wrap:anywhere')}>${split ? html`${words.slice(0, -1).join(' ')}<br/><span style=${S('font-weight:200;font-style:normal;letter-spacing:-1.6px')}>${words[words.length - 1]}</span>` : sel.name}</h1>
     </div>
     <div class="lg" style=${S(`${GL};border-radius:26px;padding:14px 4px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))`)}>
-      ${sel.homeMin ? html`<div style=${S(cell)}>${big(sel.homeMin > 99 ? Math.round(sel.homeMin / 60) : sel.homeMin, sel.homeMin > 99 ? 'hr' : 'min')}${lab('From Home')}</div>`
+      ${sel.homeMin ? html`<div style=${S(cell)}>${big(sel.homeMin > 99 ? Math.round(sel.homeMin / 6) / 10 : sel.homeMin, sel.homeMin > 99 ? 'hr' : 'min')}${lab('From Home')}</div>`
         : html`<button onClick=${v.openRoute} style=${S(`${cell};border:0;background:none;text-align:left;cursor:pointer;color:#10183F;font-family:inherit`)}><span style=${S('font-size:15px;font-weight:900;font-style:italic;line-height:1.05')}>Set<br/>Home</span>${lab('Travel Times')}</button>`}
       <div style=${S(`${cell};border-left:1px solid rgba(16,24,63,.1)`)}>${big(sel.hasPrice ? sel.price : '—')}${lab('Price')}</div>
       <div style=${S(`${cell};border-left:1px solid rgba(16,24,63,.1)`)}>
-        ${sel.hasStation ? html`<span style=${S('display:flex;align-items:center;gap:5px;min-width:0')}><span style=${S('display:flex;gap:2px;flex:none')}>${sel.stRoutes.slice(0, 2).map(Bul)}</span><span style=${S('font-size:19px;font-weight:200;white-space:nowrap')}>${String(sel.stWalk || '').replace(/[^0-9]/g, '') || '—'}<span style=${S('font-size:11px;font-weight:800;margin-left:3px')}>min</span></span></span>${lab(sel.stName)}` : html`${big('—')}${lab('No Subway Near')}`}
+        ${sel.hasStation ? html`<span style=${S('display:flex;align-items:center;gap:5px;min-width:0')}><span style=${S('display:flex;gap:2px;flex:none')}>${sel.stRoutes.slice(0, 2).map(Bul)}</span><span style=${S('font-size:19px;font-weight:200;white-space:nowrap')}>${String(sel.stWalk || '').replace(/[^0-9]/g, '') || '—'}<span style=${S('font-size:11px;font-weight:800;margin-left:3px')}>min</span></span></span>${lab(sel.stName)}` : html`${big('—')}${lab('No Station Near')}`}
       </div>
     </div>
     ${sel.hasNote && Note(sel.note, 'padding:2px 2px 0;font-size:14px;line-height:1.45;font-weight:500;color:#3C4466')}

@@ -11,8 +11,8 @@
 
 const { cors, send, requireUser, readJson, cityFor } = require('./_shared');
 
-// The five boroughs (a little generous).
-const NYC = { low: { latitude: 40.49, longitude: -74.27 }, high: { latitude: 40.93, longitude: -73.68 } };
+// The NYC map: New York State plus nearby New Jersey and Connecticut (searches favour the city, see below).
+const NYC = (b => ({ low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } }))(cityFor('nyc').box);
 const PRICE = { PRICE_LEVEL_INEXPENSIVE: 1, PRICE_LEVEL_MODERATE: 2, PRICE_LEVEL_EXPENSIVE: 3, PRICE_LEVEL_VERY_EXPENSIVE: 4 };
 
 // Checking the sign-in on every keystroke would be slow, so remember good tokens for a few minutes.
@@ -88,7 +88,8 @@ module.exports = async (req, res) => {
     const near = Array.isArray(body.near) && body.near.length === 2 && body.near.every(Number.isFinite) ? body.near : null;
     const j = await google('places:autocomplete', { method: 'POST', body: JSON.stringify({
       input: q, sessionToken: session, languageCode: 'en', regionCode: 'us',
-      locationRestriction: { rectangle: box },
+      // NYC: lean towards the city (or wherever you are) but still find spots upstate. Other cities: only that city.
+      ...(box === NYC ? { locationBias: { circle: { center: { latitude: near ? near[0] : 40.73, longitude: near ? near[1] : -73.97 }, radius: 50000 } } } : { locationRestriction: { rectangle: box } }),
       ...(near ? { origin: { latitude: near[0], longitude: near[1] } } : {})
     }) });
     const suggestions = (j.suggestions || []).map(s => s.placePrediction).filter(Boolean).map(p => ({

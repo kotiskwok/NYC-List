@@ -6,7 +6,7 @@ Everything a new chat needs to keep working on **Spotted In**: what the app does
 
 ## 1. What Spotted In is
 
-**Spotted In** is Kotis's map of places she's been meaning to try (restaurants, cafes, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station and the travel time. It also plans a day out, keeps shared trip lists with friends, and works in four cities: **New York, Singapore, Hong Kong and Toronto**.
+**Spotted In** is Kotis's map of places she's been meaning to try (restaurants, cafes, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station and the travel time. It also plans a day out, keeps shared trip lists with friends, and works in four cities: **New York, Singapore, Hong Kong and Toronto**. The New York map also stretches over **all of New York State** (plus nearby New Jersey and Connecticut) for day trips and weekends away.
 
 - **Website (also installs to the home screen):** https://nyc-lovat.vercel.app
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -43,6 +43,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **Category chips** filter the pins. Each pin is a frosted ring with the category's line icon, or the spot's photo.
 - **Nearest To You** card, once your location is known.
 - **Map Layers** (per city): NYC: Subway, Bus routes, Citi Bike · Singapore: MRT/LRT, Buses · Hong Kong: MTR, Buses, Trams, Ferries · Toronto: Subway/LRT, Streetcars, Buses, Bike Share Toronto. Bike docks show live bike and dock counts.
+- **New York State:** the NYC map zooms out to the whole state. Spots outside the city get a town as their neighborhood (Hudson, Beacon, Montauk…), grouped into regions (Long Island, Westchester, Hudson Valley, Catskills, Capital Region, Adirondacks & North Country, Finger Lakes & Central NY, Western NY, New Jersey, Connecticut) for the Explore filter.
 - **My Location** button. If location fails, you can tap where you are.
 - While a spot or directions are open, the header, chips and side buttons hide so the map is clear.
 
@@ -52,7 +53,8 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **Swipe the card down to close it.** From Explore, that returns you to the deck.
 
 ### Get There
-- An estimated route by subway/MRT/streetcar/tram/ferry with the lines, transfers and walking legs, compared with walking. Start from My Location, Home or another saved spot. Buttons open Google Maps for live times.
+- An estimated route by subway/MRT/streetcar/tram/ferry with the lines, transfers and walking legs, compared with walking.
+- **Outside the five boroughs:** a **Drive** estimate and a **Train** option (subway to Grand Central or Penn Station, then Metro-North, LIRR or Amtrak to the nearest station, then a walk or short drive). The place card's station cell shows that nearest regional station. Day plans use the drive for long legs. Start from My Location, Home or another saved spot. Buttons open Google Maps for live times.
 - **Drag the sheet down** to shrink it to a small bar above the tab bar (destination plus fastest option) and see the map. Tap it or drag up to open it again.
 
 ### Explore tab ("Where To Today?")
@@ -161,7 +163,8 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **Photos:** Storage bucket `avatars`: `<user>/avatar.jpg`, `<user>/spot-<id>.jpg`, `<user>/list-<id>.jpg`.
 
 ### Cities
-- `CITIES` in `logic.js`: center, bounds, search box, regions, transit name, layers. `setCity()` switches city; `cityMoved()` re-centers and redraws.
+- `CITIES` in `logic.js`: center, bounds, search box, regions, transit name, layers. NYC also has `core` (the five boroughs, where subway estimates apply) and `minZ` (zoom out to the state).
+- **New York State** (`data/nys-data.js`, `window.NYS`): the map's outline (`area`, which keeps Toronto out of the NYC map), towns by region, the regional rail stations with rough minutes from the hub, and line badges. `inBox`, `inCore` and `reach` in `logic.js` use it; `estimate()` adds `drive` and `rail` beyond the city and `bestOf()` picks the quickest. The server has the same outline (`poly` in `api/_shared.js`), and `localize()` widens the NYC prompts to New York State. `setCity()` switches city; `cityMoved()` re-centers and redraws.
 - `state.places` holds the current city's spots and `state.otherPlaces` the rest.
 - **Station and neighborhood data:**
   - NYC: `data/nyc-*.js`.
@@ -239,7 +242,7 @@ Changes that only touch `api/` (how links are read, keys) go live on the server 
 | `src/video.js` | On-phone video audio and frame extraction |
 | `src/runtime.js` | Base class, `NATIVE`, `API()`, `SITE()` |
 | `api/*.js` | Server functions (above). `_shared.js` (CORS, auth, cities), `_gmaps.js`, `_osmroutes.js` are helpers. |
-| `data/` | Map, street, station and city data; `routes/` transit lines (generated, don't hand-edit) |
+| `data/` | Map, street, station and city data; `nys-data.js` New York State towns, rail stations and outline; `routes/` transit lines (generated, don't hand-edit) |
 | `scripts/build-routes.js`, `.github/workflows/routes.yml` | Monthly transit-line builder |
 | `supabase/*.sql` | Database tables, security rules, functions, storage bucket |
 | `sw.js` | Offline cache (bump `CACHE` when `src/` changes) |

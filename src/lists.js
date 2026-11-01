@@ -417,8 +417,9 @@ Object.assign(Component.prototype, {
         const rows = sec.stops.map((st, i) => { const p = this.stopPlace(st), c = cats[p.cat] || { name: 'Spot', color: '#888' }, numbered = sec.flat || sec.day > 0;
           let leg = null;
           if (numbered && i > 0) { const q = this.stopPlace(sec.stops[i - 1]), a = [q.lat, q.lng], b = [p.lat, p.lng];
-            if (km(a, b) < 60) { const e = estimate(a, b), sub = e.subway;
+            if (reach(a, b)) { const e = estimate(a, b), bo = bestOf(e, true), sub = bo.mode === 'subway' ? e.subway : null;
               leg = sub ? { min: Math.max(1, Math.round(sub.min)), walk: false, bullets: [...new Set(sub.legs.filter(x => x.k === 'ride').flatMap(x => x.r.slice(0, 1)))].slice(0, 2).map(bullet) }
+                : bo.mode === 'drive' ? { min: Math.max(1, Math.round(bo.min)), walk: false, bullets: [CAR] }
                 : { min: Math.max(1, Math.round(e.walk.min)), walk: true, bullets: [] }; } }
           return { key: st.id, leg, catEmoji: emo(c), catColor: c.color, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [c.name, p.area].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
             img: placeImg(p), badge: numbered ? (sec.flat ? c.color : dayCol(sec.day)) : c.color, badgeFg: numbered && !sec.flat ? '#fff' : fgFor(c.color),
