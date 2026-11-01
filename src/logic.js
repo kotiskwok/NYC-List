@@ -23,19 +23,26 @@ const BOROUGHS=['Manhattan','Brooklyn','Queens','Bronx','Staten Island'];
 // transit for travel times, search area, AI and photo lookups, plus that city's home and Route plan.
 // box = [south, west, north, east] for searches; bounds = how far the map can pan. Data for the others is in data/city-data.js.
 const CITIES={
-  nyc:{id:'nyc',name:'New York City',short:'NYC',emoji:'🗽',q:'New York',qc:'New York City',center:[40.722,-73.97],box:[38.85,-79.8,45.05,-71.75],core:[40.49,-74.27,40.93,-73.68],bounds:[[38.3,-80.8],[45.6,-70.9]],minZ:6,regions:[...BOROUGHS,...((window.NYS||{}).regions||[])],transit:'Subway',layerSub:'Stations & Lines',layers:['bus','bike'],busSub:'Local, Select Bus & Express',bike:{name:'Citi Bike',url:'https://gbfs.lyft.com/gbfs/2.3/bkn/en/',ext:'.json'}},
+  nyc:{id:'nyc',name:'New York City',short:'NYC',emoji:'🗽',q:'New York',qc:'New York City',center:[40.722,-73.97],box:[40.49,-74.27,40.93,-73.68],bounds:[[40.42,-74.35],[40.98,-73.6]],regions:BOROUGHS,transit:'Subway',layerSub:'Stations & Lines',layers:['bus','bike'],busSub:'Local, Select Bus & Express',bike:{name:'Citi Bike',url:'https://gbfs.lyft.com/gbfs/2.3/bkn/en/',ext:'.json'}},
   sg:{id:'sg',name:'Singapore',short:'SG',emoji:'🦁',q:'Singapore',qc:'Singapore',center:[1.3,103.84],box:[1.2,103.6,1.48,104.05],bounds:[[1.12,103.55],[1.52,104.12]],regions:['Central','East','North-East','North','West'],transit:'MRT',layerSub:'MRT & LRT Stations',layers:['bus'],busSub:'SBS, SMRT, Tower Transit & Go-Ahead'},
   hk:{id:'hk',name:'Hong Kong',short:'HKG',emoji:'🌃',q:'Hong Kong',qc:'Hong Kong',center:[22.3,114.17],box:[22.15,113.82,22.57,114.45],bounds:[[22.08,113.75],[22.62,114.5]],regions:['Hong Kong Island','Kowloon','New Territories','Lantau & Islands'],transit:'MTR',layerSub:'MTR Stations',layers:['bus','tram','ferry'],busSub:'KMB, Citybus, NLB & Minibus',tram:{label:'Trams',sub:'Ding Ding Lines On The Island',col:'#007F3D'},ferry:{label:'Ferries',sub:'Star Ferry & Outlying Islands',col:'#0B7BC1'}},
   to:{id:'to',name:'Toronto',short:'TO',emoji:'🍁',q:'Toronto',qc:'Toronto, Ontario, Canada',center:[43.66,-79.39],box:[43.58,-79.64,43.86,-79.11],bounds:[[43.5,-79.78],[43.92,-79.0]],regions:['Downtown','Midtown','East End','West End & York','North York','Scarborough','Etobicoke'],transit:'TTC',layerSub:'Subway & LRT Stations',layers:['tram','bus','bike'],busSub:'TTC Bus Routes',tram:{label:'Streetcars',sub:'TTC Streetcar Routes',col:'#DA251D'},bike:{name:'Bike Share Toronto',url:'https://toronto.publicbikesystem.net/customer/gbfs/v2/en/',ext:''}}};
-const CITY_ORDER=['nyc','sg','hk','to'];
+  // New York State: day trips and weekends away from the city. No subway; travel is by car or regional train from NYC.
+CITIES.nys={id:'nys',name:'New York State',short:'NYS',emoji:'🏞️',q:'New York',qc:'New York State',center:[42.4,-74.6],z:7,minZ:6,box:[40.45,-79.8,45.05,-71.75],bounds:[[39.6,-80.8],[45.6,-70.9]],
+  regions:(window.NYS||{}).regions||[],transit:'Train',layerSub:'Metro-North, LIRR & Amtrak Stations',layers:[]};
+const CITY_ORDER=['nyc','sg','hk','to','nys'];
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
 const cityOf=p=>(p&&p.city&&CITIES[p.city])?p.city:'nyc';
 const CDATA=()=>(window.CITY_DATA||{})[CUR.id]||{};
-// The NYC map stretches over New York State (plus New Jersey and Connecticut): its outline is in data/nys-data.js.
-// core = the five boroughs, where subway estimates apply; beyond it travel is by car or regional train.
-const inBox=(ll,c)=>{c=c||CUR;const b=c.box;if(!(ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]))return false;return c.id==='nyc'&&window.NYS?inRing(ll,NYS.area):true;};
-const inCore=ll=>{const b=CUR.core;return !b||(ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]);};
-const reach=(a,b)=>CUR.id==='nyc'?inBox(a)&&inBox(b):km(a,b)<60;
+// The New York State map's outline is in data/nys-data.js. inCore = inside the five boroughs (NYC's subway area).
+// On the state map, trips may start in the city (your NYC home) and end anywhere in the state.
+const inBox=(ll,c)=>{c=c||CUR;const b=c.box;if(!(ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]))return false;return c.id==='nys'&&window.NYS?inRing(ll,NYS.area):true;};
+const inCore=ll=>{const b=CITIES.nyc.box;return ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3];};
+const reach=(a,b)=>CUR.id==='nys'?(inBox(a)||inCore(a))&&(inBox(b)||inCore(b)):km(a,b)<60;
+// The state map uses NYC's subway (to reach Grand Central or Penn Station) and shows regional rail stations on its map.
+const NYCISH=()=>CUR.id==='nyc'||CUR.id==='nys';
+// A city's home; the state map borrows your NYC home until you set one there, since trips upstate usually start in the city.
+const homeFor=(cm,id)=>((cm||{})[id]||{}).home||(id==='nys'?((cm||{}).nyc||{}).home:null)||null;
 function setCityData(id){CUR=CITIES[id]||CITIES.nyc;_A=null;_RC.clear();for(const k in _LP)delete _LP[k];}
 // Apple Maps (MapKit JS). Each map draws its own Apple-colored map first. Once /api/mapkit-token answers and MapKit loads,
 // the map swaps its base for Apple's map, drawn underneath Leaflet: pins, subway, routes and taps stay on Leaflet
@@ -83,7 +90,7 @@ const PAL={Colorful:{water:'#86C8EE',park:'#7FCB8F',air:'#D8D3C8',line:'rgba(255
  // Apple: the app's own map drawn in Apple Maps colors. It shows while Apple's real map loads and if Apple Maps is ever unavailable.
  Apple:{water:'#A6D1F0',park:'#C3E5B8',air:'#E4E1DA',line:'rgba(255,255,255,.9)',land:'#F4F2EE',boroLine:'rgba(120,118,112,.45)',boroW:1.2,label:'#6E6D69',boroLabel:'#5B5A57',boro:{}}};
 const RC={'1':'#EE352E','2':'#EE352E','3':'#EE352E','4':'#00933C','5':'#00933C','6':'#00933C','7':'#B933AD','A':'#0039A6','C':'#0039A6','E':'#0039A6','B':'#FF6319','D':'#FF6319','F':'#FF6319','M':'#FF6319','G':'#6CBE45','J':'#996633','Z':'#996633','L':'#A7A9AC','N':'#FCCC0A','Q':'#FCCC0A','R':'#FCCC0A','W':'#FCCC0A','S':'#808183','SIR':'#0039A6'};
-const bullet=r=>{if(CUR.id!=='nyc'){const x=(CDATA().lines||{})[r];return x?{t:x.t,bg:x.bg,fg:x.fg}:{t:r,bg:'#808183',fg:'#fff'};}return {t:r==='SIR'?'SI':r,bg:RC[r]||'#808183',fg:['N','Q','R','W'].includes(r)?C.navy:'#fff'};};
+const bullet=r=>{if(CUR.id==='nys'&&window.NYS&&NYS.lines[r])return railBul(r);if(!NYCISH()){const x=(CDATA().lines||{})[r];return x?{t:x.t,bg:x.bg,fg:x.fg}:{t:r,bg:'#808183',fg:'#fff'};}return {t:r==='SIR'?'SI':r,bg:RC[r]||'#808183',fg:['N','Q','R','W'].includes(r)?C.navy:'#fff'};};
 const r5=n=>Math.round(n*1e5)/1e5;
 const km=(a,b)=>Math.hypot((a[0]-b[0])*111,(a[1]-b[1])*84);
 const mi=k=>(k*0.621).toFixed(1)+' Mi';
@@ -92,9 +99,9 @@ const fmtMin=m=>{m=Math.max(1,Math.round(m));return m<60?m+' Min':Math.floor(m/6
 const walkMin=(a,b)=>km(a,b)*1.25/0.08;
 const rideMin=(a,b,v)=>km(a,b)*1.25/(v||0.45)+1;
 // Speed (km per minute) and wait for a set of lines: other cities' streetcars, trams and ferries are slower than rail.
-const lineSp=rs=>{if(CUR.id==='nyc')return {v:0.45,w:4};const L=CDATA().lines||{};let v=0,w=99;rs.forEach(r=>{const x=L[r]||{};v=Math.max(v,x.v||0.45);w=Math.min(w,x.w||4);});return {v:v||0.45,w:w===99?4:w};};
-const ST=()=>CUR.id==='nyc'?(window.NYC_SUBWAY||[]):(CDATA().st||[]);
-const nearSt=(p,n=CUR.id==='nyc'?6:10,max=1.2,rail)=>ST().filter(s=>!rail||!s.k).map(s=>({s,d:km(p,s.c)})).filter(x=>x.d<=max).sort((a,b)=>a.d-b.d).slice(0,n);
+const lineSp=rs=>{if(NYCISH())return {v:0.45,w:4};const L=CDATA().lines||{};let v=0,w=99;rs.forEach(r=>{const x=L[r]||{};v=Math.max(v,x.v||0.45);w=Math.min(w,x.w||4);});return {v:v||0.45,w:w===99?4:w};};
+const ST=()=>NYCISH()?(window.NYC_SUBWAY||[]):(CDATA().st||[]);
+const nearSt=(p,n=NYCISH()?6:10,max=1.2,rail)=>ST().filter(s=>!rail||!s.k).map(s=>({s,d:km(p,s.c)})).filter(x=>x.d<=max).sort((a,b)=>a.d-b.d).slice(0,n);
 const _RC=new Map();
 function transitEst(a,b){
  const walk={min:walkMin(a,b),km:km(a,b)*1.3};let best=null;const NA=nearSt(a),NB=nearSt(b);
@@ -105,7 +112,7 @@ function transitEst(a,b){
    const s1=lineSp(r1),s2=lineSp(r2),m1=rideMin(x.s.c,z.c,s1.v),m2=rideMin(z.c,y.s.c,s2.v),t=wa+s1.w+m1+Math.max(5,s2.w)+m2+wb;
    if(!best||t<best.min)best={min:t,legs:[{k:'walk',to:x.s,min:wa},{k:'ride',from:x.s,to:z,r:r1,min:m1+s1.w},{k:'xfer',at:z,min:5},{k:'ride',from:z,to:y.s,r:r2,min:m2},{k:'walk',min:wb}]};}}
  return {walk,subway:best&&best.min<walk.min-2?best:null};}
-// Beyond the five boroughs (NYC map only): a driving estimate, and a regional train (Metro-North, LIRR, Amtrak) from
+// On the New York State map: a driving estimate, and a regional train (Metro-North, LIRR, Amtrak) from
 // Grand Central or Penn Station when the trip starts in the city. Rough numbers; Google Maps has the real ones.
 const CAR={t:'🚗',bg:'#FFF3DF',fg:'#10183F'};
 const driveMin=k=>{const r=k*1.25;return 6+(r<=12?r/0.5:24+(r-12)/1.6);};
@@ -115,8 +122,8 @@ const railBul=l=>{const x=railLine(l);return {t:x.t,bg:x.bg,fg:x.fg};};
 const nearRail=(b,max)=>RAILS().map(s=>({s,d:km(b,s.c)})).filter(x=>x.d<=max).sort((x,y)=>x.d-y.d);
 const lastMile=(c,b,name)=>{const d=km(c,b);return d<1.3?{k:'walk',min:walkMin(c,b)}:{k:'car',min:4+driveMin(d),km:d*1.25};};
 function estimate(a,b){const key=a.join()+'|'+b.join();if(_RC.has(key))return _RC.get(key);
- const d=km(a,b),ny=CUR.id==='nyc',far=ny&&(d>12||!inCore(a)||!inCore(b));
- const out=!ny||(inCore(a)&&inCore(b)&&d<40)?transitEst(a,b):{walk:{min:walkMin(a,b),km:d*1.3},subway:null};
+ const d=km(a,b),st=CUR.id==='nys',far=st&&(d>12||!inCore(a)||!inCore(b));
+ const out=!st||(inCore(a)&&inCore(b)&&d<40)?transitEst(a,b):{walk:{min:walkMin(a,b),km:d*1.3},subway:null};
  if(far){out.drive={min:driveMin(d),km:d*1.25};out.walk.hide=out.walk.min>150;
   if(inCore(a)&&!inCore(b)){let rb=null;const hubs=(window.NYS||{}).hubs||{},toHub={};
    for(const x of nearRail(b,25)){const ln=railLine(x.s.l),hub=hubs[ln.hub];if(!hub)continue;
@@ -129,10 +136,9 @@ function estimate(a,b){const key=a.join()+'|'+b.join();if(_RC.has(key))return _R
 const bestOf=(e,noRail)=>{const o=[];if(e.subway)o.push({mode:'subway',min:e.subway.min});if(e.rail&&!noRail)o.push({mode:'rail',min:e.rail.min});if(e.drive)o.push({mode:'drive',min:e.drive.min});
  if(!e.walk.hide||!o.length)o.push({mode:'walk',min:e.walk.min});return o.sort((x,y)=>x.min-y.min)[0];};
 let _A=null;
-const areas=()=>{if(_A)return _A;if(CUR.id!=='nyc'){_A=(CDATA().hoods||[]).map(h=>({name:h.n,b:h.b,c:h.c}));return _A;}const d=window.NYC_MAP;if(!d)return [];_A=d.hoods.filter(h=>h.t!=='air').map(h=>({name:h.n,b:h.b,c:h.c})).sort((a,b)=>a.name.localeCompare(b.name));
-  if(window.NYS)_A=_A.concat(NYS.towns.map(t=>({name:t[0],b:t[1],c:[t[2],t[3]]})));return _A;};
+const areas=()=>{if(_A)return _A;if(CUR.id==='nys'){_A=((window.NYS||{}).towns||[]).map(t=>({name:t[0],b:t[1],c:[t[2],t[3]]}));return _A;}if(CUR.id!=='nyc'){_A=(CDATA().hoods||[]).map(h=>({name:h.n,b:h.b,c:h.c}));return _A;}const d=window.NYC_MAP;if(!d)return [];_A=d.hoods.filter(h=>h.t!=='air').map(h=>({name:h.n,b:h.b,c:h.c})).sort((a,b)=>a.name.localeCompare(b.name));return _A;};
 const inRing=(pt,r)=>{let ins=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const yi=r[i][0],xi=r[i][1],yj=r[j][0],xj=r[j][1];if(((yi>pt[0])!==(yj>pt[0]))&&(pt[1]<(xj-xi)*(pt[0]-yi)/(yj-yi)+xi))ins=!ins;}return ins;};
-const hoodAt=ll=>{if(CUR.id!=='nyc'){const A=areas();if(!A.length)return null;const n=A.reduce((m,a)=>km(ll,a.c)<km(ll,m.c)?a:m);return km(ll,n.c)<6?n.name:null;}const d=window.NYC_MAP;if(!d)return null;for(const h of d.hoods){if(h.t==='air')continue;for(const poly of h.p){if(inRing(ll,poly[0])&&!poly.slice(1).some(r=>inRing(ll,r)))return h.n;}}
+const hoodAt=ll=>{if(CUR.id!=='nyc'){const A=areas();if(!A.length)return null;const n=A.reduce((m,a)=>km(ll,a.c)<km(ll,m.c)?a:m);return km(ll,n.c)<(CUR.id==='nys'?40:6)?n.name:null;}const d=window.NYC_MAP;if(!d)return null;for(const h of d.hoods){if(h.t==='air')continue;for(const poly of h.p){if(inRing(ll,poly[0])&&!poly.slice(1).some(r=>inRing(ll,r)))return h.n;}}
  const A=areas();return A.length?A.reduce((m,a)=>km(ll,a.c)<km(ll,m.c)?a:m).name:null;};
 let _SI=null;
 const streetIndex=()=>{if(_SI)return _SI;const D=window.NYC_STREETS;if(!D||!D.lines)return null;const G=0.01,cells=new Map(),lines=[];
@@ -194,7 +200,7 @@ class Component extends DCLogic {
   mainMapRef=React.createRef(); exMapRef=React.createRef(); planMapRef=React.createRef(); tripMapRef=React.createRef();
   state=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LS))}catch(e){}
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
-    return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},
+    return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
@@ -214,16 +220,16 @@ class Component extends DCLogic {
   applyRemote(d){const moved=!!(d.city&&CITIES[d.city]&&d.city!==CUR.id);if(moved){setCityData(d.city);try{localStorage.setItem('nycList.city',d.city);}catch(e){}}
     const names=new Set(areas().map(a=>a.name)),cur=CUR.id,all=d.places||[],cm={nyc:{home:d.home||null,plan:d.plan||{ids:[],start:'first'}},...(d.cities||{})},m0=cm[cur]||{};
     const places=all.filter(p=>cityOf(p)===cur).map(p=>names.size&&!names.has(p.area)?{...p,area:hoodAt([p.lat,p.lng])||p.area}:p);
-    this.setState(st=>({places,otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,cats:d.cats&&d.cats.length?d.cats:CATS0,listOrder:Array.isArray(d.listOrder)?d.listOrder:st.listOrder,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},
+    this.setState(st=>({places,otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,cats:d.cats&&d.cats.length?d.cats:CATS0,listOrder:Array.isArray(d.listOrder)?d.listOrder:st.listOrder,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       selId:places.some(p=>p.id===st.selId)?st.selId:null,routeFor:places.some(p=>p.id===st.routeFor)?st.routeFor:null,
       ...(moved?{city:cur,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',exStage:'pick',busState:'',tramState:'',ferryState:'',bikeState:''}:{})}),()=>{if(moved)this.cityMoved();});}
   setCity(id){if(!CITIES[id])return;const s=this.state,prev=CUR.id;if(id===prev){this.setState({cityOpen:false});return;}
     const all=[...s.places.map(p=>p.city?p:{...p,city:prev}),...(s.otherPlaces||[])],cm={...(s.cityMeta||{}),[prev]:{home:s.home,plan:s.plan}};
     setCityData(id);try{localStorage.setItem('nycList.city',id);}catch(e){}const m0=cm[id]||{};
-    this.setState({places:all.filter(p=>cityOf(p)===id),otherPlaces:all.filter(p=>cityOf(p)!==id),cityMeta:cm,home:m0.home||null,plan:m0.plan||{ids:[],start:'first'},city:id,cityOpen:false,
+    this.setState({places:all.filter(p=>cityOf(p)===id),otherPlaces:all.filter(p=>cityOf(p)!==id),cityMeta:cm,home:homeFor(cm,id),plan:m0.plan||{ids:[],start:'first'},city:id,cityOpen:false,
       selId:null,routeFor:null,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',exStage:'pick',placing:false,layersOpen:false,obRes:[],obHome:null,obMsg:'',busState:'',tramState:'',ferryState:'',bikeState:''},()=>this.cityMoved());
     this.toast('Welcome To '+CUR.name+' '+CUR.emoji);}
-  cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip'){m.map.setMinZoom(CUR.minZ||10);m.map.setMaxBounds(CUR.bounds);}m.map.setView(CUR.center,12,{animate:false});}catch(e){}
+  cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip'){m.map.setMinZoom(CUR.minZ||10);m.map.setMaxBounds(CUR.bounds);}m.map.setView(CUR.center,CUR.z||12,{animate:false});}catch(e){}
       if(m.subway){const on=m.map.hasLayer(m.subway);m.subway.remove();this.buildSubway(m);if(on)m.subway.addTo(m.map);}
       if(!m.apple)this.drawBase(m);if(m.streets)try{m.streets.redraw();}catch(e){}m.sig='';m.ids='';m.psig=null;});
     this.allMaps().forEach(m=>this.fillLayers(m));this.syncMaps();setTimeout(()=>this.refreshVisible(),60);}
@@ -265,12 +271,12 @@ class Component extends DCLogic {
     if(s.tab==='plan'){if(!this.maps.plan){this.maps.plan=this.makeMap(this.planMapRef.current,'plan');}else kick(this.maps.plan);this.maps.plan.psig=null;this.syncPlan(true);}
     if(s.tab==='lists'&&s.tripId&&this.tripMapRef.current){if(!this.maps.trip){this.maps.trip=this.makeMap(this.tripMapRef.current,'trip');}else kick(this.maps.trip);this.syncTrip(true);}}
   makeMap(el,kind){const L=window.L;
-    const map=L.map(el,{zoomControl:false,attributionControl:false,minZoom:kind==='trip'?3:(CUR.minZ||10),maxZoom:18,zoomSnap:.5,...(kind==='trip'?{}:{maxBounds:CUR.bounds,maxBoundsViscosity:.8}),preferCanvas:true}).setView(CUR.center,12);
+    const map=L.map(el,{zoomControl:false,attributionControl:false,minZoom:kind==='trip'?3:(CUR.minZ||10),maxZoom:18,zoomSnap:.5,...(kind==='trip'?{}:{maxBounds:CUR.bounds,maxBoundsViscosity:.8}),preferCanvas:true}).setView(CUR.center,CUR.z||12);
     [['streets',410],['boroLab',450],['hoodBig',450],['hoodSmall',450],['bus',452],['subway',455],['stBul',456],['stLab',457],['bike',458],['route',470]].forEach(([n,z])=>{const p=map.createPane(n);p.style.zIndex=z;if(n!=='subway'&&n!=='route'&&n!=='bus'&&n!=='bike')p.style.pointerEvents='none';p.style.transition='opacity .35s';});
     const m={map,el,kind,base:L.layerGroup().addTo(map),labels:L.layerGroup().addTo(map),sig:'',ids:'',route:L.layerGroup().addTo(map),me:L.layerGroup().addTo(map)};
     this.drawBase(m);this.addStreets(m);this.buildSubway(m);if(this.state.showSubway)m.subway.addTo(map);m.bus=L.layerGroup();m.tram=L.layerGroup();m.ferry=L.layerGroup();m.bike=L.layerGroup();this.fillLayers(m);
     m.layer=L.layerGroup().addTo(map);
-    const fade=()=>{const z=map.getZoom();const P=n=>map.getPane(n).style;P('boroLab').opacity=z<12.5&&z>=9.5?1:0;P('hoodBig').opacity=z>=12.5&&z<15?1:0;P('hoodSmall').opacity=z>=14&&z<15?1:0;P('subway').opacity=z>=12.5?1:0;P('stBul').opacity=z>=13.5&&z<15?1:0;P('stLab').opacity=z>=15?1:0;P('bus').opacity=z>=12?1:0;P('bike').opacity=z>=13.5?1:0;};
+    const fade=()=>{const z=map.getZoom();const P=n=>map.getPane(n).style;P('boroLab').opacity=z<12.5&&z>=9.5?1:0;P('hoodBig').opacity=z>=12.5&&z<15?1:0;P('hoodSmall').opacity=z>=14&&z<15?1:0;const sx=CUR.id==='nys';P('subway').opacity=z>=(sx?7:12.5)?1:0;P('stBul').opacity=!sx&&z>=13.5&&z<15?1:0;P('stLab').opacity=z>=(sx?10:15)?1:0;P('bus').opacity=z>=12?1:0;P('bike').opacity=z>=13.5?1:0;};
     map.on('zoomend',fade);fade();map.on('click',e=>this.onMapClick(e,kind));appleMaps(ok=>{if(ok&&this._on)this.attachApple(m);});return m;}
   // Put Apple's map under this Leaflet map and keep it in step. Leaflet's own base (borough colors, labels,
   // streets) is cleared; Leaflet stops snapping zoom so pinches stay smooth and lined up.
@@ -321,7 +327,8 @@ class Component extends DCLogic {
       return t;}});
     m.streets=new Layer({pane:'streets',minZoom:12,maxZoom:18,updateWhenZooming:false,keepBuffer:3}).addTo(m.map);}
   buildSubway(m){const L=window.L;m.subway=L.layerGroup();const rend=L.canvas({pane:'subway'});
-    ST().forEach(s=>{if(s.k)return;const cm=L.circleMarker(s.c,{renderer:rend,radius:5.5,color:'#fff',weight:2,fillColor:bullet(s.r[0]).bg||C.navy,fillOpacity:1});
+    const list=CUR.id==='nys'?RAILS().map(r=>({n:r.n,c:r.c,r:[r.l]})):ST();
+    list.forEach(s=>{if(s.k)return;const cm=L.circleMarker(s.c,{renderer:rend,radius:5.5,color:'#fff',weight:2,fillColor:bullet(s.r[0]).bg||C.navy,fillOpacity:1});
       const c0=bullet(s.r[0]).bg,c1=s.r.map(r=>bullet(r).bg).find(c=>c!==c0);if(c1)L.circleMarker(s.c,{renderer:rend,radius:2.4,stroke:false,fillColor:c1,fillOpacity:1,interactive:false}).addTo(m.subway);
       cm.on('click',e=>{window.L.DomEvent.stopPropagation(e);this.toast(s.n+' · '+s.r.map(r=>CUR.id==='nyc'?r:bullet(r).t).join(' '));});cm.addTo(m.subway);
       if(m.kind==='main'){const bl=s.r.slice(0,6).map(r=>{const b=bullet(r);return `<span style="width:14px;height:14px;border-radius:50%;background:${b.bg};color:${b.fg};font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center">${b.t}</span>`;}).join('');
@@ -702,7 +709,7 @@ class Component extends DCLogic {
     const sp=s.places.find(p=>p.id===s.selId);let sel={};
     if(sp){const c=catOf(sp.cat),src=SRC[sp.source]||SRC.manual,hasUrl=!!sp.url,ip=inPlan(sp.id);let ns=nearSt([sp.lat,sp.lng],1,2,true)[0];
       // Outside the subway's reach: the nearest Metro-North, LIRR or Amtrak station, with the walk or a short drive to it.
-      if(!ns&&CUR.id==='nyc'){const r=nearRail([sp.lat,sp.lng],15)[0];if(r){const lm=lastMile(r.s.c,[sp.lat,sp.lng]);ns={s:{n:r.s.n+(lm.k==='car'?' · Drive':''),r:[],c:r.s.c},rb:[railBul(r.s.l)],min:lm.min};}}
+      if(!ns&&CUR.id==='nys'){const r=nearRail([sp.lat,sp.lng],15)[0];if(r){const lm=lastMile(r.s.c,[sp.lat,sp.lng]);ns={s:{n:r.s.n+(lm.k==='car'?' · Drive':''),r:[],c:r.s.c},rb:[railBul(r.s.l)],min:lm.min};}}
       sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
         hasStation:!!ns,stName:ns?ns.s.n:'',stRoutes:ns?(ns.rb||ns.s.r.slice(0,6).map(bullet)):[],stWalk:ns?fmtMin(ns.min!=null?ns.min:walkMin([sp.lat,sp.lng],ns.s.c))+' Walk':'',
         cols:hasUrl?'1fr 1fr 1fr':'1fr 1fr',visBg:sp.visited?C.green:'#fff',visFg:sp.visited?'#fff':C.green,visLabel:sp.visited?'Been Here ✓':'Mark Visited',
@@ -772,7 +779,7 @@ class Component extends DCLogic {
       cityRows:CITY_ORDER.map(k=>{const c=CITIES[k],n=k===CUR.id?s.places.length:(s.otherPlaces||[]).filter(p=>cityOf(p)===k).length;
         return {id:k,name:c.name,short:c.short,emoji:c.emoji,transit:c.transit,count:n,on:k===CUR.id,onClick:()=>this.setCity(k)};}),
       layerRows:(()=>{const lr=(key,label,sub,on,stv,col,onClick)=>({key,label,sub:on&&stv==='loading'?'Loading…':on&&stv==='error'?'Not Available Right Now':sub,on,col,onClick});
-        const rows=[{key:'sub',label:CUR.id==='nyc'?'Subway':CUR.transit,sub:CUR.layerSub,on:s.showSubway,col:CUR.id==='nyc'?'#EE352E':CUR.id==='sg'?'#D42E12':CUR.id==='hk'?'#ED1D24':'#DA251D',onClick:()=>this.setState({showSubway:!s.showSubway})}];
+        const rows=[{key:'sub',label:CUR.id==='nyc'?'Subway':CUR.transit,sub:CUR.layerSub,on:s.showSubway,col:CUR.id==='nyc'?'#EE352E':CUR.id==='sg'?'#D42E12':CUR.id==='hk'?'#ED1D24':CUR.id==='nys'?'#0039A6':'#DA251D',onClick:()=>this.setState({showSubway:!s.showSubway})}];
         CUR.layers.forEach(k=>{
           if(k==='bus')rows.push(lr('bus','Bus Routes',CUR.busSub,s.showBus,s.busState,'#006CB7',()=>this.setState({showBus:!s.showBus,busState:s.busState==='error'?'':s.busState})));
           if(k==='tram')rows.push(lr('tram',CUR.tram.label,CUR.tram.sub,s.showTram,s.tramState,CUR.tram.col,()=>this.setState({showTram:!s.showTram,tramState:s.tramState==='error'?'':s.tramState})));

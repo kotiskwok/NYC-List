@@ -1,13 +1,13 @@
-// New York State on the NYC map: the area the map covers beyond the five boroughs, towns grouped into regions
-// (used as "neighborhoods" for spots outside the city), and regional rail stations for train estimates.
+// The New York State map (city id 'nys'): its outline, towns grouped into regions (used as its "neighborhoods"),
+// and regional rail stations for train estimates from New York City.
 // Coordinates are [lat, lng]. Rail times (t) are rough minutes from the hub on a typical train, for estimates only.
 window.NYS = {
-  regions: ['Long Island', 'Westchester', 'Hudson Valley', 'Catskills', 'Capital Region', 'Adirondacks & North Country', 'Finger Lakes & Central NY', 'Western NY', 'New Jersey', 'Connecticut'],
-  // New York State plus New Jersey and Connecticut, drawn loosely; keeps out Ontario, Quebec, Pennsylvania and Vermont.
-  area: [[38.85, -75.6], [39.6, -75.55], [39.9, -75.12], [40.2, -74.76], [40.55, -75.2], [41.36, -74.75], [42.0, -75.36], [42.0, -79.8], [42.55, -79.8], [42.86, -78.95],
+  regions: ['Long Island', 'Westchester', 'Hudson Valley', 'Catskills', 'Capital Region', 'Adirondacks & North Country', 'Finger Lakes & Central NY', 'Western NY'],
+  // New York State, drawn loosely. Spots inside the five boroughs belong to the NYC map (checked first).
+  area: [[40.49, -74.26], [40.70, -74.03], [41.0, -73.91], [41.36, -74.69], [42.0, -75.36], [42.0, -79.8], [42.55, -79.8], [42.86, -78.95],
     [43.1, -79.08], [43.32, -79.08], [43.38, -78.0], [43.33, -77.4], [43.48, -76.6], [43.62, -76.2], [44.1, -76.42], [44.5, -75.82],
-    [45.02, -74.75], [45.02, -73.33], [43.6, -73.28], [42.75, -73.27], [42.05, -73.49], [42.05, -71.78], [41.3, -71.8], [41.08, -71.8],
-    [40.45, -72.6], [40.4, -73.9], [39.6, -73.95], [38.85, -74.85]],
+    [45.02, -74.75], [45.02, -73.33], [43.6, -73.28], [42.75, -73.27], [42.05, -73.49], [41.21, -73.51], [41.13, -73.73], [41.0, -73.66],
+    [41.18, -72.2], [41.08, -71.8], [40.45, -72.6], [40.5, -74.0]],
   towns: [
     // Long Island
     ['Long Beach', 'Long Island', 40.588, -73.658], ['Garden City', 'Long Island', 40.727, -73.634], ['Great Neck', 'Long Island', 40.800, -73.728],
@@ -71,20 +71,7 @@ window.NYS = {
     ['Rochester', 'Western NY', 43.157, -77.615], ['Letchworth', 'Western NY', 42.632, -78.050], ['East Aurora', 'Western NY', 42.768, -78.614],
     ['Ellicottville', 'Western NY', 42.275, -78.672], ['Lockport', 'Western NY', 43.171, -78.690], ['Buffalo', 'Western NY', 42.886, -78.878],
     ['Lewiston', 'Western NY', 43.172, -79.036], ['Niagara Falls', 'Western NY', 43.096, -79.037], ['Jamestown', 'Western NY', 42.097, -79.235],
-    ['Fredonia', 'Western NY', 42.440, -79.331], ['Chautauqua', 'Western NY', 42.210, -79.466],
-    // New Jersey
-    ['Jersey City', 'New Jersey', 40.718, -74.047], ['Hoboken', 'New Jersey', 40.744, -74.032], ['Edgewater', 'New Jersey', 40.827, -73.976],
-    ['Fort Lee', 'New Jersey', 40.851, -73.970], ['Englewood', 'New Jersey', 40.893, -73.973], ['Paramus', 'New Jersey', 40.944, -74.075],
-    ['Newark', 'New Jersey', 40.736, -74.172], ['Montclair', 'New Jersey', 40.826, -74.209], ['Summit', 'New Jersey', 40.716, -74.364],
-    ['Morristown', 'New Jersey', 40.797, -74.481], ['New Brunswick', 'New Jersey', 40.486, -74.452], ['Princeton', 'New Jersey', 40.357, -74.667],
-    ['Lambertville', 'New Jersey', 40.366, -74.943], ['Red Bank', 'New Jersey', 40.347, -74.064], ['Asbury Park', 'New Jersey', 40.220, -74.012],
-    ['Atlantic City', 'New Jersey', 39.364, -74.423], ['Cape May', 'New Jersey', 38.935, -74.906],
-    // Connecticut
-    ['Greenwich', 'Connecticut', 41.026, -73.628], ['Stamford', 'Connecticut', 41.053, -73.539], ['New Canaan', 'Connecticut', 41.147, -73.495],
-    ['Norwalk', 'Connecticut', 41.118, -73.408], ['Westport', 'Connecticut', 41.141, -73.358], ['Ridgefield', 'Connecticut', 41.281, -73.498],
-    ['Danbury', 'Connecticut', 41.394, -73.454], ['Kent', 'Connecticut', 41.725, -73.477], ['Washington Depot', 'Connecticut', 41.638, -73.311],
-    ['Litchfield', 'Connecticut', 41.747, -73.189], ['New Haven', 'Connecticut', 41.308, -72.928], ['Hartford', 'Connecticut', 41.764, -72.685],
-    ['Old Saybrook', 'Connecticut', 41.292, -72.376], ['Essex', 'Connecticut', 41.353, -72.391], ['Mystic', 'Connecticut', 41.354, -71.966]
+    ['Fredonia', 'Western NY', 42.440, -79.331], ['Chautauqua', 'Western NY', 42.210, -79.466]
   ],
   hubs: { gct: { n: 'Grand Central', c: [40.7527, -73.9772] }, penn: { n: 'Penn Station', c: [40.7506, -73.9935] } },
   // Line badges: t is the text in the round badge.
