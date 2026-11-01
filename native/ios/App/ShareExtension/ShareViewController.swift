@@ -147,6 +147,7 @@ private struct ShareCard: View {
                         .clipShape(Capsule())
                         .shadow(color: orange.opacity(0.35), radius: 12, x: 0, y: 8)
                 }
+                .buttonStyle(.plain)
             }
             .padding(EdgeInsets(top: 10, leading: 20, bottom: 22, trailing: 20))
             .background(
