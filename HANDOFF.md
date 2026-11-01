@@ -280,7 +280,9 @@ The App Store version is the same website wrapped with Capacitor 8 in `native/`.
 - **Server-side fetches to Google:** request as a phone or a plain client, not desktop Chrome (see Google Maps above).
 
 ### Share sheet card
-- `native/ios/App/ShareExtension/ShareViewController.swift` → `ShareCard` (SwiftUI, iOS 15 APIs only): frosted bottom card with the E2a logo (SwiftUI `PinShape` + stacked-shadow text + navy "in" pill), a green ✓ / red ✕ glass lens, mono status line, a source badge (TikTok / Instagram / Threads / Google Maps / Website, the app's colours) beside the link, and the orange Done button. Typechecked against the iOS SDK on a macOS runner (Nov 2026).
+- `native/ios/App/ShareExtension/ShareViewController.swift` → `ShareCard`, design **C1 · Ticket Toast** (SwiftUI, iOS 15 APIs only): a dark liquid-glass ticket that drops in at the top. Blue stub (yellow pin with ✓ / red pin with ✕, SAVED / NO LINK), dashed tear line, "Saved To Spotted In", FROM (TikTok / Instagram / Threads / Google Maps / site) and TO (My Map · city), Undo (removes the link from the inbox) and a yellow Done. Closes itself after ~3 s; tap outside to close.
+- The city comes from the app: `NYCNative.setCity(CUR.short)` (on load and in `cityMoved`) → `AppGroupPlugin.setCity` → app-group key `currentCity`.
+- The design options (S1–S4, C1–C3) are on the "Spotted In Icon Options" canvas artifact.
 
 ### App icon
 - Design "E2a" (Oct 2026): SPOTTED with a map pin as the O (yellow, stacked red-orange shadow) over a navy pill with a you-are-here dot and an upright yellow "in", on the app blue. Source: `native/design/app-icon.html` (open it in a browser; the options canvas lives in the claude.ai artifact "Spotted In Icon Options"). In-app logo: `Logo()` / `Wordmark` / `InPill` in `view.js` (sign-in screen). Launch splash: `Splash.imageset` (2732², logo at 1.4×). Files: `icons/` (192, 512, maskable 512 at 80%, apple-touch 180) and `native/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` (1024, no alpha).
