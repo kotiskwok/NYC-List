@@ -1,0 +1,7 @@
+total 5096
+drwxr-xr-x  6 runner  wheel      192 Nov  1 01:02 .
+drwxrwxrwt  4 root    wheel      128 Nov  1 01:02 ..
+-rw-r--r--  1 runner  wheel     9010 Nov  1 01:02 main.swift
+-rw-r--r--  1 runner  wheel   981189 Nov  1 01:02 nolink.png
+-rwxr-xr-x  1 runner  wheel   499264 Nov  1 01:02 r
+-rw-r--r--  1 runner  wheel  1110224 Nov  1 01:02 saved.png
