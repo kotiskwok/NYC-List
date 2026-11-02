@@ -1,12 +1,12 @@
 // Transit route lines from OpenStreetMap (Overpass API) for the non-NYC cities' map layers:
-// buses (Singapore, Hong Kong, Toronto), trams (Hong Kong), streetcars (Toronto) and ferries (Hong Kong).
+// buses (Singapore, Hong Kong, Toronto, Boston), trams (Hong Kong), streetcars (Toronto) and ferries (Hong Kong, Boston).
 // OSM keeps each route as a relation of road pieces ("ways"). This keeps one relation per route number,
 // joins its pieces into whole lines, simplifies them and packs each as [lat0, lng0, dLat, dLng, …] in 1e-5 degrees,
 // the same shape as /api/bus for NYC: [{ n: route number, t: kind, c: color, l: name, s: [lines] }].
 // Building takes ~35 s per layer (too long for a Vercel function), so scripts/build-routes.js runs it in a GitHub Action
 // and saves the results to data/routes/<city>-<kind>.json, which the app loads directly.
 
-const BOX = { sg: [1.2, 103.6, 1.48, 104.05], hk: [22.15, 113.82, 22.57, 114.45], to: [43.58, -79.64, 43.86, -79.11] };
+const BOX = { sg: [1.2, 103.6, 1.48, 104.05], hk: [22.15, 113.82, 22.57, 114.45], to: [43.58, -79.64, 43.86, -79.11], bos: [42.22, -71.2, 42.43, -70.95] };
 // Which relations make up each layer.
 const FILTER = {
   'sg:bus': '["route"="bus"]',
@@ -14,7 +14,9 @@ const FILTER = {
   'hk:tram': '["route"="tram"]',
   'hk:ferry': '["route"="ferry"]',
   'to:bus': '["route"="bus"]["network"="TTC"]',
-  'to:tram': '["route"="tram"]["network"="TTC"]'
+  'to:tram': '["route"="tram"]["network"="TTC"]',
+  'bos:bus': '["route"="bus"]["network"~"MBTA"]',
+  'bos:ferry': '["route"="ferry"]'
 };
 const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 
@@ -22,7 +24,8 @@ const hex = c => /^#?[0-9a-f]{6}$/i.test(String(c || '').trim()) ? '#' + String(
 function colorFor(city, kind, tags) {
   const own = hex(tags.colour);
   if (kind === 'tram') return city === 'hk' ? '#007F3D' : '#DA251D';
-  if (kind === 'ferry') return '#0B7BC1';
+  if (kind === 'ferry') return city === 'bos' ? '#008EAA' : '#0B7BC1';
+  if (city === 'bos') return /^SL/i.test(tags.ref || '') ? '#7C878E' : '#E0A500';
   const op = (tags.operator || '') + ' ' + (tags.network || '');
   if (city === 'hk') {
     if (/KMB|Kowloon Motor|九巴/i.test(op)) return '#E2231A';

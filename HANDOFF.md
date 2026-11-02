@@ -6,7 +6,7 @@ Everything a new chat needs to keep working on **Spotted In**: what the app does
 
 ## 1. What Spotted In is
 
-**Spotted In** is Kotis's map of places she's been meaning to try (restaurants, cafes, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station and the travel time. It also plans a day out, keeps shared trip lists with friends, and works in four cities: **New York, Singapore, Hong Kong and Toronto**. A fifth map, **New York State**, holds day trips and weekends away outside the city.
+**Spotted In** is Kotis's map of places she's been meaning to try (restaurants, cafes, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station and the travel time. It also plans a day out, keeps shared trip lists with friends, and works in five cities: **New York, Singapore, Hong Kong, Toronto and Boston**. A fifth map, **New York State**, holds day trips and weekends away outside the city.
 
 - **Website (also installs to the home screen):** https://nyc-lovat.vercel.app
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -39,10 +39,10 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 
 ### Map tab
 - **Apple Maps** as the base map (MapKit JS). If it's ever unavailable, the app draws its own city map in Apple Maps colours.
-- **Header card:** "Spotted In" with the yellow **city button** (NYC ▾ / SG / HKG / TO / NYS) to switch city, a big count of **Spots To Try**, your profile photo with a sync dot (tap for **Your Account**), and Visited / In Plan counts.
+- **Header card:** "Spotted In" with the yellow **city button** (NYC ▾ / SG / HKG / TO / BOS / NYS) to switch city, a big count of **Spots To Try**, your profile photo with a sync dot (tap for **Your Account**), and Visited / In Plan counts.
 - **Category chips** filter the pins. Each pin is a frosted ring with the category's line icon, or the spot's photo.
 - **Nearest To You** card, once your location is known.
-- **Map Layers** (per city): NYC: Subway, Bus routes, Citi Bike · Singapore: MRT/LRT, Buses · Hong Kong: MTR, Buses, Trams, Ferries · Toronto: Subway/LRT, Streetcars, Buses, Bike Share Toronto. Bike docks show live bike and dock counts.
+- **Map Layers** (per city): NYC: Subway, Bus routes, Citi Bike · Singapore: MRT/LRT, Buses · Hong Kong: MTR, Buses, Trams, Ferries · Toronto: Subway/LRT, Streetcars, Buses, Bike Share Toronto · Boston: the T (Red, Orange, Blue, Green B/C/D/E, Mattapan), MBTA Buses & Silver Line, Ferries, Bluebikes. Bike docks show live bike and dock counts.
 - **New York State map (NYS):** its own map, last in the city list (not offered as a home city on the welcome pages). It opens zoomed out on the whole state; spots get a town as their neighborhood (Hudson, Beacon, Montauk…), grouped into regions (Long Island, Westchester, Hudson Valley, Catskills, Capital Region, Adirondacks & North Country, Finger Lakes & Central NY, Western NY). Its map layer is Metro-North, LIRR & Amtrak stations. It uses your NYC home until you set one there.
 - **My Location** button. If location fails, you can tap where you are.
 - While a spot or directions are open, the header, chips and side buttons hide so the map is clear.
@@ -168,7 +168,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - `state.places` holds the current city's spots and `state.otherPlaces` the rest.
 - **Station and neighborhood data:**
   - NYC: `data/nyc-*.js`.
-  - Other cities: `data/city-data.js`: neighborhoods, rail stations, plus streetcar, tram and ferry stops (`k:1`) with line speeds and waits for travel estimates.
+  - Other cities: `data/city-data.js`: neighborhoods, rail stations, plus streetcar, tram and ferry stops (`k:1`) with line speeds and waits for travel estimates. Boston (`bos`, added Nov 2026 from OpenStreetMap) has MBTA stations with line codes RL/OL/BL/B/C/D/E/M, Silver Line stops as `k:1`, and neighborhoods grouped Boston / Cambridge / Somerville / Brookline / Nearby.
 - **Bus, tram, streetcar and ferry route lines:**
   - Other cities: static files `data/routes/<city>-<kind>.json`, built monthly from OpenStreetMap by the GitHub Action **Build transit routes** (`scripts/build-routes.js` → `api/_osmroutes.js`). The Action can also be run by hand.
   - NYC buses: `/api/bus`.

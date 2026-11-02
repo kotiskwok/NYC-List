@@ -30,7 +30,10 @@ const CITIES={
   // New York State: day trips and weekends away from the city. No subway; travel is by car or regional train from NYC.
 CITIES.nys={id:'nys',name:'New York State',short:'NYS',emoji:'🏞️',q:'New York',qc:'New York State',center:[42.4,-74.6],z:7,minZ:6,box:[40.45,-79.8,45.05,-71.75],bounds:[[39.6,-80.8],[45.6,-70.9]],
   regions:(window.NYS||{}).regions||[],transit:'Train',layerSub:'Metro-North, LIRR & Amtrak Stations',layers:[]};
-const CITY_ORDER=['nyc','sg','hk','to','nys'];
+CITIES.bos={id:'bos',name:'Boston',short:'BOS',emoji:'🦞',q:'Boston, MA',qc:'Boston, Massachusetts',center:[42.355,-71.075],box:[42.22,-71.2,42.43,-70.95],bounds:[[42.15,-71.3],[42.5,-70.85]],
+  regions:['Boston','Cambridge','Somerville','Brookline','Nearby'],transit:'The T',layerSub:'Red, Orange, Blue & Green Line Stations',layers:['bus','ferry','bike'],busSub:'MBTA Buses & Silver Line',
+  ferry:{label:'Ferries',sub:'MBTA Harbor Ferries',col:'#008EAA'},bike:{name:'Bluebikes',url:'https://gbfs.lyft.com/gbfs/2.3/bos/en/',ext:'.json'}};
+const CITY_ORDER=['nyc','sg','hk','to','bos','nys'];
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
 const cityOf=p=>(p&&p.city&&CITIES[p.city])?p.city:'nyc';
 const CDATA=()=>(window.CITY_DATA||{})[CUR.id]||{};
@@ -438,7 +441,7 @@ class Component extends DCLogic {
     else if(o.mode==='drive'){L.polyline([r.a,r.b],{renderer:rend,color:'#fff',weight:9,lineCap:'round',interactive:false}).addTo(m.route);L.polyline([r.a,r.b],{renderer:rend,color:C.orange,weight:5,lineCap:'round',interactive:false}).addTo(m.route);}
     else{let cur=r.a;o.legs.forEach(l=>{if(l.k==='walk'||l.k==='car'){const to=l.to?l.to.c:r.b;dash(cur,to);cur=to;}
       else if(l.k==='ride'){L.polyline([l.from.c,l.to.c],{renderer:rend,color:'#fff',weight:10,lineCap:'round',interactive:false}).addTo(m.route);
-        L.polyline([l.from.c,l.to.c],{renderer:rend,color:l.col||RC[l.r[0]]||C.navy,weight:6,lineCap:'round',interactive:false}).addTo(m.route);
+        L.polyline([l.from.c,l.to.c],{renderer:rend,color:l.col||bullet(l.r[0]).bg||C.navy,weight:6,lineCap:'round',interactive:false}).addTo(m.route);
         [l.from,l.to].forEach(st=>{L.circleMarker(st.c,{renderer:rend,radius:6,color:C.navy,weight:3,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(m.route);pts.push(st.c);});cur=l.to.c;}});}
     L.circleMarker(r.a,{renderer:rend,radius:8,color:'#fff',weight:3,fillColor:C.navy,fillOpacity:1,interactive:false}).addTo(m.route);
     setTimeout(()=>{try{const map=m.map,b=L.latLngBounds(pts),sz=map.getSize();if(!sz.y)return;const top=150,bot=Math.min(sz.y*.6,500)+10,aH=Math.max(120,sz.y-top-bot),aW=sz.x-70;
@@ -779,7 +782,7 @@ class Component extends DCLogic {
       cityRows:CITY_ORDER.map(k=>{const c=CITIES[k],n=k===CUR.id?s.places.length:(s.otherPlaces||[]).filter(p=>cityOf(p)===k).length;
         return {id:k,name:c.name,short:c.short,emoji:c.emoji,transit:c.transit,count:n,on:k===CUR.id,onClick:()=>this.setCity(k)};}),
       layerRows:(()=>{const lr=(key,label,sub,on,stv,col,onClick)=>({key,label,sub:on&&stv==='loading'?'Loading…':on&&stv==='error'?'Not Available Right Now':sub,on,col,onClick});
-        const rows=[{key:'sub',label:CUR.id==='nyc'?'Subway':CUR.transit,sub:CUR.layerSub,on:s.showSubway,col:CUR.id==='nyc'?'#EE352E':CUR.id==='sg'?'#D42E12':CUR.id==='hk'?'#ED1D24':CUR.id==='nys'?'#0039A6':'#DA251D',onClick:()=>this.setState({showSubway:!s.showSubway})}];
+        const rows=[{key:'sub',label:CUR.id==='nyc'?'Subway':CUR.transit,sub:CUR.layerSub,on:s.showSubway,col:CUR.id==='nyc'?'#EE352E':CUR.id==='sg'?'#D42E12':CUR.id==='hk'?'#ED1D24':CUR.id==='nys'?'#0039A6':CUR.id==='bos'?'#DA291C':'#DA251D',onClick:()=>this.setState({showSubway:!s.showSubway})}];
         CUR.layers.forEach(k=>{
           if(k==='bus')rows.push(lr('bus','Bus Routes',CUR.busSub,s.showBus,s.busState,'#006CB7',()=>this.setState({showBus:!s.showBus,busState:s.busState==='error'?'':s.busState})));
           if(k==='tram')rows.push(lr('tram',CUR.tram.label,CUR.tram.sub,s.showTram,s.tramState,CUR.tram.col,()=>this.setState({showTram:!s.showTram,tramState:s.tramState==='error'?'':s.tramState})));
