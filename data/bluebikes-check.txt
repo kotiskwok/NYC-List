@@ -1,0 +1,3 @@
+https://gbfs.lyft.com/gbfs/2.3/bos/en/station_information.json 200 {"data": {"stations": [{"station_id": "f834d260-0de8-11e7-991c-3863bb43a7d0", "name": "South Boston Library - 646 E Broadway", "short_name": "C32017", "lon": -7
+https://gbfs.lyft.com/gbfs/1.1/bos/en/station_information.json 200 {"data": {"stations": [{"station_id": "f834d260-0de8-11e7-991c-3863bb43a7d0", "name": "South Boston Library - 646 E Broadway", "short_name": "C32017", "lon": -7
+https://gbfs.bluebikes.com/gbfs/gbfs.json 200 {"data": {"en": {"feeds": [{"name": "gbfs", "url": "https://gbfs.lyft.com/gbfs/1.1/bos/gbfs.json"}, {"name": "ebikes_at_stations", "url": "https://gbfs.lyft.com
