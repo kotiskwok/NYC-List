@@ -1,25 +1,19 @@
-# Temporary: builds data/boston-raw.json from OpenStreetMap. Removed once Boston's station data is in data/city-data.js.
+# Temporary: checks the Bluebikes feed address. Removed once Boston is set up.
 name: Boston data (temporary)
 on:
   push:
     branches: [main]
-    paths: [scripts/boston-data.js, .github/workflows/boston-data.yml]
+    paths: [.github/workflows/boston-data.yml]
 permissions:
   contents: write
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: node scripts/boston-data.js
       - run: |
+          for u in https://gbfs.lyft.com/gbfs/2.3/bos/en/station_information.json https://gbfs.lyft.com/gbfs/1.1/bos/en/station_information.json https://gbfs.bluebikes.com/gbfs/gbfs.json; do
+            echo "$u $(curl -s -o /tmp/b -w '%{http_code}' "$u") $(head -c 160 /tmp/b | tr -d '\n')" >> data/bluebikes-check.txt; done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/boston-raw.json
-          git commit -m "Boston raw data from OpenStreetMap"
-          git pull --rebase origin main
-          git push
+          git add data/bluebikes-check.txt && git commit -m "Bluebikes feed check" && git pull --rebase origin main && git push
