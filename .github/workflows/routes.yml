@@ -1,10 +1,17 @@
-# Rebuilds the Singapore / Hong Kong / Toronto transit route files (data/routes) from OpenStreetMap
-# and commits them, which redeploys the site on Vercel. Runs monthly, on demand, and when the builder changes.
+# Rebuilds the Singapore / Hong Kong / Toronto / Boston transit route files (data/routes) from OpenStreetMap
+# and commits them, which redeploys the site on Vercel. Runs weekly, on demand, and when the builder changes.
+# The shared Overpass servers are often slow, so every layer that finishes is committed even if the run stops early,
+# and the next run only builds the layers that are missing or more than 20 days old.
 name: Build transit routes
 on:
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Rebuild every layer, even fresh ones'
+        type: boolean
+        default: false
   schedule:
-    - cron: '17 6 3 * *'
+    - cron: '17 6 * * 1'
   push:
     branches: [main]
     paths:
@@ -19,14 +26,25 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 200
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node scripts/build-routes.js
+      # git checkout gives every file today's date; restore each route file's real age from its last commit.
+      - name: Restore file dates
+        run: |
+          git fetch --unshallow --quiet || true
+          for f in data/routes/*.json; do [ -e "$f" ] || continue; touch -d "$(git log -1 --format=%cI -- "$f")" "$f"; done
+      - name: Build routes
+        timeout-minutes: 180
+        continue-on-error: true
+        env:
+          FORCE: ${{ inputs.force && '1' || '' }}
+        run: node scripts/build-routes.js
       - name: Commit updated routes
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

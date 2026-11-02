@@ -170,7 +170,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
   - NYC: `data/nyc-*.js`.
   - Other cities: `data/city-data.js`: neighborhoods, rail stations, plus streetcar, tram and ferry stops (`k:1`) with line speeds and waits for travel estimates. Boston (`bos`, added Nov 2026 from OpenStreetMap) has MBTA stations with line codes RL/OL/BL/B/C/D/E/M, Silver Line stops as `k:1`, and neighborhoods grouped Boston / Cambridge / Somerville / Brookline / Nearby.
 - **Bus, tram, streetcar and ferry route lines:**
-  - Other cities: static files `data/routes/<city>-<kind>.json`, built monthly from OpenStreetMap by the GitHub Action **Build transit routes** (`scripts/build-routes.js` → `api/_osmroutes.js`). The Action can also be run by hand.
+  - Other cities: static files `data/routes/<city>-<kind>.json`, built weekly from OpenStreetMap by the GitHub Action **Build transit routes** (`scripts/build-routes.js` → `api/_osmroutes.js`). The shared Overpass servers are slow, so each layer is committed as soon as the run ends (even if it stops early), and the next run only builds layers that are missing or over 20 days old. Run it by hand from GitHub → Actions → Build transit routes → Run workflow (tick **force** to rebuild everything).
   - NYC buses: `/api/bus`.
 - Server prompts are localized per city (`CITIES` / `localize()` in `api/_shared.js`).
 

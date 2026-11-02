@@ -9,8 +9,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   let failed = 0;
+  // Layers built in the last 20 days are skipped, so a run that stopped part-way picks up where it left off.
+  // FORCE=1 rebuilds everything; ONLY=hk:tram,to:bus builds just those.
+  const only = (process.env.ONLY || '').split(',').filter(Boolean), force = process.env.FORCE === '1';
   for (const key of Object.keys(OSM.FILTER)) {
     const [city, kind] = key.split(':');
+    if (only.length && !only.includes(key)) continue;
+    const prev = path.join(OUT, `${city}-${kind}.json`);
+    if (!force && !only.length && fs.existsSync(prev) && Date.now() - fs.statSync(prev).mtimeMs < 20 * 864e5) { console.log(`${key}: fresh, skipped`); continue; }
     let ok = false;
     for (let attempt = 1; attempt <= 4 && !ok; attempt++) {
       const t0 = Date.now();
