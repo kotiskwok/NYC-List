@@ -1,8 +1,46 @@
 // View: a faithful translation of the prototype's template into React (via htm).
 const html = htm.bind(React.createElement);
 
+const _css = new Map(); // S() cache (cleared when the theme changes)
+// Light / dark appearance. THEME.pref is 'system', 'light' or 'dark' (saved on this device); THEME.dark is what's showing.
+// The views are drawn in light colors; in dark mode S() below swaps the navy text, white glass, cream and navy fills for
+// their dark versions, so every screen follows without its own dark styles.
+const THEME = { pref: (() => { try { return localStorage.getItem('nycList.theme') || 'system'; } catch (e) { return 'system'; } })(), dark: false };
+const _mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+const applyTheme = () => { THEME.dark = THEME.pref === 'dark' || (THEME.pref === 'system' && !!(_mq && _mq.matches));
+  document.documentElement.setAttribute('data-theme', THEME.dark ? 'dark' : 'light');
+  const mt = document.querySelector('meta[name="theme-color"]'); if (mt) mt.setAttribute('content', THEME.dark ? '#0E1433' : '#FFF3DF');
+  try { window.NYCNative && NYCNative.statusBar && NYCNative.statusBar(THEME.dark); } catch (e) {} _css.clear(); };
+applyTheme();
+const _themeSubs = new Set();
+window.THEME_DARK = () => THEME.dark; window.THEME_PREF = () => THEME.pref;
+window.onThemeChange = fn => { _themeSubs.add(fn); return () => _themeSubs.delete(fn); };
+window.setThemePref = pref => { THEME.pref = pref; try { localStorage.setItem('nycList.theme', pref); } catch (e) {} applyTheme(); _themeSubs.forEach(f => f()); };
+if (_mq) { const onSys = () => { if (THEME.pref === 'system') { applyTheme(); _themeSubs.forEach(f => f()); } };
+  _mq.addEventListener ? _mq.addEventListener('change', onSys) : _mq.addListener && _mq.addListener(onSys); }
+const DK_TEXT = { '#10183f': '#EEF0FA', '#4a5275': '#A3A9C6', '#3c4466': '#C9CDE2', '#6a7090': '#9CA2C0', '#8a8fa8': '#8E94B2', '#1b3db8': '#8FA6FF' };
+const DK_FILL = { '#ffffff': '#232B58', '#fff3df': '#0E1433', '#10183f': '#2E3C96', '#ffe2df': 'rgba(232,36,44,.2)', '#f2efe9': '#1A1F3A' };
+const rgbaRe = /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/g;
+const darkVal = (k, v) => {
+  if (typeof v !== 'string') return v;
+  if (k === 'color' || k === 'caretColor') {
+    const h = DK_TEXT[v.toLowerCase()]; if (h) return h;
+    return v.replace(rgbaRe, (m, r, g, b, a) => r === '16' && g === '24' && b === '63' ? `rgba(238,240,250,${a})` : m);
+  }
+  if (k === 'background' || k === 'backgroundColor') {
+    const h = DK_FILL[v.toLowerCase()]; if (h) return h;
+    // A plain navy tint (chips, wells) turns into a light tint; navy inside gradients (photo scrims) stays.
+    if (/^rgba\(16,\s*24,\s*63,[\d.\s]+\)$/.test(v)) return v.replace(rgbaRe, (m, r, g, b, a) => `rgba(255,255,255,${Math.min(.16, +a * 1.1)})`);
+    return v.replace(rgbaRe, (m, r, g, b, a) => +r >= 235 && +g >= 235 && +b >= 220 ? `rgba(30,37,76,${Math.min(.92, +a + .08)})` : m).replace(/#fff\b/gi, 'rgba(30,37,76,.9)');
+  }
+  if (k.startsWith('border') && !/radius/i.test(k)) return v.replace(rgbaRe, (m, r, g, b, a) => r === '255' && g === '255' && b === '255' ? `rgba(255,255,255,${Math.min(.16, +a)})`
+    : r === '16' && g === '24' && b === '63' ? `rgba(255,255,255,${Math.min(.22, +a * 1.2)})` : m).replace(/#ffffff\b|#fff\b/gi, 'rgba(255,255,255,.16)');
+  if (k === 'boxShadow') return v.replace(rgbaRe, (m, r, g, b, a) => r === '255' && g === '255' && b === '255' ? `rgba(255,255,255,${(+a * .14).toFixed(3)})`
+    : r === '16' && g === '24' && b === '63' ? `rgba(0,0,0,${Math.min(.6, +a * 1.8).toFixed(3)})` : m).replace(/#ffffff\b|#fff\b/gi, 'rgba(255,255,255,.12)');
+  return v;
+};
+
 // Inline CSS strings -> React style objects (cached).
-const _css = new Map();
 const S = str => {
   let o = _css.get(str); if (o) return o; o = {};
   str.split(';').forEach(d => {
@@ -12,6 +50,10 @@ const S = str => {
   });
   // Glass look: plain white surfaces turn frosted. Use #FFFFFF where solid white is needed (e.g. on a colored button).
   if (o.background === '#fff') o.background = 'rgba(255,255,255,.66)';
+  if (THEME.dark) { const bg = String(o.background || o.backgroundColor || '').trim();
+    // Text sitting on a colored fill (a yellow pill, a list's color card) keeps its own color.
+    const colored = /#[0-9a-f]{3,8}\b/i.test(bg) && !/^#(fff|ffffff|fff3df|10183f|f2efe9)$/i.test(bg);
+    for (const k in o) if (!(colored && (k === 'color' || k === 'caretColor'))) o[k] = darkVal(k, o[k]); }
   if (_css.size > 4000) _css.clear(); _css.set(str, o); return o;
 };
 // Offsets: the design was drawn under a 46px status bar with no home indicator.
@@ -28,10 +70,11 @@ const GLX_LIGHT = 'background:linear-gradient(150deg,rgba(255,255,255,.95),rgba(
 const TILE = 'background:linear-gradient(150deg,rgba(255,255,255,.78),rgba(255,255,255,.4) 55%,rgba(255,255,255,.6));border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 2px 1px #fff,0 8px 20px rgba(16,24,63,.08)';
 const ROW = 'background:linear-gradient(150deg,rgba(255,255,255,.84),rgba(255,255,255,.5) 55%,rgba(255,255,255,.7));border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 2px 1px #fff,0 10px 24px rgba(16,24,63,.08)';
 // A category's line icon (see CAT_ICON in logic.js), or its emoji when it has none.
-const CatIcon = (em, px, col) => CAT_ICON[em]
+const icoCol = c => THEME.dark && typeof c === 'string' && DK_TEXT[c.toLowerCase()] ? DK_TEXT[c.toLowerCase()] : c;
+const CatIcon = (em, px, col0) => { const col = icoCol(col0); return CAT_ICON[em]
   ? html`<svg width=${px} height=${px} viewBox="0 0 24 24" fill="none" stroke=${col} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${CAT_ICON[em]}></path></svg>`
-  : html`<span class="emo" aria-hidden="true" style=${S(`font-size:${Math.round(px * .95)}px`)}>${em}</span>`;
-const Ico = (d, px, col, sw) => html`<svg width=${px || 20} height=${px || 20} viewBox="0 0 24 24" fill="none" stroke=${col || 'currentColor'} stroke-width=${sw || 2.2} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${d}></path></svg>`;
+  : html`<span class="emo" aria-hidden="true" style=${S(`font-size:${Math.round(px * .95)}px`)}>${em}</span>`; };
+const Ico = (d, px, col, sw) => html`<svg width=${px || 20} height=${px || 20} viewBox="0 0 24 24" fill="none" stroke=${icoCol(col) || 'currentColor'} stroke-width=${sw || 2.2} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${d}></path></svg>`;
 const BACK = 'M15 5l-7 7 7 7', ARROW_NE = 'M7 17L17 7M9 7h8v8';
 const MONO = 'font-family:var(--mono)';
 const Grab = () => html`<div aria-hidden="true" style=${S('align-self:center;width:40px;height:5px;border-radius:3px;background:rgba(16,24,63,.2);flex:none')}></div>`;
@@ -720,13 +763,15 @@ function ListsScreen(v) {
     <div ref=${v.tripMapRef} style=${S(`position:absolute;inset:0;z-index:0;isolation:isolate;visibility:${mapOn ? 'visible' : 'hidden'}`)}></div>
     ${v.listsIndex ? html`
     <div class="noscroll" style=${S(`position:absolute;inset:0;z-index:5;background:var(--bgfx);overflow-y:auto;padding:${T(56)} 16px ${B(130)};display:flex;flex-direction:column;gap:12px`)}>
-      <div style=${S('display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:0 4px')}>
-        <div style=${S('min-width:0')}>
-          <span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:${v.walletDragging ? '#FF6B1A' : '#4A5275'}`)}>${v.walletDragging ? 'DRAG TO REORDER · LET GO TO DROP' : `WALLET · ${v.listCards.length} ${v.listCards.length === 1 ? 'LIST' : 'LISTS'}${v.listCards.length > 1 ? ' · HOLD TO REORDER' : ''}`}</span>
-          <div style=${S('font-weight:900;font-style:italic;font-size:38px;line-height:1.02;letter-spacing:-1.5px;color:#10183F;white-space:nowrap')}>My <span style=${S('font-weight:200;font-style:normal')}>Lists</span></div>
-        </div>
-        ${v.listsSignedIn && !v.listsMissing && html`<button class="lg" onClick=${v.openNewTrip} aria-label="New List" style=${S(`${GL};width:48px;height:48px;flex:none;border-radius:50%;color:#FF6B1A;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M12 5v14M5 12h14', 22, 'currentColor', 2.8)}</button>`}
+      <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px')}>
+        <h1 style=${S('margin:0;min-width:0;font-size:38px;line-height:1.02;letter-spacing:-1.5px;color:#10183F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900;font-style:italic')}>${v.listsTitle ? v.listsTitle + (/s$/i.test(v.listsTitle) ? '’' : '’s') : 'My'}</span> <span style=${S('font-weight:200')}>Lists</span></h1>
+        ${v.listsSignedIn && !v.listsMissing && html`<button onClick=${v.openNewTrip} aria-label="New List" style=${S('flex:none;height:44px;padding:0 16px 0 12px;border-radius:999px;border:0;background:#10183F;color:#FFFFFF;font-family:inherit;font-size:14px;font-weight:800;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 10px 22px rgba(16,24,63,.22)')}>${Ico('M12 5v14M5 12h14', 18, '#FFC425', 3)}New</button>`}
       </div>
+      ${v.listTabs && v.listTabs.some(t => !t.label.endsWith(' 0')) && html`
+      <div role="tablist" aria-label="Filter Lists" style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>
+        ${v.listTabs.map(t => html`<button key=${t.key} role="tab" aria-selected=${t.on} onClick=${t.onClick} style=${S(`height:36px;border:0;border-radius:999px;font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:${t.on ? '#FFFFFF' : 'transparent'};box-shadow:${t.on ? '0 4px 10px rgba(16,24,63,.1)' : 'none'};font-weight:${t.on ? 800 : 700};color:${t.on ? '#10183F' : '#4A5275'}`)}>${t.label}</button>`)}
+      </div>`}
+      ${v.walletDragging && html`<div style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#FF6B1A;padding:0 4px`)}>DRAG TO REORDER · LET GO TO DROP</div>`}
       ${v.listsLocal && Msg('Sign In To Use Lists', 'Lists Live In Your Account So You Can Share Them With Friends.')}
       ${v.listsMissing && Msg('One Quick Setup Step', 'Lists Need Their Database Tables. Run supabase/lists.sql Once In Supabase → SQL Editor, Then Come Back.', 'Check Again', v.retryLists)}
       ${v.listsLoading && html`<div role="status" style=${S('text-align:center;font-weight:700;color:#4A5275;padding:20px')}>Loading Your Lists…</div>`}
@@ -734,32 +779,69 @@ function ListsScreen(v) {
       ${v.listsEmpty && Msg('No Lists Yet', 'Make One For A Friend’s Visit, A Birthday Or A Weekend — Then Invite Them To Add Spots Too.')}
       ${v.listCards.length > 0 && html`
       <div ref=${v.walletRef} style=${S('display:flex;flex-direction:column;padding-top:4px')}>
-        ${[...v.listCards].reverse().map((c, i, arr) => { const front = i === arr.length - 1;
+        ${[...v.listCards].reverse().map((c, i, arr) => { const front = i === arr.length - 1, lift = c.lifted ? ';box-shadow:0 30px 60px rgba(16,24,63,.38),0 8px 18px rgba(16,24,63,.2)' : '';
+          const motion = `z-index:${c.lifted ? 50 : i + 1};transform:${c.wTf || 'none'};transition:${c.lifted ? 'box-shadow .2s' : 'transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .2s'};-webkit-touch-callout:none;user-select:none;-webkit-user-select:none`;
+          if (!front) return html`
+        <button key=${c.id} class=${c.dragging ? '' : 'press'} onClick=${c.onClick} onPointerDown=${c.onDown} onContextMenu=${e => e.preventDefault()} aria-label=${'Open ' + c.name + '. Hold To Reorder.'} style=${S(`position:relative;height:76px;margin-bottom:-20px;border:0;border-radius:22px 22px 0 0;padding:0 16px 20px;overflow:hidden;background:${c.wbg};color:${c.wfg};display:flex;align-items:center;gap:12px;text-align:left;font-family:inherit;cursor:${c.lifted ? 'grabbing' : 'pointer'};width:100%;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45),0 -6px 16px rgba(16,24,63,.12)${lift};${motion}`)}>
+          ${c.img && html`<span aria-hidden="true" style=${S('position:absolute;inset:0;opacity:.35')}>${Photo(c.img)}</span>`}
+          <span style=${S('position:relative;font-size:15px;font-weight:800;letter-spacing:2px')}>${c.code}</span>
+          ${html`<span style=${S('position:relative;flex:1;min-width:0;display:flex')}>${wName(c.name, 16)}</span>`}
+          <span style=${S(`position:relative;${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;opacity:.9;white-space:nowrap`)}>${[c.d1 ? (c.d1.split(', ')[1] || c.d1).toUpperCase() : '', c.cd && c.cd.top === 'IN' ? c.cd.big.toUpperCase() : c.cd ? c.cd.big.toUpperCase() : c.spots != null ? c.spots + (c.spots === 1 ? ' SPOT' : ' SPOTS') : 'MAP ONLY'].filter(Boolean).join(' · ')}</span>
+        </button>`;
+          const big = t => html`<span style=${S('font-size:30px;font-weight:200;letter-spacing:-1.2px;line-height:1;white-space:nowrap')}>${t}</span>`;
+          const lab = t => html`<span style=${S(`${MONO};font-size:9.5px;font-weight:700;letter-spacing:1px;color:#4A5275;white-space:nowrap`)}>${t}</span>`;
+          const md = x => x ? (x.split(', ')[1] || x) : '', wd = x => x ? x.split(', ')[0].toUpperCase() : '';
+          const stat = (l, val, first) => html`<span style=${S(`display:flex;flex-direction:column;gap:1px;padding:0 12px;min-width:0;${first ? '' : 'border-left:1px solid rgba(16,24,63,.12)'}`)}>${lab(l)}<span style=${S('font-size:19px;font-weight:200;white-space:nowrap')}>${val}</span></span>`;
           return html`
-        <button key=${c.id} class=${c.dragging ? '' : 'press'} onClick=${c.onClick} onPointerDown=${c.onDown} onContextMenu=${e => e.preventDefault()} aria-label=${'Open ' + c.name + '. Hold To Reorder.'} style=${S(`${WCARD(c.wbg, `z-index:${c.lifted ? 50 : i + 1};margin-bottom:${front ? 0 : -132}px;height:${front ? 'auto' : '196px'};min-height:196px`)};border:0;padding:0;text-align:left;color:${c.wfg};cursor:${c.lifted ? 'grabbing' : 'pointer'};display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;transform:${c.wTf || 'none'};transition:${c.lifted ? 'box-shadow .2s' : 'transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .2s'}${c.lifted ? ';box-shadow:0 30px 60px rgba(16,24,63,.38),0 8px 18px rgba(16,24,63,.2)' : ''}`)}>
-          <span aria-hidden="true" style=${S(`position:absolute;inset:0;${SHEEN}`)}></span>
-          <span style=${S('position:relative;display:flex;flex-direction:column;gap:12px;padding:14px 16px 16px')}>
-            <span style=${S('display:flex;align-items:center;gap:10px;min-height:36px')}>${wIcon(c.wfg, c.img, c.initial)}${wName(c.name)}<span style=${S('display:flex;flex-direction:column;align-items:flex-end;flex:none')}>${c.spots != null ? wMono(c.spots + (c.spots === 1 ? ' SPOT' : ' SPOTS'), c.wfg) : wMono('MAP ONLY', c.wfg)}${c.days > 0 && wMono(c.days + (c.days === 1 ? ' DAY' : ' DAYS'), c.wfg)}</span></span>
-            ${front && html`
-            <span style=${S('display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:18px')}>
-              <span style=${S('display:flex;flex-direction:column;min-width:0')}>${wMono(c.range ? 'DATES' : 'MADE BY', c.wfg)}<span style=${S('font-size:24px;font-weight:200;letter-spacing:-1px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${c.range || c.who}</span></span>
-              ${c.cd && html`<span style=${S('display:flex;flex-direction:column;align-items:flex-end;flex:none')}>${wMono(c.cd.top, c.wfg)}<span style=${S('font-size:24px;font-weight:200;letter-spacing:-1px;line-height:1.15;white-space:nowrap')}>${c.cd.big}</span></span>`}
-            </span>
-            <span style=${S(`display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px dashed ${c.wfg === '#fff' ? 'rgba(255,255,255,.5)' : 'rgba(16,24,63,.25)'}`)}>
-              ${wPeople(c.ppl, c.wfg)}${c.tagMono && wMono(c.tagMono, c.wfg, 'text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0')}
-            </span>`}
-          </span>
-        </button>`; })}
+        <div key=${c.id} role="button" tabindex="0" onClick=${c.onClick} onPointerDown=${c.onDown} onContextMenu=${e => e.preventDefault()} onKeyDown=${e => { if (e.key === 'Enter') c.onClick(); }} aria-label=${'Open ' + c.name + '. Hold To Reorder.'} class=${c.dragging ? '' : 'press'} style=${S(`position:relative;border-radius:24px;overflow:hidden;background:#FFFFFF;color:#10183F;cursor:${c.lifted ? 'grabbing' : 'pointer'};box-shadow:0 -6px 18px rgba(16,24,63,.14),0 20px 40px rgba(16,24,63,.2)${lift};${motion}`)}>
+          <div style=${S(`position:relative;height:150px;overflow:hidden;color:#FFFFFF;background:${c.wbg}`)}>
+            <span aria-hidden="true" style=${S(`position:absolute;inset:0;${SHEEN}`)}></span>
+            ${c.img && Photo(c.img, c.name)}
+            <span aria-hidden="true" style=${S('position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,24,63,.12),rgba(16,24,63,0) 35%,rgba(16,24,63,.58))')}></span>
+            <div style=${S('position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:center;justify-content:space-between')}>
+              <span style=${S('height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.45);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font-size:14px;font-weight:800;letter-spacing:2.4px;display:flex;align-items:center')}>${c.code}</span>
+              ${c.canPhoto && html`<label onClick=${e => e.stopPropagation()} onPointerDown=${e => e.stopPropagation()} class=${v.tripPhotoBusy ? 'ai-busy' : ''} style=${S('position:relative;height:30px;padding:0 12px 0 9px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.2);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#FFFFFF;font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px;cursor:pointer')}>${Ico('M4 8h3l2-3h6l2 3h3v11H4z M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 15, 'currentColor', 2.4)}${v.tripPhotoBusy ? 'Saving…' : 'Photo'}<input type="file" accept="image/*" aria-label="Change List Photo" onChange=${c.onPhoto} disabled=${v.tripPhotoBusy} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')}/></label>`}
+            </div>
+            <div style=${S('position:absolute;left:16px;right:16px;bottom:12px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px')}>
+              <span style=${S('min-width:0;display:flex;font-size:30px;letter-spacing:-1.1px;line-height:1.05')}>${wName(c.name, 30)}</span>
+              ${c.cd && html`<span style=${S(`flex:none;height:26px;padding:0 10px;border-radius:999px;background:#FFC425;color:#10183F;${MONO};font-size:10px;font-weight:700;display:flex;align-items:center;white-space:nowrap`)}>${(c.cd.top === 'IN' ? 'IN ' + c.cd.big : c.cd.big).toUpperCase()}</span>`}
+            </div>
+          </div>
+          <div style=${S('padding:14px 18px 12px;display:flex;flex-direction:column;gap:14px')}>
+            ${c.d1 ? html`
+            <div style=${S('display:flex;align-items:center;gap:10px')}>
+              <span style=${S('display:flex;flex-direction:column;gap:2px')}>${lab((c.dN ? 'ARRIVE · ' : 'ON · ') + wd(c.d1))}${big(md(c.d1))}</span>
+              ${c.dN && html`
+              <svg width="64" height="18" viewBox="0 0 64 18" fill="none" aria-hidden="true" style=${S('flex:1;min-width:24px')}><path d="M4 9h52" stroke="#1B3DB8" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"></path><path d="M54 3l6 6-6 6" stroke="#1B3DB8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="4" cy="9" r="3" fill="#FF6B1A"></circle></svg>
+              <span style=${S('display:flex;flex-direction:column;gap:2px;align-items:flex-end')}>${lab('DEPART · ' + wd(c.dN))}${big(md(c.dN))}</span>`}
+            </div>` : html`
+            <div style=${S('display:flex;flex-direction:column;gap:2px')}>${lab('WHEN')}${big('Anytime')}</div>`}
+            <div style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:16px;background:rgba(16,24,63,.05);padding:9px 0')}>
+              ${stat('SPOTS', c.spots != null ? c.spots : '—', true)}${stat('DAYS', c.days || '—')}${stat('TRAVEL', c.travel ? (c.travel >= 60 ? Math.floor(c.travel / 60) + 'h ' + (c.travel % 60) + 'm' : c.travel + 'm') : '—')}
+            </div>
+          </div>
+          <div aria-hidden="true" style=${S('position:relative;height:0;border-top:2px dashed rgba(16,24,63,.2);margin:0 18px')}>
+            <span style=${S('position:absolute;left:-32px;top:-12px;width:24px;height:24px;border-radius:50%;background:#FFF3DF')}></span>
+            <span style=${S('position:absolute;right:-32px;top:-12px;width:24px;height:24px;border-radius:50%;background:#FFF3DF')}></span>
+          </div>
+          <div style=${S('padding:12px 18px 14px;display:flex;align-items:center;gap:10px')}>
+            ${wPeople(c.ppl, '#10183F')}
+            <span style=${S(`flex:1;min-width:0;${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${c.hereLabel ? '#1F9D6B' : '#4A5275'}`)}>${c.hereLabel || c.tagMono || (c.who || '').toUpperCase()}</span>
+            <svg width="70" height="28" viewBox="0 0 74 30" role="img" aria-label=${'List Code ' + c.code} style=${S('flex:none;color:#10183F')}><g fill="currentColor">${c.bars.map((b, k) => html`<rect key=${k} x=${b.x} y="0" width=${b.w} height="30"></rect>`)}</g></svg>
+          </div>
+        </div>`; })}
       </div>`}
-      ${v.listCards[0] && v.listCards[0].next && html`
-      <div style=${S('display:flex;flex-direction:column;gap:8px;margin-top:6px')}>
-        <div style=${S('display:flex;justify-content:space-between;padding:0 4px')}><span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1px;color:#4A5275;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>UP NEXT · ${v.listCards[0].name.toUpperCase()}</span><button onClick=${v.listCards[0].onClick} style=${S(`border:0;background:none;padding:0;cursor:pointer;${MONO};font-size:10.5px;font-weight:700;color:#1B3DB8;flex:none`)}>OPEN →</button></div>
-        <button class="lg" onClick=${v.listCards[0].onClick} style=${S(`${GL};border-radius:22px;padding:8px 12px 8px 8px;display:flex;align-items:center;gap:10px;color:#10183F;text-align:left;cursor:pointer`)}>
-          <span style=${S('position:relative;overflow:hidden;width:44px;height:44px;flex:none;border-radius:14px;background:linear-gradient(140deg,#FFE38F,#FFC425)')}>${Photo(v.listCards[0].next.img)}</span>
-          <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.listCards[0].next.name}</span><span style=${S(`${MONO};font-size:9.5px;font-weight:700;color:#4A5275`)}>${v.listCards[0].next.sub}</span></span>
-          ${Ico(ARROW_NE, 16, '#1B3DB8', 2.4)}
-        </button>
-      </div>`}
+      ${v.listActivity ? html`
+      <button class="lg" onClick=${v.listActivity.onClick} role="status" style=${S(`${GL};height:46px;border-radius:18px;padding:0 10px 0 14px;display:flex;align-items:center;gap:10px;color:#10183F;text-align:left;font-family:inherit;cursor:pointer;margin-top:4px`)}>
+        <span style=${S('width:8px;height:8px;flex:none;border-radius:50%;background:#1F9D6B;box-shadow:0 0 0 3px rgba(31,157,107,.2)')}></span>
+        <span style=${S('flex:1;min-width:0;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.listActivity.who} added <b style=${S('font-weight:900')}>${v.listActivity.name}</b> ${v.listActivity.where.replace(/^To/, 'to')}</span>
+        <span style=${S(`${MONO};font-size:10px;font-weight:700;color:#4A5275;flex:none`)}>${v.listActivity.ago}</span>
+      </button>` : v.listCards[0] && v.listCards[0].next && html`
+      <button class="lg" onClick=${v.listCards[0].onClick} style=${S(`${GL};border-radius:20px;padding:7px 12px 7px 7px;display:flex;align-items:center;gap:10px;color:#10183F;text-align:left;cursor:pointer;margin-top:4px;font-family:inherit`)}>
+        <span style=${S('position:relative;overflow:hidden;width:38px;height:38px;flex:none;border-radius:12px;background:linear-gradient(140deg,#FFE38F,#FFC425)')}>${Photo(v.listCards[0].next.img)}</span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S(`${MONO};font-size:9.5px;font-weight:700;color:#4A5275`)}>UP NEXT · ${v.listCards[0].next.sub}</span><span style=${S('font-size:14.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.listCards[0].next.name}</span></span>
+        ${Ico(ARROW_NE, 16, '#1B3DB8', 2.4)}
+      </button>`}
     </div>` : mapOn ? html`
     <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:600;display:flex;flex-direction:column;gap:10px;pointer-events:none`)}>
       <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:8px')}>
@@ -1314,6 +1396,13 @@ function AccountSheet(v) {
         <span style=${S('display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#3C4466')}><span style=${S(`width:9px;height:9px;border-radius:50%;background:${v.syncDot}`)}></span>${v.syncLabel}</span>
       </div>
       <div style=${S('font-size:13px;line-height:1.4;color:#3C4466')}>Your spots, categories, home and day plan sync to every device you sign in on.</div>
+      <div style=${S('display:flex;flex-direction:column;gap:7px')}>
+        <span style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Appearance</span>
+        <div role="radiogroup" aria-label="Appearance" style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>
+          ${v.themeOpts.map(t => html`<button key=${t.key} role="radio" aria-checked=${t.on} onClick=${t.onClick} style=${S(`height:38px;border:0;border-radius:999px;font-family:inherit;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;background:${t.on ? '#FFFFFF' : 'transparent'};box-shadow:${t.on ? '0 4px 10px rgba(16,24,63,.1)' : 'none'};font-weight:${t.on ? 800 : 700};color:${t.on ? '#10183F' : '#4A5275'}`)}>${Ico(t.icon, 15, 'currentColor', 2.3)}${t.label}</button>`)}
+        </div>
+        <span style=${S('font-size:11.5px;color:#6A7090')}>Automatic follows your phone’s light or dark setting.</span>
+      </div>
       <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
         <button onClick=${v.syncNow} style=${S('height:46px;border-radius:14px;border:1.5px solid rgba(16,24,63,.14);background:#fff;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Sync Now</button>
         <button onClick=${v.signOut} style=${S('height:46px;border-radius:14px;border:0;background:#FFE2DF;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer')}>Sign Out</button>

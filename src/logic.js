@@ -236,7 +236,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',reserveOpen:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',reserveOpen:false,listsTab:null,themeV:0,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -273,7 +273,7 @@ class Component extends DCLogic {
   takeShared(){const s=this.state;if(!this._share||!(s.auth==='signedIn'||s.auth==='local'))return;const u=this._share;this._share=null;if(this._shareQ&&this._shareQ.length)setTimeout(()=>this.toast(this._shareQ.length+' More Shared '+(this._shareQ.length===1?'Link':'Links')+' Waiting'),900);
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link Added — Tap ✨ Fill From Link To Read It.'});else this.aiAuto(u,true);}},400);}
-  componentDidMount(){this._on=true;window.NYCNative&&NYCNative.setCity(CUR.short);fetch(API('/api/photo?probe=1'),{cache:'no-store'}).then(r=>{if(r.status===204&&this._on){GPHOTO.on=true;this.setState({gphoto:true});}}).catch(()=>{});APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
+  componentDidMount(){this._on=true;window.__nycApp=this;this._themeOff=window.onThemeChange&&onThemeChange(()=>this.themeChanged());window.NYCNative&&NYCNative.setCity(CUR.short);fetch(API('/api/photo?probe=1'),{cache:'no-store'}).then(r=>{if(r.status===204&&this._on){GPHOTO.on=true;this.setState({gphoto:true});}}).catch(()=>{});APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
     window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
@@ -320,9 +320,9 @@ class Component extends DCLogic {
     const div=document.createElement('div');div.className='apple-base';div.style.cssText='position:absolute;inset:0;z-index:100;pointer-events:none';
     let ak;try{ak=new mapkit.Map(div,{isScrollEnabled:false,isZoomEnabled:false,isRotationEnabled:false,showsCompass:mapkit.FeatureVisibility.Hidden,
       showsScale:mapkit.FeatureVisibility.Hidden,showsZoomControl:false,showsMapTypeControl:false,showsUserLocationControl:false,showsPointsOfInterest:true,
-      colorScheme:mapkit.Map.ColorSchemes.Light,padding:new mapkit.Padding(0,0,pad,0)});}catch(e){console.warn('Apple Maps map',e);return;}
+      colorScheme:(window.THEME_DARK&&THEME_DARK())?mapkit.Map.ColorSchemes.Dark:mapkit.Map.ColorSchemes.Light,padding:new mapkit.Padding(0,0,pad,0)});}catch(e){console.warn('Apple Maps map',e);return;}
     m.el.insertBefore(div,m.el.firstChild);m.apple=ak;m.appleDiv=div;m.appleOpt={snap:map.options.zoomSnap,anim:map.options.zoomAnimation,za:map._zoomAnimated};
-    m.base.clearLayers();m.labels.clearLayers();if(m.streets){map.removeLayer(m.streets);m.streets=null;}m.el.style.background='#F2EFE9';
+    m.base.clearLayers();m.labels.clearLayers();if(m.streets){map.removeLayer(m.streets);m.streets=null;}m.el.style.background=(window.THEME_DARK&&THEME_DARK())?'#1A1F3A':'#F2EFE9';
     map.options.zoomSnap=0;map.options.zoomAnimation=false;map._zoomAnimated=false;
     m.appleSync=()=>{const sz=map.getSize();if(!sz.x||!sz.y||!m.apple)return;const b=map.getPixelBounds(),sc=map.options.crs.scale(map.getZoom());
       try{m.apple.setVisibleMapRectAnimated(new mapkit.MapRect(b.min.x/sc,b.min.y/sc,(b.max.x-b.min.x)/sc,Math.max(1,b.max.y-b.min.y-pad)/sc),false);}catch(e){}};
@@ -745,6 +745,9 @@ class Component extends DCLogic {
       ()=>setTimeout(()=>{if(this.maps&&made.length){this.maps.main.map.invalidateSize();this.fit(this.maps.main,made,{padding:[70,70],maxZoom:15});}},120));
     this.toast(made.length?`Added ${made.length} ${made.length===1?'Spot':'Spots'}`+(skipped?` · ${skipped} Couldn’t Be Found`:''):'Couldn’t Find These On The Map — Add Them One By One');}
 
+  // Light / dark switched (in Your Account, or the phone's setting under Automatic): redraw, and re-tint Apple's maps.
+  themeChanged(){const dark=window.THEME_DARK&&THEME_DARK();this.allMaps().forEach(m=>{if(m.apple)try{m.apple.colorScheme=dark?mapkit.Map.ColorSchemes.Dark:mapkit.Map.ColorSchemes.Light;m.el.style.background=dark?'#1A1F3A':'#F2EFE9';}catch(e){}});
+    this.setState(st=>({themeV:st.themeV+1}));}
   renderVals(){const s=this.state,f=s.form,cat=Object.fromEntries(s.cats.map(c=>[c.id,c])),l=this.lists(),A=areas();
     const catOf=id=>cat[id]||{name:'Uncategorized',color:'#888'};const vis=s.places.filter(p=>p.visited).length;
     const chip=(on,label,onClick,col)=>({label,onClick,bg:on?(col||C.navy):'#fff',fg:on?'#fff':C.navy,border:on?(col||C.navy):'rgba(16,24,63,.14)'});
@@ -939,7 +942,8 @@ class Component extends DCLogic {
       addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':s.addTarget?'Add To The List':'Add A Spot',formFor:s.addTarget?((s.trips.find(t=>t.id===s.addTarget)||{}).name||''):'',form:f,
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
       onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
-      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),showReserveField:!!(f.reserve||(f.cat&&this.priced(f.cat))),
+      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),
+      themeOpts:[['system','Automatic','M12 3a9 9 0 1 0 0 18V3z M12 3a9 9 0 0 1 0 18'],['light','Light','M12 7a5 5 0 1 0 0 10a5 5 0 1 0 0-10 M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4'],['dark','Dark','M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z']].map(([k,l,ic])=>({key:k,label:l,icon:ic,on:(window.THEME_PREF?THEME_PREF():'system')===k,onClick:()=>window.setThemePref&&setThemePref(k)})),showReserveField:!!(f.reserve||(f.cat&&this.priced(f.cat))),
       pasteUrl:()=>navigator.clipboard?.readText().then(t=>{this.setForm({url:t.trim()});this.aiAuto(t.trim(),true);}).catch(()=>this.toast('Long-Press The Field To Paste')),
       hasSrcBadge:!!fsrc,srcBadge:fsrc?(fsrc==='link'?'Website Link':SRC[fsrc].label+' Link Detected'):'',srcBadgeBg:fsrc?SRC[fsrc].bg:C.navy,
       formCats:s.cats.map(c=>{const on=f.cat===c.id;return {name:c.name,emoji:emo(c),bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'rgba(16,24,63,.12)',dot:on?fgFor(c.color):c.color,onClick:()=>this.setForm({cat:c.id})};}),

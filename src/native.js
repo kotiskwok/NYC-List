@@ -58,6 +58,8 @@ const NYCNative = (() => {
 
   return {
     tap(style) { try { Haptics && Haptics.impact({ style: style || 'LIGHT' }); } catch (e) {} },
+    // Status-bar text: dark on the light theme, light on the dark one.
+    statusBar(dark) { try { StatusBar && StatusBar.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); } catch (e) {} },
     // Tells the share card which city's map new spots go to.
     setCity(short) { try { Inbox && Inbox.setCity && Inbox.setCity({ city: short }); } catch (e) {} }
   };

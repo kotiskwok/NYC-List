@@ -95,7 +95,8 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - A pull-up timeline: **Leave At** time, a **STAY** chip on each stop (15 min–3 hrs), and arrival times. Each leg shows line badges, walking minutes, or a car for long drives on the New York State map. **Auto-Order**, reorder, remove, Add Spots, Clear, and **Start Route In Google Maps**.
 
 ### Lists tab (shared trip lists, e.g. "Sonia's Visit")
-- **Wallet:** lists are stacked coloured cards like Apple Wallet. The front card shows dates, a countdown ("In 14 days", "Day 2 of 3"), the people on it and how it's shared; **Up Next** shows its first stop. **Hold a card and drag it up or down to reorder** (with haptics on iPhone). The order syncs with your account.
+- **Wallet (boarding-pass design "M1"):** the title is "<First Name>'s Lists" ("Kotis' Lists" when the name ends in s). Tabs: **Upcoming** (dated, not over), **Anytime** (no dates, or done), **Shared** (with or from friends). The front list is a boarding pass: its photo on top (with a **Photo** button), three-letter code (SON), name and countdown; then arrive/depart dates, Spots / Days / Travel, a torn perforation, and a stub with the people, "Sonia Is Here · Editing" when someone has it open, and a barcode. Lists behind show as color tabs with their code and countdown. Below: a live line ("Sonia added Lucali to Day 1 · 2 MIN", the latest spot a friend added in the last 3 days), or Up Next. **+ New** makes a list.
+- Lists are stacked coloured cards like Apple Wallet. The front card shows dates, a countdown ("In 14 days", "Day 2 of 3"), the people on it and how it's shared; **Up Next** shows its first stop. **Hold a card and drag it up or down to reorder** (with haptics on iPhone). The order syncs with your account.
 - **+ New List:** a name, optional number of days and an optional first date. Add spots **From My Map** or as **New Spot** (on the list only). Day chips with dates, a day colour per pin, travel time between stops, and a **Route ↗** per day. **Edit** changes the name, days and date, and sets a list photo.
 - **Share & Invite** (owner): share **Just This List** (friends can add, sort, remove), **Just My Map** (view-only, never your home) or **Both**, by invite link `/?join=<code>`. Friends sign up with a name and land on the list. A live **"Sonia Is Here"** tag shows when someone else has the list open. Edits sync within about a second.
 
@@ -114,6 +115,10 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 ### Sharing into the app
 - **iPhone app:** **Share → Spotted In** from any app. A dark glass **ticket** drops in at the top. A blue stub shows a yellow pin with ✓ and SAVED, then a tear line, "Saved To Spotted In", **FROM** (TikTok / Instagram / Threads / Google Maps / site) and **TO** (My Map · current map), with **Undo** and **Done**. It closes by itself after about 3 seconds. The app fills the spot in the next time it opens.
 - **Website:** `https://nyc-lovat.vercel.app/?add=<link>` opens Add A Spot with the link. Android's share menu works through the web manifest, and an iPhone Shortcut can open that link.
+
+### Light and dark mode
+- **Your Account → Appearance:** Automatic (follows the phone), Light or Dark. Saved per device (`localStorage['nycList.theme']`).
+- How it works: views are written in light colors; in dark mode `S()` in `view.js` swaps navy text, white/cream glass, navy fills and shadows for dark versions (`darkVal`), keeping text on colored fills. `index.html` has the dark `--bgfx`. Apple Maps switches to its dark scheme; the iPhone status bar follows (`NYCNative.statusBar`). New styles: keep using `#10183F` text, `#fff`/`#FFFFFF` fills and `rgba(16,24,63,…)` tints and they'll flip automatically.
 
 ### Account, sign-in and welcome
 - **Sign-in screen** with the Spotted In logo, email/password, and a show-password eye. Invite links show "Kotis Invited You".

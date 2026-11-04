@@ -212,7 +212,12 @@ const dayDate = (start, d) => { if (!start || !d) return ''; const t = new Date(
 const dayName = (start, d) => d ? 'Day ' + d + (dayDate(start, d) ? ' · ' + dayDate(start, d) : '') : 'Not On A Day Yet';
 // Wallet cards: each list gets a palette color (in list order), a date range and a countdown.
 const WALLET = [['#F98DBE', '#F45FA0', '#D93F86', '#fff'], ['#FFE38F', '#FFC425', '#F5AE10', '#10183F'], ['#5C78E6', '#1B3DB8', '#142E92', '#fff'], ['#52C496', '#1F9D6B', '#16805A', '#fff'], ['#FFA26A', '#FF6B1A', '#E8561A', '#fff']];
-const WSTEP = 64; // how much of each stacked card shows (196px card, -132px overlap)
+const WSTEP = 56; // how much of each stacked card shows (76px tab, -20px overlap)
+// Boarding-pass wallet: a three-letter code per list (SON for "Sonia's Visit") and a barcode drawn from its id.
+const listCode = name => { const w = String(name || '').replace(/['’]s\b/gi, '').split(/[^A-Za-z0-9]+/).filter(x => x && !/^(the|a|an|my|our)$/i.test(x));
+  const c = (w[0] || 'LST').slice(0, 3); return (c + (w[1] || '').slice(0, 3 - c.length) + 'XX').slice(0, 3).toUpperCase(); };
+const barcode = id => { let h = 2166136261; const out = []; for (let i = 0, x = 0; x < 72; i++) { h = Math.imul(h ^ String(id).charCodeAt(i % String(id).length), 16777619) >>> 0; const w = 1 + (h % 4); out.push({ x, w }); x += w + 1 + ((h >> 4) % 3); } return out.filter(b => b.x + b.w <= 74); };
+const agoLabel = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'NOW' : m < 60 ? m + ' MIN' : m < 1440 ? Math.round(m / 60) + ' HR' : Math.round(m / 1440) + ' D'; };
 const walletOf = i => { const w = WALLET[Math.max(0, i) % WALLET.length]; return { bg: `linear-gradient(135deg,${w[0]},${w[1]} 55%,${w[2]})`, fg: w[3], solid: w[1] }; };
 const shortD = (start, d) => { const x = dayDate(start, d); return x ? (x.split(', ')[1] || x) : ''; };
 const dayTag = (start, d) => { const x = dayDate(start, d); if (!x) return ''; const [wd, md] = x.split(', '); return (wd + ' ' + (md || '').split(' ')[1]).toUpperCase(); };
@@ -241,6 +246,10 @@ Object.assign(Component.prototype, {
   stopPlace(st) { if (st.by === NYCLists.uid() && st.pid) { const p = this.state.places.find(x => x.id === st.pid); if (p) return { ...st.p, ...NYCLists.snap(p) }; } return st.p; },
   onMyMap(p) { return this.state.places.some(x => x.name.trim().toLowerCase() === (p.name || '').trim().toLowerCase() && km([x.lat, x.lng], [p.lat, p.lng]) < 0.4); },
   // Stops grouped for display: "not on a day yet" first, then Day 1..n (or one plain list when there are no days).
+  // Total travel between consecutive stops of each day (transit or walking), in minutes.
+  tripTravel(t) { let min = 0; this.tripSections(t).forEach(sec => { if (!sec.flat && !sec.day) return; for (let i = 1; i < sec.stops.length; i++) {
+      const q = this.stopPlace(sec.stops[i - 1]), p = this.stopPlace(sec.stops[i]), a = [q.lat, q.lng], b = [p.lat, p.lng];
+      if (reach(a, b)) min += bestOf(estimate(a, b), true).min; } }); return Math.round(min); },
   tripSections(t) {
     const d = t.data, n = d.days || 0, day = st => (st.day >= 1 && st.day <= n) ? st.day : 0;
     if (!n) return [{ day: 0, flat: true, stops: d.stops }];
@@ -252,7 +261,7 @@ Object.assign(Component.prototype, {
     const me = NYCLists.uid(), name = NYCLists.myName(), cats = this.state.cats;
     NYCLists.edit(tripId, d => {
       const have = new Set(d.stops.filter(st => st.by === me && st.pid).map(st => st.pid));
-      const add = places.filter(p => !(fromMap && have.has(p.id))).map(p => ({ id: sid(), pid: fromMap ? p.id : null, by: me, byName: name, day: 0, p: NYCLists.snap(p) }));
+      const add = places.filter(p => !(fromMap && have.has(p.id))).map(p => ({ id: sid(), pid: fromMap ? p.id : null, by: me, byName: name, at: Date.now(), day: 0, p: NYCLists.snap(p) }));
       if (!add.length) return null;
       const catIds = new Set(d.cats.map(c => c.id)), newCats = [];
       add.forEach(st => { const c = cats.find(x => x.id === st.p.cat); if (c && !catIds.has(c.id)) { catIds.add(c.id); newCats.push({ ...c, emoji: emo(c) }); } });
@@ -346,16 +355,18 @@ Object.assign(Component.prototype, {
 
   // ---- who else has this list open right now (Supabase Realtime presence) ----
   watchPresence() {
-    const s = this.state, key = s.auth === 'signedIn' && s.tab === 'lists' && s.tripId ? s.tripId : '';
+    const s = this.state, peekId = s.auth === 'signedIn' && s.tab === 'lists' && !s.tripId ? (this._walletFront || '') : '';
+    const key = s.auth === 'signedIn' && s.tab === 'lists' && s.tripId ? s.tripId : peekId ? 'peek:' + peekId : '';
     if (key === this._presKey) return; this._presKey = key;
     const c = NYCSync.client && NYCSync.client();
     if (this._pres) { try { c && c.removeChannel(this._pres); } catch (e) {} this._pres = null; }
     if ((s.tripHere || []).length) this.setState({ tripHere: [] });
     if (!key || !c || !c.channel) return;
-    const me = NYCLists.uid(), ch = c.channel('nyc-list-' + key, { config: { presence: { key: me } } }); this._pres = ch;
+    const peek = key.startsWith('peek:'), id = peek ? key.slice(5) : key;
+    const me = NYCLists.uid(), ch = c.channel('nyc-list-' + id, { config: { presence: { key: me } } }); this._pres = ch;
     ch.on('presence', { event: 'sync' }, () => { if (this._pres !== ch) return; const st = ch.presenceState();
       this.setState({ tripHere: Object.keys(st).filter(k => k !== me).map(k => ((st[k] || [])[0] || {}).name || 'Someone') }); })
-      .subscribe(status => { if (status === 'SUBSCRIBED') Promise.resolve(ch.track({ name: (NYCSync.displayName && NYCSync.displayName()) || 'Someone' })).catch(() => {}); });
+      .subscribe(status => { if (status === 'SUBSCRIBED' && !peek) Promise.resolve(ch.track({ name: (NYCSync.displayName && NYCSync.displayName()) || 'Someone' })).catch(() => {}); });
   },
   setTripStopMap(on) { this.setState({ tripStopMap: on, tripSel: null }, () => setTimeout(() => { this.refreshVisible && this.refreshVisible(); }, 60)); },
 
@@ -376,7 +387,9 @@ Object.assign(Component.prototype, {
   },
   walletDrop(wd) {
     const front = this._walletIds || [], vis = [...front].reverse(), [m] = vis.splice(wd.from, 1); vis.splice(wd.over, 0, m);
-    this.setState({ walletDrag: null, ...(wd.over !== wd.from ? { listOrder: vis.reverse() } : {}) });
+    const sub = vis.reverse(), all = this._walletAll || front, pos = all.map((id, i) => front.includes(id) ? i : -1).filter(i => i >= 0), full = [...all];
+    pos.forEach((i, k) => { full[i] = sub[k]; });
+    this.setState({ walletDrag: null, ...(wd.over !== wd.from ? { listOrder: full } : {}) });
     if (wd.over !== wd.from) this.toast('List Order Saved');
   },
   // Stops the page scrolling while a card is lifted (iOS needs a non-passive touchmove listener).
@@ -398,10 +411,27 @@ Object.assign(Component.prototype, {
       return { id: tr.id, wbg: w.bg, wfg: w.fg, spots: pm.list ? n : null, days: d, range: dateRange(tr.data.start, d), cd: countdown(tr.data.start, d), next,
         ppl: ppl.map((a, i) => ({ key: i, initial: (a.n || '?')[0].toUpperCase(), bg: [C.blue, C.orange, C.purple][i] })), tagMono: tags.map(g => g.t.toUpperCase()).join(' · '),
         name: tr.name, who: who(tr), meta: (pm.list ? n + (n === 1 ? ' Spot' : ' Spots') : 'View-Only Map') + (d ? ' · ' + d + (d === 1 ? ' Day' : ' Days') : '') + (firstDate ? ' · From ' + firstDate : ''),
-        tags, img: tr.data.photo || null, initial: tr.name.replace(/^the\s+/i, '')[0] || '★', bg: own ? C.yellow : C.pink, fg: own ? C.navy : '#fff', onClick: () => this.openTrip(tr.id) }; });
+        tags, img: tr.data.photo || null, initial: tr.name.replace(/^the\s+/i, '')[0] || '★', bg: own ? C.yellow : C.pink, fg: own ? C.navy : '#fff', onClick: () => this.openTrip(tr.id),
+        code: listCode(tr.name), bars: barcode(tr.id), solid: w.solid, canPhoto: pm.edit, onPhoto: e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; this.pickTripPhoto(tr.id, f); },
+        d1: dayDate(tr.data.start, 1), dN: d > 1 ? dayDate(tr.data.start, d) : '', travel: pm.list && n > 1 ? this.tripTravel(tr) : null,
+        upcoming: !!tr.data.start && (!countdown(tr.data.start, d) || countdown(tr.data.start, d).top !== 'WENT'), shared: !own || tr.members.length > 0, _tr: tr }; });
 
     { const ord = s.listOrder || [], rk = id => ord.indexOf(id); cards.sort((a, b) => rk(a.id) - rk(b.id)); }
+    this._walletAll = cards.map(c => c.id);
+    // Tabs: Upcoming (has dates, not over yet), Anytime (no dates, or done) and Shared (with or from friends).
+    const tabN = { upcoming: cards.filter(c => c.upcoming).length, anytime: cards.filter(c => !c.upcoming).length, shared: cards.filter(c => c.shared).length };
+    const tab = s.listsTab && (tabN[s.listsTab] || !cards.length) ? s.listsTab : (tabN.upcoming ? 'upcoming' : tabN.anytime ? 'anytime' : tabN.shared ? 'shared' : 'upcoming');
+    const listTabs = [['upcoming', 'Upcoming'], ['anytime', 'Anytime'], ['shared', 'Shared']].map(([k, l]) => ({ key: k, label: l + ' · ' + tabN[k], on: tab === k, onClick: () => this.setState({ listsTab: k, walletDrag: null }) }));
+    const allCards = cards; cards.splice(0, cards.length, ...allCards.filter(c => tab === 'upcoming' ? c.upcoming : tab === 'anytime' ? !c.upcoming : c.shared));
     this._walletIds = cards.map(c => c.id);
+    if (this._walletFront !== (cards[0] && cards[0].id)) { this._walletFront = cards[0] && cards[0].id; setTimeout(() => this.watchPresence && this.watchPresence(), 0); }
+    const peekHere = !s.tripId && this._presKey === 'peek:' + this._walletFront ? (s.tripHere || []).filter((x, i, a) => a.indexOf(x) === i) : [];
+    if (cards[0]) cards[0].hereLabel = peekHere.length ? (peekHere.length > 1 ? peekHere[0] + ' + ' + (peekHere.length - 1) + ' Are Here' : peekHere[0] + ' Is Here · Editing').toUpperCase() : '';
+    // The live line: the latest spot a friend added to any of your lists in the last 3 days.
+    let activity = null;
+    s.trips.forEach(tr => { if (!this.tripPerm(tr).list) return; tr.data.stops.forEach(st => { if (st.by === me || !st.at || Date.now() - st.at > 3 * 864e5) return;
+      if (!activity || st.at > activity.at) activity = { at: st.at, who: st.byName || 'A Friend', name: (st.p && st.p.name) || this.stopPlace(st).name, day: st.day, list: tr.name, id: tr.id }; }); });
+    if (activity) Object.assign(activity, { ago: agoLabel(activity.at), where: activity.day ? 'To Day ' + activity.day : 'To ' + activity.list, onClick: () => this.openTrip(activity.id) });
     { const wd = s.walletDrag, n = cards.length;
       cards.forEach((c, k) => { const j = n - 1 - k; let sh = 0;
         if (wd && c.id !== wd.id) { if (wd.from < wd.over && j > wd.from && j <= wd.over) sh = -WSTEP; else if (wd.from > wd.over && j >= wd.over && j < wd.from) sh = WSTEP; }
@@ -564,7 +594,8 @@ Object.assign(Component.prototype, {
     return {
       listsDisplay: s.tab === 'lists' ? 'block' : 'none', listsIndex: !t, listsSignedIn: signedIn, listsLocal: s.auth === 'local',
       listsState: s.tripsState, listsMissing: s.tripsState === 'missing', listsLoading: s.tripsState === 'loading' && !s.trips.length, listsError: s.tripsState === 'error' && !s.trips.length,
-      listCards: cards, walletRef: el => this.walletRef(el), walletDragging: !!s.walletDrag, listsEmpty: s.tripsState === 'ready' && !s.trips.length, retryLists: () => NYCLists.refresh(),
+      listCards: cards, listTabs, listActivity: activity, listsTitle: ((window.NYCSync && NYCSync.displayName && NYCSync.displayName()) || '').trim().split(/\s+/)[0] || '',
+      tripPhotoBusy: !!s.tripPhotoBusy, walletRef: el => this.walletRef(el), walletDragging: !!s.walletDrag, listsEmpty: s.tripsState === 'ready' && !s.trips.length, retryLists: () => NYCLists.refresh(),
       openNewTrip: () => this.setState({ newTripOpen: true, newTripName: '', newTripDays: 0, newTripStart: '', newTripAddPid: null }),
       trip: detail, tripMapRef: this.tripMapRef, tripMapH: '100%', tripMapOn: !!detail && (detail.showMap || detail.stopMap), tripEdit: editSheet,
       hasTripSel: !!tsel && s.tab === 'lists' && !s.addOpen, tsel, tripShare: share, tripPick: pick, listChoose: choose, newTrip,
