@@ -29,6 +29,22 @@ The app is built around major cities. New York State is the last map, for day tr
 
 ## 2. Working on it with Claude
 
+### Apps to download (so Claude can make changes directly)
+
+| Download | On | Why |
+|---|---|---|
+| **Claude desktop app** (claude.ai/download) | Mac | The main place to work. It links the chat to the Mac (Claude can update the Xcode project), has the built-in browser pane (Vercel, Supabase, App Store Connect, Play Console), and allows computer use for Xcode. Keep it open and the Mac awake while Claude works. |
+| **Claude app** (App Store) | iPhone | Start or check on work from the phone. Changes to the code and the website work from here; anything on the Mac needs the desktop app open. |
+| **Xcode** (Mac App Store) | Mac | Builds the iPhone app. You press Archive and Upload here. After installing, open it once to accept the license and install the iOS platform. |
+| **Node.js LTS** (nodejs.org) | Mac | Runs `npx cap sync ios` / `npm run sync`, which copies the website into the iPhone app. |
+| **Git** (comes with Xcode's Command Line Tools: run `xcode-select --install` in Terminal) | Mac | `git pull` keeps **Documents › Spotted In App** up to date with GitHub. |
+| **TestFlight** (App Store) | iPhone | Installs and tests the beta builds. |
+| **Spotted In** (via the TestFlight invite) | iPhone | The app itself, to check each new build. |
+| **Google Chrome + Claude in Chrome extension** (optional) | Mac | Only if you'd rather Claude used your own Chrome instead of the built-in browser pane. |
+| Android phone with **Google Play** (later, for Android) | Android | To test the Android build. No Android Studio is needed; GitHub builds it. |
+
+Nothing else is needed: GitHub, Vercel, Supabase, App Store Connect, Google Cloud and Play Console are all websites.
+
 ### Apps and connections Claude needs
 Set these up once. With all of them, Claude can change the code, put it live, update the iPhone project on the Mac, run database setup and manage TestFlight.
 
