@@ -74,6 +74,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 ### Place card (tap a pin)
 - Photo banner (your own photo, or the spot's first Google Maps photo), the category, neighborhood and source, the name in two weights, and a glass row with **From Home** (minutes, or hours for long trips) / **Price** / **Nearest station** with its line badges and walking time. On the New York State map the station cell shows the nearest Metro-North, LIRR or Amtrak station. The note shows one sentence per line.
 - Round glass buttons: open the source post (TikTok / Instagram / Threads / Google Maps), **Plan**, **Visited**, **To List**, **Photo**, **Edit**. Then a **Get There** pill.
+- **Reserve A Table** (restaurants, or any spot with a saved booking link): opens the saved link ("Book On Resy", "Book On OpenTable"…), or shows Resy / OpenTable / Google (Chope instead of Resy in Singapore and Hong Kong) searches for the spot, plus **Save A Booking Link**. The link is the **Booking Link** field in Edit.
 - **Swipe the card down to close it.** From Explore, that returns you to the deck.
 
 ### Get There
@@ -184,7 +185,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **Local copy:** `localStorage['nycList.v1']`; the current map in `localStorage['nycList.city']`. **Cloud:** one JSON row per user in `nyc_list` (row-level security).
 - **Synced snapshot:** `{places (every map's spots, each tagged city), cats, home, plan (NYC's), cities:{sg,hk,to,bos,nys}:{home, plan}, city, listOrder}`.
 - `src/sync.js` does a three-way merge against the last synced base about a second after any change, and on resume or coming back online. City, home and plan merge per map.
-- **Place:** `{id, name, cat, area, lat, lng, url, source, address, note, price 0-4, visited, city?, photo?, hours?}`. `hours` = `{p:[[openDay, openMin, closeDay, closeMin]…], s: businessStatus, t: checkedAt}` or `{none:1, t}` (days 0 = Sunday, local minutes). (no `city` means NYC). Category `{id, name, color, emoji}`. Plan `{ids, start, leave, stay}`. Home `{lat, lng, area}`.
+- **Place:** `{id, name, cat, area, lat, lng, url, source, address, note, price 0-4, visited, city?, photo?, hours?, reserve?}` (`reserve` = booking link). `hours` = `{p:[[openDay, openMin, closeDay, closeMin]…], s: businessStatus, t: checkedAt}` or `{none:1, t}` (days 0 = Sunday, local minutes). (no `city` means NYC). Category `{id, name, color, emoji}`. Plan `{ids, start, leave, stay}`. Home `{lat, lng, area}`.
 - **Shared lists** (`supabase/lists.sql`):
   - `nyc_trips`: owner, name, sharing flags, invite code, `rev`, and `data {stops, days, start, cats, photo}`.
   - `nyc_trip_members`, plus the functions `nyc_join_trip`, `nyc_trip_preview` and `nyc_shared_map`.

@@ -546,6 +546,19 @@ function PlaceCard(v) {
       </label>`}
       ${!onMap && bubble(v.editSel, 'Edit', 'M4 20h4L19 9l-4-4L4 16z', '#1B3DB8')}
     </div>
+    ${sel.showReserve && html`
+    <div style=${S('display:flex;flex-direction:column;gap:8px')}>
+      <button class="lg" onClick=${v.onReserve} aria-expanded=${sel.reserveSaved ? null : String(sel.reserveOpts.length > 0)} style=${S(`${GL};height:50px;border-radius:999px;padding:0 8px 0 18px;display:flex;align-items:center;gap:10px;color:#10183F;cursor:pointer;font-family:inherit`)}>
+        ${Ico('M4 7h16v13H4z M4 11h16 M8 4v5M16 4v5', 19, '#E8242C', 2.2)}
+        <span style=${S('flex:1;text-align:left;font-size:15px;font-weight:800')}>${sel.reserveLabel}</span>
+        <span style=${S('width:34px;height:34px;border-radius:50%;background:#10183F;color:#FFC425;display:flex;align-items:center;justify-content:center')}>${Ico(sel.reserveSaved ? ARROW_NE : sel.reserveOpts.length ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6', 15, 'currentColor', 2.6)}</span>
+      </button>
+      ${sel.reserveOpts.length > 0 && html`
+      <div style=${S('display:flex;flex-wrap:wrap;gap:6px;padding:0 4px')}>
+        ${sel.reserveOpts.map((o, i) => html`<button key=${i} onClick=${o.go} style=${S('height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(16,24,63,.14);background:rgba(255,255,255,.7);color:#10183F;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:5px')}>${o.label}${Ico(ARROW_NE, 12, '#1B3DB8', 2.6)}</button>`)}
+        <button onClick=${v.editSel} style=${S('height:38px;padding:0 6px;border:0;background:none;color:#1B3DB8;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Save A Booking Link</button>
+      </div>`}
+    </div>`}
     <div style=${S('display:flex;align-items:center')}>
       <button class="lg" onClick=${v.openRoute} style=${S('flex:1;height:58px;border-radius:999px;border:0;background:#10183F;color:#ffffff;display:flex;align-items:center;padding-left:24px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25)')}>Get There</button>
       <button onClick=${v.openRoute} aria-label="Get There" style=${S('margin-left:8px;width:58px;height:58px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 3px 1px rgba(255,255,255,.55),0 12px 26px rgba(255,107,26,.42)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.4)}</button>
@@ -1232,6 +1245,12 @@ function AddSheet(v) {
       <textarea id="f-note" value=${f.note} onChange=${v.onNote} placeholder="What To Order, When To Go…" rows="3" style=${S(`${inp};padding:12px 14px;resize:none;line-height:1.45`)}></textarea>
       ${hint('Each Sentence Shows On Its Own Line.')}
     </div>
+    ${v.showReserveField && html`
+    <div style=${col6}>
+      <label for="f-reserve" style=${lab}>BOOKING LINK</label>
+      <input id="f-reserve" type="url" inputmode="url" value=${f.reserve || ""} onChange=${v.onReserveField} placeholder="Resy, OpenTable, Tock Or Their Website" style=${S(`height:52px;${inp}`)} />
+      ${hint('Optional — The Place Card’s Reserve Button Opens It.')}
+    </div>`}
     ${f.id && html`<div style=${S('display:flex;justify-content:center')}><button onClick=${() => { const sure = v.delLabel !== 'Delete'; v.deleteSel(); if (sure) v.closeAdd(); }} style=${S('border:0;background:none;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer;padding:8px')}>${v.delLabel === 'Delete' ? 'Delete This Spot' : v.delLabel}</button></div>`}`;
 
   const seg = (m, label) => html`<button role="tab" aria-selected=${mode === m} onClick=${() => v.setAddMode(m)} style=${S(`height:38px;border:none;border-radius:12px;background:${mode === m ? '#FFFFFF' : 'transparent'};color:${mode === m ? '#10183F' : '#3A4470'};font-size:13px;font-weight:${mode === m ? 800 : 700};cursor:pointer;${mode === m ? 'box-shadow:0 2px 8px rgba(16,24,63,.12)' : ''}`)}>${label}</button>`;

@@ -189,7 +189,7 @@ const SEED=[
 const LS='nycList.v1';
 const _x=0;const toTitle=s=>s.replace(/\S+/g,w=>w[0].toUpperCase()+w.slice(1));
 const PRICES=['$','$$','$$$','$$$$'],PRICE_HINT=['Under $20 A Person','$20–40 A Person','$40–80 A Person','$80+ A Person'];
-const blank=()=>({id:null,price:0,url:'',name:'',cat:null,area:'auto',address:'',note:'',lat:null,lng:null,newCatOpen:false,newCatName:'',newCatColor:C.purple,newCatEmoji:'⭐'});
+const blank=()=>({id:null,price:0,url:'',name:'',cat:null,area:'auto',address:'',note:'',reserve:'',lat:null,lng:null,newCatOpen:false,newCatName:'',newCatColor:C.purple,newCatEmoji:'⭐'});
 const gmaps=(a,b,mode)=>'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(a)+'&destination='+encodeURIComponent(b)+'&travelmode='+mode;
 // A link shared into the app: ?add=<link> (iPhone Shortcut) or ?url= / ?text= / ?title= (Android share menu).
 const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const raw=['add','url','text','title'].map(k=>q.get(k)||'').join(' ');
@@ -219,6 +219,15 @@ const openInfo=(p,now)=>{const h=p.hours;if(!h||h.none)return null;
   if(close!=null){const at=w+close;return {open:true,soon:close<=60,label:(close<=60?'Closes Soon · ':'Open · Closes ')+clock(at)};}
   if(!next)return null;const day=Math.floor((((w+next.d)%WEEK)+WEEK)%WEEK/1440),today=Math.floor(w/1440)%7;
   return {open:false,label:'Closed · Opens '+(day===today&&next.d<1440?'':day===(today+1)%7&&next.d<2880?'Tomorrow ':DAYS[day]+' ')+clock(next.o)};};
+// Reservations: a saved booking link opens straight away; otherwise search the booking sites used in that map's city.
+const RESY={nyc:'new-york-ny',nys:'new-york-ny',bos:'boston-ma',to:'toronto-on'};
+const bookSite=u=>{const h=(()=>{try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return '';}})();
+  return /resy\.com$/.test(h)?'Resy':/opentable\./.test(h)?'OpenTable':/(exploretock|tock)\.com$/.test(h)?'Tock':/sevenrooms\.com$/.test(h)?'SevenRooms':/chope\.co$/.test(h)?'Chope':/yelp\./.test(h)?'Yelp':h?'Website':'';};
+const bookOpts=p=>{const c=cityOf(p),q=encodeURIComponent(p.name),cq=encodeURIComponent(p.name+' '+CITIES[c].q),o=[];
+  if(RESY[c])o.push({label:'Resy',url:'https://resy.com/cities/'+RESY[c]+'/search?query='+q});
+  o.push({label:'OpenTable',url:'https://www.opentable.com/s?term='+cq});
+  if(c==='sg'||c==='hk')o.push({label:'Chope',url:'https://www.google.com/search?q='+encodeURIComponent('site:chope.co '+p.name)});
+  o.push({label:'Google',url:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+CITIES[c].q+' reservation')});return o;};
 const placeQ=p=>p.address?`${p.name}, ${p.address}, ${CITIES[cityOf(p)].q}`:`${p.name}, ${p.area}, ${CITIES[cityOf(p)].q}`;
 
 class Component extends DCLogic {
@@ -227,7 +236,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',reserveOpen:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -562,9 +571,9 @@ class Component extends DCLogic {
       if(!ll&&ao)ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];
       this.setState({saving:false});if(!ll){this.toast('Couldn’t Find It — Drop A Pin Or Pick A Neighborhood');return;}}
     const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
-    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
+    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
     if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false);this.setState({addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added To The List!');return;}
-    this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?p:x):[p,...st.places]}),
+    this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
     this.toast(orig?'Changes Saved':'Pinned To Your Map!');}
   // Apple requires in-app account deletion. Server: /api/delete-account (needs SUPABASE_SERVICE_ROLE_KEY in Vercel).
@@ -777,6 +786,8 @@ class Component extends DCLogic {
         planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1],
         srcBadge:hasUrl?'Saved From '+src.label:'',catEmoji:emo(c),catColor:c.color,img:placeImg(sp),ownPhoto:!!sp.photo,photoBusy:s.spotPhotoBusy,
         onPhoto:e=>{const f=e.target.files&&e.target.files[0];e.target.value='';this.pickSpotPhoto(sp.id,f);},removePhoto:()=>this.removeSpotPhoto(sp.id)};
+      {const site=sp.reserve?bookSite(sp.reserve):'';sel.showReserve=!!(sp.reserve||this.priced(sp.cat));sel.reserveLabel=site?(site==='Website'?'Book A Table':'Book On '+site):'Reserve A Table';
+        sel.reserveSaved=!!sp.reserve;sel.reserveOpts=s.reserveOpen===sp.id&&!sp.reserve?bookOpts(sp).map(o=>({label:o.label,go:()=>{this.setState({reserveOpen:false});window.open(o.url,'_blank');}})):[];}
       {const oi=openInfo(sp);sel.hours=oi?oi.label:'';sel.hoursCol=oi?(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C'):'';
         // Look up the hours the first time a spot is opened (in the background; the card updates when they arrive).
         if(needHours(sp)&&!(this._hq&&this._hq.has(sp.id)))setTimeout(()=>this.fetchHours([sp.id]),0);}
@@ -882,9 +893,10 @@ class Component extends DCLogic {
       nearest:(()=>{if(!s.here||s.tab!=='map'||s.placing||s.routeFor||s.selId)return null;let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited)return;const d=km(s.here,[p.lat,p.lng]);if(d<bd){bd=d;best=p;}});if(!best||bd>8)return null;
         const c=catOf(best.cat),walk=Math.max(1,Math.round(bd*1.25/4.8*60));return {name:best.name,img:placeImg(best),catName:c.name,col:c.color,fg:fgFor(c.color),em:emo(c),big:walk>99?Math.round(walk/60):walk,unit:walk>99?'hr':'min',
           onClick:()=>{this.setState({selId:best.id});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([best.lat,best.lng],15.5,{duration:.6}),60);}};})(),onMapTab:s.tab==='map',delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
-      openSource:()=>sp&&window.open(sp.url,'_blank'),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
+      openSource:()=>sp&&window.open(sp.url,'_blank'),
+      onReserve:()=>{if(!sp)return;if(sp.reserve){window.open(sp.reserve,'_blank');return;}this.setState({reserveOpen:s.reserveOpen===sp.id?false:sp.id});},openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
       toggleVisited:()=>{if(!sp)return;this.setState(st=>({places:st.places.map(p=>p.id===sp.id?{...p,visited:!p.visited}:p)}));if(!sp.visited)this.toast('Nice! Marked As Visited');},
-      editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',lat:sp.lat,lng:sp.lng}}),
+      editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',reserve:sp.reserve||'',lat:sp.lat,lng:sp.lng}}),
       deleteSel:()=>{if(!sp)return;if(!s.confirmDel)return this.setState({confirmDel:true});this.setState(st=>({places:st.places.filter(p=>p.id!==sp.id),plan:{...st.plan,ids:st.plan.ids.filter(x=>x!==sp.id)},selId:null,confirmDel:false}));this.toast('Spot Deleted');},
       routeOpen:!!rd&&!s.placing,routeMini:!!s.routeMini,routeCollapse:()=>this.setState({routeMini:true}),routeExpand:()=>this.setState({routeMini:false}),routeDest:rd?rd.d.name:'',closeRoute:()=>{const id=s.routeFor;this.setState({routeFor:null,selId:id});},
       originChips,originIsSpot:s.routeMode==='spot',routeSpotVal:s.routeSpot||'',onRouteSpot:e=>this.setState({routeSpot:e.target.value,routePick:0}),
@@ -927,7 +939,7 @@ class Component extends DCLogic {
       addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':s.addTarget?'Add To The List':'Add A Spot',formFor:s.addTarget?((s.trips.find(t=>t.id===s.addTarget)||{}).name||''):'',form:f,
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
       onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
-      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),
+      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),showReserveField:!!(f.reserve||(f.cat&&this.priced(f.cat))),
       pasteUrl:()=>navigator.clipboard?.readText().then(t=>{this.setForm({url:t.trim()});this.aiAuto(t.trim(),true);}).catch(()=>this.toast('Long-Press The Field To Paste')),
       hasSrcBadge:!!fsrc,srcBadge:fsrc?(fsrc==='link'?'Website Link':SRC[fsrc].label+' Link Detected'):'',srcBadgeBg:fsrc?SRC[fsrc].bg:C.navy,
       formCats:s.cats.map(c=>{const on=f.cat===c.id;return {name:c.name,emoji:emo(c),bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'rgba(16,24,63,.12)',dot:on?fgFor(c.color):c.color,onClick:()=>this.setForm({cat:c.id})};}),
