@@ -286,11 +286,15 @@ function ExploreScreen(v) {
             <button onClick=${v.toggleHideVisited} role="switch" aria-checked=${v.hideVisited} style=${S(`height:26px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;${MONO};font-size:10px;font-weight:700;background:${v.hideVisited ? '#1F9D6B' : 'rgba(16,24,63,.07)'};color:${v.hideVisited ? '#fff' : '#4A5275'}`)}>${v.hideVisited ? '✓ ' : ''}HIDE VISITED</button>
           </span>
         </div>
-        <h1 style=${S('margin:0 4px;font-size:38px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-1.6px;white-space:nowrap;color:#10183F')}>Where To <span style=${S('font-weight:200;font-style:normal')}>Today?</span></h1>
+        <h1 style=${S('margin:0 4px;font-size:38px;line-height:.98;font-weight:900;font-style:italic;letter-spacing:-1.6px;color:#10183F')}>${v.exTitleA} <span style=${S('font-weight:200;font-style:normal')}>${v.exTitleB}</span></h1>
+        <div style=${S('align-self:flex-start;max-width:300px;padding:10px 14px;border-radius:22px 22px 22px 6px;background:#FFFFFF;box-shadow:0 6px 14px rgba(16,24,63,.07);font-size:15px;line-height:1.35;color:#10183F')}>${v.exGreeting.lead}${v.exGreeting.bold && html`<b style=${S('font-weight:800')}>${v.exGreeting.bold}</b>`}${v.exGreeting.tail}</div>
+        <div class="noscroll" style=${S('display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:0 16px')}>
+          ${v.exVibes.map((c, i) => html`<button key=${i} onClick=${c.onClick} style=${S(`flex:none;height:38px;padding:0 14px;border-radius:999px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;white-space:nowrap;${c.hot ? 'border:0;background:#FF6B1A;color:#FFFFFF' : 'border:1.5px solid #10183F;background:#FFFFFF;color:#10183F'}`)}>${c.label}</button>`)}
+        </div>
         <div style=${S('display:flex;gap:8px')}>
           <label class="lg" style=${S(`${GL};flex:1;min-width:0;height:50px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 8px 0 16px`)}>
             ${Ico('M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14 M20 20l-3.5-3.5', 18, '#4A5275')}
-            <input value=${v.exQuery} onInput=${v.onExQuery} placeholder="Search spots, vibes, streets" aria-label="Search Your Spots" enterkeyhint="search" style=${S('flex:1;min-width:0;border:0;background:transparent;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none')}/>
+            <input value=${v.exQuery} onInput=${v.onExQuery} placeholder="Ask Spotted Anything…" aria-label="Search Your Spots" enterkeyhint="search" style=${S('flex:1;min-width:0;border:0;background:transparent;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none')}/>
             ${v.exQuery && html`<button onClick=${v.clearExQuery} aria-label="Clear Search" style=${S('width:32px;height:32px;flex:none;border-radius:50%;border:0;background:rgba(16,24,63,.08);color:#10183F;font-weight:800;cursor:pointer')}>✕</button>`}
           </label>
           <button onClick=${v.toggleExFilters} aria-label="More Filters" aria-expanded=${v.exFiltersOpen} style=${S('position:relative;width:50px;height:50px;flex:none;border-radius:50%;border:0;background:#10183F;color:#FFC425;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 10px 22px rgba(16,24,63,.25)')}>
@@ -352,8 +356,8 @@ function ExploreScreen(v) {
           ${v.exCount > 0 && html`<button onClick=${v.showResults} style=${S(`border:0;background:none;padding:6px 0;cursor:pointer;${MONO};font-size:11px;font-weight:700;color:#1B3DB8`)}>SEE ALL ${v.exCount} →</button>`}
         </div>
         <div style=${S('position:relative;height:340px;margin:2px 8px 0')}>
-          ${v.deckEmpty ? endCard('Nothing', 'Matches Yet', 'Try fewer filters, or save a spot you spotted online.', [pill('Clear Filters', v.clearExAll), pill('Add A Spot', v.openAdd, true)])
-            : v.deckDone ? endCard('That’s All', v.deckTotal, 'You went through every match. Shuffle for a new order, or see them all at once.', [pill('See All', v.showResults), pill('Shuffle Again', v.deckShuffle, true)])
+          ${v.deckEmpty ? endCard('Nothing', 'Matches Yet', 'Nothing fits that, bestie. Try fewer filters or go spot something new!', [pill('Clear Filters', v.clearExAll), pill('Add A Spot', v.openAdd, true)])
+            : v.deckDone ? endCard('That’s All', v.deckTotal, 'You saw every single one!! Shuffle for a new order or see them all at once.', [pill('See All', v.showResults), pill('Shuffle Again', v.deckShuffle, true)])
             : v.deckCards.map((c, i) => DeckCard(c, i, v)).reverse()}
         </div>
         ${!v.deckEmpty && !v.deckDone && html`<div style=${S('display:flex;justify-content:center;gap:22px;padding-top:6px')}>${mono('← SKIP', '#E8242C')}${mono('TAP TO OPEN', '#1B3DB8')}${mono('PLAN →', '#1F9D6B')}</div>`}
