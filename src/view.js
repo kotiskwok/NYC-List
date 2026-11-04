@@ -203,6 +203,7 @@ function DeckCard(c, i, v) {
       <div style=${S('flex:1;min-width:0')}>
         <div style=${S('font-size:21px;letter-spacing:-.6px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900')}>${c.bold}</span> <span style=${S('font-weight:200')}>${c.light}</span></div>
         <div style=${S(`${MONO};font-size:10px;font-weight:700;color:#4A5275;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${c.meta}</div>
+        ${(c.why || c.hours) && html`<div style=${S('font-size:12px;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (c.why ? '#7A4FD6' : c.hoursCol))}>${c.why || c.hours}</div>`}
       </div>
       ${front && html`
       <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" class="lg" style=${S(`${GL};width:46px;height:46px;flex:none;border-radius:50%;color:#E8242C;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
@@ -228,7 +229,10 @@ function ExploreScreen(v) {
       <div style=${S('position:relative;display:flex;flex-direction:column;gap:10px')}>
         <div style=${S('display:flex;justify-content:space-between;align-items:center;padding:0 4px')}>
           ${mono(`EXPLORE · ${v.exSaved} SAVED · ${v.cityShort}`)}
-          <button onClick=${v.toggleHideVisited} role="switch" aria-checked=${v.hideVisited} style=${S(`height:26px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;display:flex;align-items:center;gap:5px;${MONO};font-size:10px;font-weight:700;background:${v.hideVisited ? '#1F9D6B' : 'rgba(16,24,63,.07)'};color:${v.hideVisited ? '#fff' : '#4A5275'}`)}>${v.hideVisited ? '✓ ' : ''}HIDE VISITED</button>
+          <span style=${S('display:flex;gap:6px;flex:none;margin-left:8px')}>
+            <button onClick=${v.toggleOpenNow} role="switch" aria-checked=${v.openNow} style=${S(`height:26px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;${MONO};font-size:10px;font-weight:700;background:${v.openNow ? '#1F9D6B' : 'rgba(16,24,63,.07)'};color:${v.openNow ? '#fff' : '#4A5275'}`)}>${v.openNow ? '✓ ' : ''}${v.openNowLabel}</button>
+            <button onClick=${v.toggleHideVisited} role="switch" aria-checked=${v.hideVisited} style=${S(`height:26px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;${MONO};font-size:10px;font-weight:700;background:${v.hideVisited ? '#1F9D6B' : 'rgba(16,24,63,.07)'};color:${v.hideVisited ? '#fff' : '#4A5275'}`)}>${v.hideVisited ? '✓ ' : ''}HIDE VISITED</button>
+          </span>
         </div>
         <h1 style=${S('margin:0 4px;font-size:38px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-1.6px;white-space:nowrap;color:#10183F')}>Where To <span style=${S('font-weight:200;font-style:normal')}>Today?</span></h1>
         <div style=${S('display:flex;gap:8px')}>
@@ -242,6 +246,16 @@ function ExploreScreen(v) {
             ${v.exFilterN > 0 && !v.exFiltersOpen && html`<span style=${S('position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#FF6B1A;color:#fff;border:2px solid #FFF3DF;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.exFilterN}</span>`}
           </button>
         </div>
+        ${(v.showVibe || v.vibeBusy) && html`
+        <button onClick=${v.runVibe} disabled=${v.vibeBusy} class=${v.vibeBusy ? 'ai-busy' : ''} style=${S('align-self:flex-start;max-width:100%;height:38px;padding:0 15px;border-radius:999px;border:0;background:linear-gradient(120deg,#1B3DB8,#7A4FD6);color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.3),0 8px 18px rgba(27,61,184,.28)')}>
+          <span aria-hidden="true">✨</span><span style=${S('white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.vibeBusy ? 'Reading Your Spots…' : 'Vibe Search: “' + v.vibeQ + '”'}</span>
+        </button>`}
+        ${v.vibeOn && html`
+        <div style=${S('display:flex;align-items:center;gap:8px;padding:0 4px')}>
+          ${mono('✨ VIBE MATCHES · BEST FIRST', '#7A4FD6')}<span style=${S('flex:1')}></span>
+          <button onClick=${v.clearVibe} style=${S(`border:0;background:none;padding:4px 0;cursor:pointer;${MONO};font-size:10.5px;font-weight:700;color:#1B3DB8`)}>BACK TO KEYWORDS</button>
+        </div>`}
+        ${v.vibeMsg && html`<div style=${S('padding:0 4px;font-size:13px;font-weight:700;color:#E8242C')}>${v.vibeMsg}</div>`}
         ${v.exFiltersOpen && html`
         <div class="lg" style=${S(`${GL};border-radius:26px;padding:14px;display:flex;flex-direction:column;gap:12px`)}>
           ${v.exShowPrice && html`
@@ -508,6 +522,7 @@ function PlaceCard(v) {
         ${!onMap && html`<button onClick=${v.closeSel} aria-label="Close" style=${S('flex:none;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.6);color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>✕</button>`}
       </div>
       <h1 style=${S('margin:0;font-size:48px;line-height:.9;font-weight:900;font-style:italic;font-stretch:100%;letter-spacing:-2px;text-wrap:balance;overflow-wrap:anywhere')}>${split ? html`${words.slice(0, -1).join(' ')}<br/><span style=${S('font-weight:200;font-style:normal;letter-spacing:-1.6px')}>${words[words.length - 1]}</span>` : sel.name}</h1>
+      ${sel.hours && html`<div style=${S(`display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800;color:${sel.hoursCol}`)}><span style=${S(`width:8px;height:8px;border-radius:50%;background:${sel.hoursCol};box-shadow:0 0 0 3px ${sel.hoursCol}33`)}></span>${sel.hours}</div>`}
     </div>
     <div class="lg" style=${S(`${GL};border-radius:26px;padding:14px 4px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))`)}>
       ${sel.homeMin ? html`<div style=${S(cell)}>${big(sel.homeMin > 99 ? Math.round(sel.homeMin / 6) / 10 : sel.homeMin, sel.homeMin > 99 ? 'hr' : 'min')}${lab('From Home')}</div>`

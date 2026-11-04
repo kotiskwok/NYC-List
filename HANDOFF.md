@@ -54,6 +54,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **Apple Maps** as the base map (MapKit JS). If it's ever unavailable, the app draws its own map in Apple Maps colours.
 - **Header card:** "Spotted In" with the yellow **city button** (NYC ▾) that opens **Pick A City** (each map with its spot count and transit name), a big count of **Spots To Try**, your profile photo with a sync dot (tap for **Your Account**), and Visited / In Plan counts.
 - **Category chips** filter the pins. Each pin is a frosted ring with the category's line icon, or the spot's photo.
+- **Open Now** chip (after All Spots) shows only spots open right now, in that map's local time. Hours are looked up the first time a spot is opened, or for every spot when the chip is turned on.
 - **Nearest To You** card, once your location is known.
 - **Map Layers** (per map; bike docks show live bike and dock counts):
 
@@ -84,6 +85,8 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 
 ### Explore tab ("Where To Today?")
 - Search (name, area, address, note), category chips, a glass **matches** card (count, neighborhoods, a colour bar by category, price), and a filter button (price for restaurants, neighborhoods by region, Hide Visited).
+- **Open Now** toggle next to Hide Visited. Each place card shows "Open · Closes 10 PM" / "Closed · Opens Tue 8 AM".
+- **Vibe Search:** type a few words ("cozy cafe to work near home") and tap the purple ✨ Vibe Search pill. AI picks the best-fitting saved spots, best first, with a short reason on each deck card. **Back To Keywords** returns to the normal search.
 - **Shuffle The Deck:** swipeable cards showing minutes away (or from home). Swipe right (or the orange **+**) adds to the plan; swipe left (or **✕**) skips; tap opens the spot. While you drag, the card **floods green (Plan) or red (Skip)** from that side, a big "Plan"/"Skip" slides in, and a light bar fills until it says LET GO ✓. **See All** shows the matches as a list or map, with Add All To Plan.
 
 ### Route tab (Plan A Day)
@@ -181,7 +184,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **Local copy:** `localStorage['nycList.v1']`; the current map in `localStorage['nycList.city']`. **Cloud:** one JSON row per user in `nyc_list` (row-level security).
 - **Synced snapshot:** `{places (every map's spots, each tagged city), cats, home, plan (NYC's), cities:{sg,hk,to,bos,nys}:{home, plan}, city, listOrder}`.
 - `src/sync.js` does a three-way merge against the last synced base about a second after any change, and on resume or coming back online. City, home and plan merge per map.
-- **Place:** `{id, name, cat, area, lat, lng, url, source, address, note, price 0-4, visited, city?, photo?}` (no `city` means NYC). Category `{id, name, color, emoji}`. Plan `{ids, start, leave, stay}`. Home `{lat, lng, area}`.
+- **Place:** `{id, name, cat, area, lat, lng, url, source, address, note, price 0-4, visited, city?, photo?, hours?}`. `hours` = `{p:[[openDay, openMin, closeDay, closeMin]…], s: businessStatus, t: checkedAt}` or `{none:1, t}` (days 0 = Sunday, local minutes). (no `city` means NYC). Category `{id, name, color, emoji}`. Plan `{ids, start, leave, stay}`. Home `{lat, lng, area}`.
 - **Shared lists** (`supabase/lists.sql`):
   - `nyc_trips`: owner, name, sharing flags, invite code, `rev`, and `data {stops, days, start, cats, photo}`.
   - `nyc_trip_members`, plus the functions `nyc_join_trip`, `nyc_trip_preview` and `nyc_shared_map`.
@@ -212,6 +215,8 @@ Endpoints check the caller's Supabase token, except `photo`, `geocode`, `bus` an
 | `POST /api/places` | Google Places (New): `auto` (suggestions), `detail`, `find` (best match), limited to the current map's area. |
 | `GET /api/photo?q=&ll=` | A spot's first Google photo as a JPEG. It only answers the app's own pages; the iPhone app is recognised by `&app=ios` or its web view. |
 | `GET /api/geocode` | OpenStreetMap address search for the iPhone app (Nominatim refuses requests without a Referer). |
+| `POST /api/hours` | Opening hours for up to 25 spots (Google Places), stored on each spot as `hours` and refreshed monthly. Powers **Open Now**. |
+| `POST /api/vibe` | **Vibe search**: Claude ranks the user's own saved spots against a plain-language request (no web search). |
 | `POST /api/transcribe` | OpenAI speech-to-text for phone videos. |
 | `GET /api/bus` | NYC bus route lines. |
 | `GET /api/mapkit-token` | Apple Maps token, only for the live site, previews and the iPhone app. |

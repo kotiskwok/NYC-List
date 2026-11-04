@@ -197,6 +197,28 @@ const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const r
   ['add','url','text','title'].forEach(k=>q.delete(k));const rest=q.toString();history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+location.hash);
   return m?m[0].replace(/[.,!?)\]]+$/,''):'';}catch(e){return '';}})();
 const withCity=q=>{const re=CUR.id==='nyc'?/new york|nyc|brooklyn|queens|bronx|staten/i:new RegExp(CUR.q,'i');return re.test(q)?q:q+', '+CUR.qc;};
+// Opening hours (from /api/hours, stored on the spot as hours:{p:[[openDay,openMin,closeDay,closeMin]…],s,t}).
+// Each map's clock, so Open Now is right wherever you are.
+const TZ={nyc:'America/New_York',nys:'America/New_York',bos:'America/New_York',to:'America/Toronto',sg:'Asia/Singapore',hk:'Asia/Hong_Kong'};
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WEEK=10080;
+const cityNow=id=>{try{const f=new Intl.DateTimeFormat('en-US',{timeZone:TZ[id]||TZ.nyc,weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(new Date()),g=t=>(f.find(x=>x.type===t)||{}).value;
+  return DAYS.indexOf(g('weekday'))*1440+(+g('hour')%24)*60+(+g('minute'));}catch(e){const d=new Date();return d.getDay()*1440+d.getHours()*60+d.getMinutes();}};
+const clock=m=>{m=((m%1440)+1440)%1440;const h=Math.floor(m/60),mm=m%60;return (h%12||12)+(mm?':'+String(mm).padStart(2,'0'):'')+(h<12?' AM':' PM');};
+const HOURS_TTL=30*864e5;
+const needHours=p=>!p.hours||!p.hours.t||Date.now()-p.hours.t>HOURS_TTL;
+// {open, label, soon} for a spot right now, or null when its hours aren't known.
+const openInfo=(p,now)=>{const h=p.hours;if(!h||h.none)return null;
+  if(h.s==='CLOSED_PERMANENTLY')return {open:false,label:'Permanently Closed',gone:true};
+  if(h.s==='CLOSED_TEMPORARILY')return {open:false,label:'Temporarily Closed',gone:true};
+  const P=h.p||[];if(!P.length)return null;
+  if(P.length===1&&P[0][2]==null)return {open:true,label:'Open 24 Hours'};
+  const w=now==null?cityNow(cityOf(p)):now;let close=null,next=null;
+  for(const [od,om,cd,cm] of P){if(cd==null)continue;const o=od*1440+om;let c=cd*1440+cm;if(c<=o)c+=WEEK;
+    for(const x of [w,w+WEEK])if(x>=o&&x<c)close=close==null?c-x:Math.min(close,c-x);
+    const d=((o-w)%WEEK+WEEK)%WEEK;if(next==null||d<next.d)next={d,o};}
+  if(close!=null){const at=w+close;return {open:true,soon:close<=60,label:(close<=60?'Closes Soon · ':'Open · Closes ')+clock(at)};}
+  if(!next)return null;const day=Math.floor((((w+next.d)%WEEK)+WEEK)%WEEK/1440),today=Math.floor(w/1440)%7;
+  return {open:false,label:'Closed · Opens '+(day===today&&next.d<1440?'':day===(today+1)%7&&next.d<2880?'Tomorrow ':DAYS[day]+' ')+clock(next.o)};};
 const placeQ=p=>p.address?`${p.name}, ${p.address}, ${CITIES[cityOf(p)].q}`:`${p.name}, ${p.area}, ${CITIES[cityOf(p)].q}`;
 
 class Component extends DCLogic {
@@ -205,7 +227,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -225,12 +247,12 @@ class Component extends DCLogic {
     const places=all.filter(p=>cityOf(p)===cur).map(p=>names.size&&!names.has(p.area)?{...p,area:hoodAt([p.lat,p.lng])||p.area}:p);
     this.setState(st=>({places,otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,cats:d.cats&&d.cats.length?d.cats:CATS0,listOrder:Array.isArray(d.listOrder)?d.listOrder:st.listOrder,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       selId:places.some(p=>p.id===st.selId)?st.selId:null,routeFor:places.some(p=>p.id===st.routeFor)?st.routeFor:null,
-      ...(moved?{city:cur,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',exStage:'pick',busState:'',tramState:'',ferryState:'',bikeState:''}:{})}),()=>{if(moved)this.cityMoved();});}
+      ...(moved?{city:cur,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',vibe:null,vibeMsg:'',exStage:'pick',busState:'',tramState:'',ferryState:'',bikeState:''}:{})}),()=>{if(moved)this.cityMoved();});}
   setCity(id){if(!CITIES[id])return;const s=this.state,prev=CUR.id;if(id===prev){this.setState({cityOpen:false});return;}
     const all=[...s.places.map(p=>p.city?p:{...p,city:prev}),...(s.otherPlaces||[])],cm={...(s.cityMeta||{}),[prev]:{home:s.home,plan:s.plan}};
     setCityData(id);try{localStorage.setItem('nycList.city',id);}catch(e){}const m0=cm[id]||{};
     this.setState({places:all.filter(p=>cityOf(p)===id),otherPlaces:all.filter(p=>cityOf(p)!==id),cityMeta:cm,home:homeFor(cm,id),plan:m0.plan||{ids:[],start:'first'},city:id,cityOpen:false,
-      selId:null,routeFor:null,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',exStage:'pick',placing:false,layersOpen:false,obRes:[],obHome:null,obMsg:'',busState:'',tramState:'',ferryState:'',bikeState:''},()=>this.cityMoved());
+      selId:null,routeFor:null,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',vibe:null,vibeMsg:'',exStage:'pick',placing:false,layersOpen:false,obRes:[],obHome:null,obMsg:'',busState:'',tramState:'',ferryState:'',bikeState:''},()=>this.cityMoved());
     this.toast('Welcome To '+CUR.name+' '+CUR.emoji);}
   cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip'){m.map.setMinZoom(CUR.minZ||10);m.map.setMaxBounds(CUR.bounds);}m.map.setView(CUR.center,CUR.z||12,{animate:false});}catch(e){}
       if(m.subway){const on=m.map.hasLayer(m.subway);m.subway.remove();this.buildSubway(m);if(on)m.subway.addTo(m.map);}
@@ -386,15 +408,48 @@ class Component extends DCLogic {
   fit(m,l,opt){const pts=l.map(p=>Array.isArray(p)?p:[p.lat,p.lng]).filter(p=>p&&isFinite(p[0])&&isFinite(p[1]));if(!pts.length)return;
     try{m.map.fitBounds(window.L.latLngBounds(pts),opt||{padding:[60,60],maxZoom:15});}catch(e){console.log('fit fail',m.kind,JSON.stringify(l).slice(0,200));}}
   priced(catId){const c=this.state.cats.find(x=>x.id===catId);return catId==='food'||!!(c&&/restaurant|bar\b|food|brunch|dinner|eats/i.test(c.name));}
-  lists(){const s=this.state;
-    return {main:s.places.filter(p=>!s.mapCats.length||s.mapCats.includes(p.cat)),
-      ex:s.places.filter(p=>(!s.exCats.length||s.exCats.includes(p.cat))&&(!s.exAreas.length||s.exAreas.includes(p.area))&&!(s.hideVisited&&p.visited)&&(!s.exPrices.length||!this.priced(p.cat)||s.exPrices.includes(p.price||0))&&this.exMatchQ(p))};}
+  lists(){const s=this.state,now=s.openNow?cityNow(CUR.id):0,vb=this.vibeOn();
+    const open=p=>{if(!s.openNow)return true;const o=openInfo(p,now);return !!(o&&o.open);};
+    let ex=s.places.filter(p=>(!s.exCats.length||s.exCats.includes(p.cat))&&(!s.exAreas.length||s.exAreas.includes(p.area))&&!(s.hideVisited&&p.visited)&&(!s.exPrices.length||!this.priced(p.cat)||s.exPrices.includes(p.price||0))&&open(p)&&(vb?vb.rank.has(p.id):this.exMatchQ(p)));
+    if(vb)ex=ex.sort((a,b)=>vb.rank.get(a.id)-vb.rank.get(b.id));
+    return {main:s.places.filter(p=>(!s.mapCats.length||s.mapCats.includes(p.cat))&&open(p)),ex};}
+  // Vibe search results stay on while the search box still says what was asked.
+  vibeOn(){const v=this.state.vibe;if(!v||v.q!==this.state.exQuery.trim())return null;if(!v.rank)v.rank=new Map(v.ids.map((id,i)=>[id,i]));return v;}
+  async runVibe(){const s=this.state,q=s.exQuery.trim();if(s.vibeBusy||q.length<2)return;
+    const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
+    if(!token){this.setState({vibeMsg:'Sign In To Use Vibe Search.'});return;}
+    if(!s.places.length){this.setState({vibeMsg:'Save A Few Spots First.'});return;}
+    const cat=Object.fromEntries(s.cats.map(c=>[c.id,c.name]));
+    this.setState({vibeBusy:true,vibeMsg:''});
+    let j=null,ok=false;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),30000);
+      const r=await fetch(API('/api/vibe'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+        body:JSON.stringify({q,city:CUR.id,spots:s.places.map(p=>({id:p.id,n:p.name,c:cat[p.cat]||'',a:p.area,s:p.address||'',note:p.note||'',price:p.price||0,v:!!p.visited}))})});
+      clearTimeout(t);j=await r.json().catch(()=>null);ok=r.ok;}catch(e){}
+    if(this.state.exQuery.trim()!==q){this.setState({vibeBusy:false});return;}
+    if(!ok){this.setState({vibeBusy:false,vibeMsg:(j&&j.error)||'Couldn’t Reach Vibe Search. Check Your Connection.'});return;}
+    const m=(j&&j.matches)||[];
+    this.setState({vibeBusy:false,vibe:{q,ids:m.map(x=>x.id),why:Object.fromEntries(m.map(x=>[x.id,x.why]))},vibeMsg:m.length?'':'Nothing Saved Fits That Vibe — Try Different Words.'});}
+  // Fetch opening hours for spots that don't have them yet (or haven't been checked in a month).
+  async fetchHours(ids){if(this._hOff)return;this._hq=this._hq||new Set();
+    const s=this.state,want=s.places.filter(p=>ids.includes(p.id)&&needHours(p)&&!this._hq.has(p.id));if(!want.length)return;
+    const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token)return;
+    want.forEach(p=>this._hq.add(p.id));const many=want.length>1;if(many)this.setState({hoursBusy:true});
+    for(let i=0;i<want.length;i+=25){const part=want.slice(i,i+25);let got=null;
+      try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),30000);
+        const r=await fetch(API('/api/hours'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+          body:JSON.stringify({spots:part.map(p=>({id:p.id,q:placeQ(p),ll:[p.lat,p.lng]}))})});clearTimeout(t);
+        if(r.status===503){this._hOff=true;break;}if(r.ok)got=(await r.json()).hours||{};}catch(e){}
+      if(!got){part.forEach(p=>this._hq.delete(p.id));continue;}
+      const t0=Date.now();
+      this.setState(st=>({places:st.places.map(p=>p.id in got?{...p,hours:got[p.id]?{...got[p.id],t:t0}:{none:1,t:t0}}:p)}));}
+    if(many)this.setState({hoursBusy:false});}
+  toggleOpenNow(){const on=!this.state.openNow;this.setState({openNow:on});if(on)this.fetchHours(this.state.places.map(p=>p.id));}
   // Explore search: every word typed must appear in the spot's name, area, address or note.
   exMatchQ(p){const q=this.state.exQuery.trim().toLowerCase();if(!q)return true;const t=(p.name+' '+p.area+' '+(p.address||'')+' '+(p.note||'')).toLowerCase();return q.split(/\s+/).every(w=>t.includes(w));}
   // Explore deck: the matches in a shuffled order (the seed changes with Shuffle Again). The position resets when the filters change.
-  deckList(){const s=this.state,seed=s.deckSeed;const h=id=>{let x=Math.imul(seed,2654435761)>>>0;for(const ch of String(id))x=Math.imul(x^ch.charCodeAt(0),16777619)>>>0;return x;};
+  deckList(){const s=this.state,seed=s.deckSeed;if(this.vibeOn())return this.lists().ex;const h=id=>{let x=Math.imul(seed,2654435761)>>>0;for(const ch of String(id))x=Math.imul(x^ch.charCodeAt(0),16777619)>>>0;return x;};
     return [...this.lists().ex].sort((a,b)=>h(a.id)-h(b.id));}
-  deckKeyNow(){const s=this.state;return [s.exCats,s.exAreas,s.exPrices,s.hideVisited,s.exQuery.trim().toLowerCase(),s.deckSeed].map(String).join('|');}
+  deckKeyNow(){const s=this.state;return [s.exCats,s.exAreas,s.exPrices,s.hideVisited,s.openNow,this.vibeOn()?'vibe':'',s.exQuery.trim().toLowerCase(),s.deckSeed].map(String).join('|');}
   deckPos(){const s=this.state;return s.deck.key===this.deckKeyNow()?s.deck.pos:0;}
   deckAct(kind){if(this.state.deckFly)return;const pos=this.deckPos(),p=this.deckList()[pos];if(!p)return;
     if(kind==='plan'){if(!this.state.plan.ids.includes(p.id))this.togglePlan(p.id);else this.toast('Already In Your Plan');}
@@ -685,6 +740,7 @@ class Component extends DCLogic {
     const catOf=id=>cat[id]||{name:'Uncategorized',color:'#888'};const vis=s.places.filter(p=>p.visited).length;
     const chip=(on,label,onClick,col)=>({label,onClick,bg:on?(col||C.navy):'#fff',fg:on?'#fff':C.navy,border:on?(col||C.navy):'rgba(16,24,63,.14)'});
     const mapChips=[{label:'All',emoji:'🗽',count:s.places.length,dot:s.mapCats.length?C.navy:C.yellow,bg:s.mapCats.length?'#fff':C.navy,fg:s.mapCats.length?C.navy:'#fff',border:s.mapCats.length?'#fff':C.navy,onClick:()=>this.setState({mapCats:[]})},
+      {label:s.openNow&&s.hoursBusy?'Checking Hours…':'Open Now',emoji:'',dot:s.openNow?'#fff':C.green,bg:s.openNow?C.green:'#fff',fg:s.openNow?'#fff':C.navy,border:s.openNow?C.green:'#fff',onClick:()=>this.toggleOpenNow()},
       ...s.cats.map(c=>{const on=s.mapCats.includes(c.id);return {label:c.name,emoji:emo(c),count:s.places.filter(p=>p.cat===c.id).length,dot:on?fgFor(c.color):c.color,bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'#fff',onClick:()=>this.toggle('mapCats',c.id)};})];
     const exTiles=s.cats.map(c=>{const on=s.exCats.includes(c.id),n=s.places.filter(p=>p.cat===c.id).length;
       return {on,n,col:c.color,name:c.name,emoji:emo(c),countLabel:n+(n===1?' Spot Saved':' Spots Saved'),check:on?'✓':'',bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'rgba(16,24,63,.1)',dot:on?fgFor(c.color):c.color,onClick:()=>this.toggle('exCats',c.id)};});
@@ -702,13 +758,15 @@ class Component extends DCLogic {
     // Explore deck (hybrid Command Center + Spot Deck)
     const deck=this.deckList(),dpos=this.deckPos(),dref=s.here||(s.home?[s.home.lat,s.home.lng]:null);
     const tripMin=p=>{if(!dref||!reach(dref,[p.lat,p.lng]))return null;return bestOf(estimate(dref,[p.lat,p.lng])).min;};
-    const deckCards=deck.slice(dpos,dpos+3).map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=i===0?tripMin(p):null;
+    const vb=this.vibeOn(),dnow=cityNow(CUR.id);
+    const deckCards=deck.slice(dpos,dpos+3).map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=i===0?tripMin(p):null,oi=openInfo(p,dnow);
       return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:inPlan(p.id),
         idx:String(dpos+i+1).padStart(2,'0'),meta:[p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:'',m!=null?Math.max(1,Math.round(m))+' MIN '+(s.here?'AWAY':'FROM HOME'):c.name].filter(Boolean).join(' · ').toUpperCase(),
+        why:vb&&vb.why[p.id]?'✨ '+vb.why[p.id]:'',hours:oi?oi.label:'',hoursCol:oi?(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C'):'',
         onDown:e=>this.deckDown(e),onMove:e=>this.deckMove(e),onUp:()=>this.deckUp(p.id),onCancel:()=>{this._dg=null;this.setState({deckDx:0});}};});
     const catCount={};l.ex.forEach(p=>{catCount[p.cat]=(catCount[p.cat]||0)+1;});
     const exBar=Object.entries(catCount).map(([id,k])=>({col:catOf(id).color,n:k}));
-    const exFilterN=s.exAreas.length+s.exPrices.length+(s.hideVisited?1:0);
+    const exFilterN=s.exAreas.length+s.exPrices.length+(s.hideVisited?1:0)+(s.openNow?1:0);
     const sp=s.places.find(p=>p.id===s.selId);let sel={};
     if(sp){const c=catOf(sp.cat),src=SRC[sp.source]||SRC.manual,hasUrl=!!sp.url,ip=inPlan(sp.id);let ns=nearSt([sp.lat,sp.lng],1,2,true)[0];
       // Outside the subway's reach: the nearest Metro-North, LIRR or Amtrak station, with the walk or a short drive to it.
@@ -719,6 +777,9 @@ class Component extends DCLogic {
         planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1],
         srcBadge:hasUrl?'Saved From '+src.label:'',catEmoji:emo(c),catColor:c.color,img:placeImg(sp),ownPhoto:!!sp.photo,photoBusy:s.spotPhotoBusy,
         onPhoto:e=>{const f=e.target.files&&e.target.files[0];e.target.value='';this.pickSpotPhoto(sp.id,f);},removePhoto:()=>this.removeSpotPhoto(sp.id)};
+      {const oi=openInfo(sp);sel.hours=oi?oi.label:'';sel.hoursCol=oi?(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C'):'';
+        // Look up the hours the first time a spot is opened (in the background; the card updates when they arrive).
+        if(needHours(sp)&&!(this._hq&&this._hq.has(sp.id)))setTimeout(()=>this.fetchHours([sp.id]),0);}
       if(s.home&&reach([s.home.lat,s.home.lng],[sp.lat,sp.lng])){const e=estimate([s.home.lat,s.home.lng],[sp.lat,sp.lng]),bo=bestOf(e),sub=bo.mode==='subway'?e.subway:null;
         const xf=sub?sub.legs.filter(x=>x.k==='xfer').length:0;
         sel.homeMin=Math.max(1,Math.round(bo.min));sel.homeHow=sub?(xf?xf+(xf>1?' Transfers':' Transfer'):'No Transfers'):bo.mode==='rail'?'Train':bo.mode==='drive'?'Drive':'Walk';}}
@@ -800,7 +861,9 @@ class Component extends DCLogic {
       setHereOnMap:()=>{this.setState({locFail:null});this.startPlacing('here');},
       placing:!!s.placing,placingTitle,cancelPlacing:()=>{const ret=s.placingReturn;this.setState({placing:false,...(s.placing==='spot'?{addOpen:true}:{}),...(ret==='plan'?{tab:'plan'}:{}),...(ret&&ret.startsWith('route:')?{routeFor:ret.slice(6)}:{})});},
       clearCats:()=>this.setState({exCats:[]}),clearAreas:()=>this.setState({exAreas:[]}),clearCatsLabel:s.exCats.length?'Clear':'',clearAreasLabel:s.exAreas.length?'Clear':'',
-      hvTrack:s.hideVisited?C.green:'#CFCBDA',hvKnob:s.hideVisited?'20px':'0px',toggleHideVisited:()=>this.setState({hideVisited:!s.hideVisited}),
+      hvTrack:s.hideVisited?C.green:'#CFCBDA',hvKnob:s.hideVisited?'20px':'0px',toggleHideVisited:()=>this.setState({hideVisited:!s.hideVisited}),openNow:s.openNow,openNowLabel:s.openNow&&s.hoursBusy?'CHECKING…':'OPEN NOW',toggleOpenNow:()=>this.toggleOpenNow(),
+      vibeOn:!!vb,vibeBusy:s.vibeBusy,vibeMsg:s.vibeMsg,runVibe:()=>this.runVibe(),clearVibe:()=>this.setState({vibe:null,vibeMsg:''}),
+      showVibe:!vb&&s.exQuery.trim().length>=2&&(s.exQuery.trim().split(/\s+/).length>=2||!l.ex.length),vibeQ:s.exQuery.trim(),
       showBtnLabel:n?`Show ${n} ${n===1?'Place':'Places'} →`:'No Matches Yet',showBtnBg:n?C.orange:'#A9ADC2',
       showResults:()=>n&&this.setState({exStage:'results',selId:null}),backToPick:()=>this.setState({exStage:'pick',selId:null}),
       addAllToPlan:()=>{this.setState(st=>({plan:{...st.plan,ids:[...st.plan.ids,...l.ex.map(p=>p.id).filter(id=>!st.plan.ids.includes(id))]}}));this.toast(n+' Spots In Your Plan');},
@@ -809,7 +872,7 @@ class Component extends DCLogic {
       exPriceLbl:s.exPrices.length?[...s.exPrices].sort().map(i=>PRICES[i-1]).join(' · '):'ANY $',
       exQuery:s.exQuery,onExQuery:e=>this.setState({exQuery:e.target.value}),clearExQuery:()=>this.setState({exQuery:''}),
       toggleExFilters:()=>this.setState({exFilters:!s.exFilters}),closeExFilters:()=>this.setState({exFilters:false}),
-      clearExAll:()=>this.setState({exCats:[],exAreas:[],exPrices:[],hideVisited:false,exQuery:''}),
+      clearExAll:()=>this.setState({exCats:[],exAreas:[],exPrices:[],hideVisited:false,openNow:false,exQuery:'',vibe:null,vibeMsg:''}),
       deckCards,deckDx:s.deckDx,deckFly:s.deckFly,deckDone:!!n&&dpos>=n,deckEmpty:!n,deckTotal:String(n).padStart(2,'0'),
       deckSkip:()=>this.deckAct('skip'),deckPlan:()=>this.deckAct('plan'),deckOpen:()=>{const p=this.deckList()[this.deckPos()];if(p)this.setState({selId:p.id,confirmDel:false});},deckShuffle:()=>this.setState({deckSeed:s.deckSeed+1,deckDx:0,deckFly:''}),
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
