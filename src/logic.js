@@ -219,15 +219,10 @@ const openInfo=(p,now)=>{const h=p.hours;if(!h||h.none)return null;
   if(close!=null){const at=w+close;return {open:true,soon:close<=60,label:(close<=60?'Closes Soon · ':'Open · Closes ')+clock(at)};}
   if(!next)return null;const day=Math.floor((((w+next.d)%WEEK)+WEEK)%WEEK/1440),today=Math.floor(w/1440)%7;
   return {open:false,label:'Closed · Opens '+(day===today&&next.d<1440?'':day===(today+1)%7&&next.d<2880?'Tomorrow ':DAYS[day]+' ')+clock(next.o)};};
-// Reservations: a saved booking link opens straight away; otherwise search the booking sites used in that map's city.
-const RESY={nyc:'new-york-ny',nys:'new-york-ny',bos:'boston-ma',to:'toronto-on'};
+// Reservations: one real booking page per restaurant (found by /api/booking on a tap, or saved from a post), never a guess.
 const bookSite=u=>{const h=(()=>{try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return '';}})();
   return /resy\.com$/.test(h)?'Resy':/opentable\./.test(h)?'OpenTable':/(exploretock|tock)\.com$/.test(h)?'Tock':/sevenrooms\.com$/.test(h)?'SevenRooms':/chope\.co$/.test(h)?'Chope':/yelp\./.test(h)?'Yelp':h?'Website':'';};
-const bookOpts=p=>{const c=cityOf(p),q=encodeURIComponent(p.name),cq=encodeURIComponent(p.name+' '+CITIES[c].q),o=[];
-  if(RESY[c])o.push({label:'Resy',url:'https://resy.com/cities/'+RESY[c]+'/search?query='+q});
-  o.push({label:'OpenTable',url:'https://www.opentable.com/s?term='+cq});
-  if(c==='sg'||c==='hk')o.push({label:'Chope',url:'https://www.google.com/search?q='+encodeURIComponent('site:chope.co '+p.name)});
-  o.push({label:'Google',url:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+CITIES[c].q+' reservation')});return o;};
+const BOOK_TTL=30*864e5;
 const placeQ=p=>p.address?`${p.name}, ${p.address}, ${CITIES[cityOf(p)].q}`:`${p.name}, ${p.area}, ${CITIES[cityOf(p)].q}`;
 
 class Component extends DCLogic {
@@ -236,7 +231,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',reserveOpen:false,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',bookBusy:null,stopNoteDraft:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -571,7 +566,7 @@ class Component extends DCLogic {
       if(!ll&&ao)ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];
       this.setState({saving:false});if(!ll){this.toast('Couldn’t Find It — Drop A Pin Or Pick A Neighborhood');return;}}
     const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
-    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
+    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
     if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false);this.setState({addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added To The List!');return;}
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
@@ -748,6 +743,16 @@ class Component extends DCLogic {
   // Light / dark switched (in Your Account, or the phone's setting under Automatic): redraw, and re-tint Apple's maps.
   themeChanged(){const dark=window.THEME_DARK&&THEME_DARK();this.allMaps().forEach(m=>{if(m.apple)try{m.apple.colorScheme=dark?mapkit.Map.ColorSchemes.Dark:mapkit.Map.ColorSchemes.Light;m.el.style.background=dark?'#1A1F3A':'#F2EFE9';}catch(e){}});
     this.setState(st=>({themeV:st.themeV+1}));}
+  // Looks up a restaurant's one real booking page (server: /api/booking) and saves it on the spot.
+  async findBooking(id){const s=this.state,p=s.places.find(x=>x.id===id);if(!p||s.bookBusy)return;
+    const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token){this.toast('Sign In To Find Booking Pages');return;}
+    this.setState({bookBusy:id});let j=null,ok=false;
+    try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),55000);
+      const r=await fetch(API('/api/booking'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+        body:JSON.stringify({name:p.name,address:p.address||'',area:p.area||'',city:cityOf(p),ll:[p.lat,p.lng]})});clearTimeout(t);j=await r.json().catch(()=>null);ok=r.ok;}catch(e){}
+    if(!ok||!j){this.setState({bookBusy:null});this.toast((j&&j.error)||'Couldn’t Look It Up — Check Your Connection');return;}
+    const t0=Date.now();this.setState(st=>({bookBusy:null,places:st.places.map(x=>x.id!==id?x:j.url?{...x,reserve:j.url,reserveChk:null}:{...x,reserveChk:{t:t0,r:j.reason==='walkin'?'walkin':'notfound'}})}));
+    this.toast(j.url?'Found It On '+(j.platform==='Website'?'Their Website':j.platform)+' — Tap To Book':j.reason==='walkin'?'Looks Like Walk-In Only':'No Online Booking Page Found');}
   renderVals(){const s=this.state,f=s.form,cat=Object.fromEntries(s.cats.map(c=>[c.id,c])),l=this.lists(),A=areas();
     const catOf=id=>cat[id]||{name:'Uncategorized',color:'#888'};const vis=s.places.filter(p=>p.visited).length;
     const chip=(on,label,onClick,col)=>({label,onClick,bg:on?(col||C.navy):'#fff',fg:on?'#fff':C.navy,border:on?(col||C.navy):'rgba(16,24,63,.14)'});
@@ -789,8 +794,11 @@ class Component extends DCLogic {
         planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1],
         srcBadge:hasUrl?'Saved From '+src.label:'',catEmoji:emo(c),catColor:c.color,img:placeImg(sp),ownPhoto:!!sp.photo,photoBusy:s.spotPhotoBusy,
         onPhoto:e=>{const f=e.target.files&&e.target.files[0];e.target.value='';this.pickSpotPhoto(sp.id,f);},removePhoto:()=>this.removeSpotPhoto(sp.id)};
-      {const site=sp.reserve?bookSite(sp.reserve):'';sel.showReserve=!!(sp.reserve||this.priced(sp.cat));sel.reserveLabel=site?(site==='Website'?'Book A Table':'Book On '+site):'Reserve A Table';
-        sel.reserveSaved=!!sp.reserve;sel.reserveOpts=s.reserveOpen===sp.id&&!sp.reserve?bookOpts(sp).map(o=>({label:o.label,go:()=>{this.setState({reserveOpen:false});window.open(o.url,'_blank');}})):[];}
+      {const site=sp.reserve?bookSite(sp.reserve):'',chk=sp.reserveChk&&Date.now()-sp.reserveChk.t<BOOK_TTL?sp.reserveChk.r:'',busy=s.bookBusy===sp.id;
+        sel.showReserve=!!(sp.reserve||this.priced(sp.cat));sel.reserveSaved=!!sp.reserve;sel.reserveBusy=busy;sel.reserveMuted=!sp.reserve&&!!chk&&!busy;
+        sel.reserveLabel=sp.reserve?(site==='Website'?'Book On Their Website':'Book On '+site):busy?'Finding Their Booking Page…':chk==='walkin'?'Walk-In Only':chk==='notfound'?'No Online Booking Found':'Find Their Booking Page';
+        sel.reserveSub=sp.reserve?'':chk==='walkin'?'Google lists it as not taking reservations.':chk==='notfound'?'They may take bookings by phone.':'';
+        sel.reserveRetry=!sp.reserve&&!!chk&&!busy;}
       {const oi=openInfo(sp);sel.hours=oi?oi.label:'';sel.hoursCol=oi?(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C'):'';
         // Look up the hours the first time a spot is opened (in the background; the card updates when they arrive).
         if(needHours(sp)&&!(this._hq&&this._hq.has(sp.id)))setTimeout(()=>this.fetchHours([sp.id]),0);}
@@ -897,7 +905,8 @@ class Component extends DCLogic {
         const c=catOf(best.cat),walk=Math.max(1,Math.round(bd*1.25/4.8*60));return {name:best.name,img:placeImg(best),catName:c.name,col:c.color,fg:fgFor(c.color),em:emo(c),big:walk>99?Math.round(walk/60):walk,unit:walk>99?'hr':'min',
           onClick:()=>{this.setState({selId:best.id});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([best.lat,best.lng],15.5,{duration:.6}),60);}};})(),onMapTab:s.tab==='map',delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
       openSource:()=>sp&&window.open(sp.url,'_blank'),
-      onReserve:()=>{if(!sp)return;if(sp.reserve){window.open(sp.reserve,'_blank');return;}this.setState({reserveOpen:s.reserveOpen===sp.id?false:sp.id});},openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
+      onReserve:()=>{if(!sp)return;if(sp.reserve){window.open(sp.reserve,'_blank');return;}const chk=sp.reserveChk&&Date.now()-sp.reserveChk.t<BOOK_TTL;if(!chk)this.findBooking(sp.id);},
+      retryReserve:()=>sp&&this.findBooking(sp.id),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
       toggleVisited:()=>{if(!sp)return;this.setState(st=>({places:st.places.map(p=>p.id===sp.id?{...p,visited:!p.visited}:p)}));if(!sp.visited)this.toast('Nice! Marked As Visited');},
       editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',reserve:sp.reserve||'',lat:sp.lat,lng:sp.lng}}),
       deleteSel:()=>{if(!sp)return;if(!s.confirmDel)return this.setState({confirmDel:true});this.setState(st=>({places:st.places.filter(p=>p.id!==sp.id),plan:{...st.plan,ids:st.plan.ids.filter(x=>x!==sp.id)},selId:null,confirmDel:false}));this.toast('Spot Deleted');},

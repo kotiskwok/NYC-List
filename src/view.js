@@ -83,6 +83,7 @@ const inkOf = c => { const k = String(c || '').toLowerCase();
   if (THEME.dark) return INK_DK[k] || (/^#[0-9a-f]{6}$/i.test(k) && lum(k) < .35 ? '#EEF0FA' : c || '#EEF0FA');
   return INK[k] || c || '#10183F'; };
 const tintOf = c => /^#[0-9a-f]{6}$/i.test(c || '') ? (THEME.dark && lum(c) < .35 ? 'rgba(255,255,255,.1)' : c + (THEME.dark ? '38' : '1F')) : 'rgba(16,24,63,.08)';
+const THUMB_UP = 'M7 11v9H4v-9z M7 11l4-8a2 2 0 0 1 2 2v4h5.5a2 2 0 0 1 2 2.3l-1.2 6.5a2 2 0 0 1-2 1.7H7', THUMB_DOWN = 'M7 13V4H4v9z M7 13l4 8a2 2 0 0 0 2-2v-4h5.5a2 2 0 0 0 2-2.3l-1.2-6.5a2 2 0 0 0-2-1.7H7', NOTE_I = 'M5 4h14v12H9l-4 4z';
 const BACK = 'M15 5l-7 7 7 7', ARROW_NE = 'M7 17L17 7M9 7h8v8';
 const MONO = 'font-family:var(--mono)';
 const Grab = () => html`<div aria-hidden="true" style=${S('align-self:center;width:40px;height:5px;border-radius:3px;background:rgba(16,24,63,.2);flex:none')}></div>`;
@@ -598,16 +599,17 @@ function PlaceCard(v) {
       ${!onMap && bubble(v.editSel, 'Edit', 'M4 20h4L19 9l-4-4L4 16z', '#1B3DB8')}
     </div>
     ${sel.showReserve && html`
-    <div style=${S('display:flex;flex-direction:column;gap:8px')}>
-      <button class="lg" onClick=${v.onReserve} aria-expanded=${sel.reserveSaved ? null : String(sel.reserveOpts.length > 0)} style=${S(`${GL};height:50px;border-radius:999px;padding:0 8px 0 18px;display:flex;align-items:center;gap:10px;color:#10183F;cursor:pointer;font-family:inherit`)}>
-        ${Ico('M4 7h16v13H4z M4 11h16 M8 4v5M16 4v5', 19, '#E8242C', 2.2)}
-        <span style=${S('flex:1;text-align:left;font-size:15px;font-weight:800')}>${sel.reserveLabel}</span>
-        <span style=${S('width:34px;height:34px;border-radius:50%;background:#10183F;color:#FFC425;display:flex;align-items:center;justify-content:center')}>${Ico(sel.reserveSaved ? ARROW_NE : sel.reserveOpts.length ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6', 15, 'currentColor', 2.6)}</span>
+    <div style=${S('display:flex;flex-direction:column;gap:6px')}>
+      <button onClick=${v.onReserve} disabled=${sel.reserveBusy} class=${sel.reserveBusy ? 'ai-busy' : ''} style=${S(`height:50px;border-radius:999px;border:0;padding:0 8px 0 18px;display:flex;align-items:center;gap:10px;font-family:inherit;cursor:${sel.reserveMuted ? 'default' : 'pointer'};background:${sel.reserveMuted ? 'rgba(16,24,63,.06)' : tintOf('#E8242C')};color:#10183F`)}>
+        ${Ico('M4 7h16v13H4z M4 11h16 M8 4v5M16 4v5', 19, sel.reserveMuted ? '#4A5275' : inkOf('#E8242C'), 2.2)}
+        <span style=${S('flex:1;min-width:0;text-align:left;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${sel.reserveLabel}</span>
+        ${!sel.reserveMuted && html`<span style=${S('width:34px;height:34px;flex:none;border-radius:50%;background:#E8242C;color:#FFFFFF;display:flex;align-items:center;justify-content:center')}>${Ico(sel.reserveSaved ? ARROW_NE : 'M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14 M20 20l-3.5-3.5', 15, 'currentColor', 2.6)}</span>`}
       </button>
-      ${sel.reserveOpts.length > 0 && html`
-      <div style=${S('display:flex;flex-wrap:wrap;gap:6px;padding:0 4px')}>
-        ${sel.reserveOpts.map((o, i) => html`<button key=${i} onClick=${o.go} style=${S('height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(16,24,63,.14);background:rgba(255,255,255,.7);color:#10183F;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:5px')}>${o.label}${Ico(ARROW_NE, 12, '#1B3DB8', 2.6)}</button>`)}
-        <button onClick=${v.editSel} style=${S('height:38px;padding:0 6px;border:0;background:none;color:#1B3DB8;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Save A Booking Link</button>
+      ${(sel.reserveSub || sel.reserveRetry) && html`
+      <div style=${S('display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:0 8px;font-size:12.5px;font-weight:600;color:#4A5275')}>
+        ${sel.reserveSub && html`<span>${sel.reserveSub}</span>`}
+        <button onClick=${v.editSel} style=${S('border:0;background:none;padding:2px 0;color:#1B3DB8;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer')}>Add Their Link</button>
+        ${sel.reserveRetry && html`<button onClick=${v.retryReserve} style=${S('border:0;background:none;padding:2px 0;color:#1B3DB8;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer')}>Check Again</button>`}
       </div>`}
     </div>`}
     <div style=${S('display:flex;align-items:center')}>
@@ -933,6 +935,12 @@ function ListsScreen(v) {
               <div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
                 <span style=${S('font-size:15.5px;font-weight:800;line-height:1.2')}>${r.name}</span>
                 <span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${r.sub}${r.hasBy ? ' · ' + r.by : ''}</span>
+                ${(r.canVote || r.yesN || r.noN || r.notesN) && html`
+                <span style=${S('display:flex;align-items:center;gap:5px;margin-top:3px')}>
+                  ${[[1, r.yesN, r.onYes, THUMB_UP, '#1F9D6B', 'Vote Yes'], [-1, r.noN, r.onNo, THUMB_DOWN, '#E8242C', 'Vote No']].map(([val, n, go, ic, col, lab]) => html`
+                  <button key=${val} onClick=${r.canVote ? go : e => e.stopPropagation()} aria-label=${lab + (n ? ' · ' + n : '')} aria-pressed=${r.myVote === val} style=${S(`height:26px;padding:0 9px;border-radius:999px;border:0;display:flex;align-items:center;gap:4px;font-family:inherit;font-size:11.5px;font-weight:800;cursor:${r.canVote ? 'pointer' : 'default'};background:${r.myVote === val ? col : tintOf(col)};color:${r.myVote === val ? '#FFFFFF' : inkOf(col)}`)}>${Ico(ic, 13, 'currentColor', 2.3)}${n || ''}</button>`)}
+                  ${r.notesN > 0 && html`<span style=${S(`height:26px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;background:${tintOf('#7A4FD6')};color:${inkOf('#7A4FD6')}`)}>${Ico(NOTE_I, 13, 'currentColor', 2.3)}${r.notesN}</span>`}
+                </span>`}
               </div>
               ${r.canEdit && html`
               <div style=${S('display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none')}>
@@ -1003,6 +1011,33 @@ function TripSelCard(v) {
     <div style=${S('font-weight:900;font-style:italic;font-stretch:100%;font-size:30px;line-height:1;letter-spacing:-.02em')}>${p.name}</div>
     <div style=${S('font-size:12px;font-weight:800;color:#F45FA0;margin-top:-4px')}>${p.by}</div>
     ${p.hasNote && Note(p.note, 'padding:12px 14px;border-radius:18px;background:rgba(255,196,37,.22);border:1px dashed rgba(16,24,63,.25);font-size:14px;line-height:1.4;font-weight:500;color:#10183F')}
+    ${p.isStop && (p.canVote || p.yesN || p.noN) && html`
+    <div style=${S('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
+      ${[[1, p.yesN, p.onYes, THUMB_UP, '#1F9D6B', 'I’m In'], [-1, p.noN, p.onNo, THUMB_DOWN, '#E8242C', 'Skip It']].map(([val, n, go, ic, col, lab]) => html`
+      <button key=${val} onClick=${p.canVote ? go : null} disabled=${!p.canVote} aria-pressed=${p.myVote === val} style=${S(`height:40px;padding:0 14px;border-radius:999px;border:0;display:flex;align-items:center;gap:6px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:${p.canVote ? 'pointer' : 'default'};background:${p.myVote === val ? col : tintOf(col)};color:${p.myVote === val ? '#FFFFFF' : inkOf(col)}`)}>${Ico(ic, 16, 'currentColor', 2.3)}${lab}${n ? html`<span style=${S(`${MONO};font-size:11px;opacity:.85`)}>${n}</span>` : ''}</button>`)}
+      ${p.votersLine && html`<span style=${S('flex:1 1 100%;font-size:12px;font-weight:600;color:#4A5275')}>${p.votersLine}</span>`}
+    </div>`}
+    ${p.isStop && html`
+    <div style=${S('display:flex;flex-direction:column;gap:6px')}>
+      ${p.notes.map(n => html`
+      <div key=${n.key} style=${S('display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border-radius:16px;background:rgba(16,24,63,.05)')}>
+        <span style=${S('width:26px;height:26px;flex:none;border-radius:50%;background:#7A4FD6;color:#FFFFFF;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${n.initial}</span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('display:flex;gap:6px;align-items:baseline')}><b style=${S('font-size:12.5px;font-weight:800')}>${n.name}</b><span style=${S(`${MONO};font-size:9.5px;font-weight:700;color:#4A5275`)}>${n.ago}</span></span><span style=${S('font-size:13.5px;line-height:1.4;font-weight:500;overflow-wrap:anywhere')}>${n.text}</span></span>
+      </div>`)}
+      ${p.editingNote ? html`
+      <div style=${S('display:flex;flex-direction:column;gap:6px')}>
+        <label for="stop-note" style=${S('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)')}>Your Note</label>
+        <textarea id="stop-note" value=${p.noteDraft} onInput=${p.onNoteInput} rows="2" maxlength="500" placeholder="What should everyone know? “Get the vodka pizza”, “Only if it’s sunny”…" style=${S('border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#FFFFFF;padding:10px 12px;font-family:inherit;font-size:14px;line-height:1.4;color:#10183F;resize:none;outline:none')}></textarea>
+        <div style=${S('display:flex;gap:6px;justify-content:flex-end')}>
+          <button onClick=${p.cancelNote} style=${S('height:36px;padding:0 14px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Cancel</button>
+          <button onClick=${p.saveNote} style=${S('height:36px;padding:0 16px;border-radius:999px;border:0;background:#10183F;color:#FFFFFF;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>${p.noteDraft.trim() ? 'Save Note' : p.myNote ? 'Remove Note' : 'Save Note'}</button>
+        </div>
+      </div>` : p.canVote && html`
+      <button onClick=${p.startNote} style=${S(`display:flex;gap:9px;align-items:flex-start;text-align:left;padding:9px 11px;border-radius:16px;border:1.5px dashed rgba(122,79,214,.45);background:${tintOf('#7A4FD6')};color:#10183F;font-family:inherit;cursor:pointer`)}>
+        ${Ico(NOTE_I, 16, inkOf('#7A4FD6'), 2.3)}
+        <span style=${S('flex:1;min-width:0;font-size:13.5px;line-height:1.4;font-weight:600')}>${p.myNote ? html`<b style=${S('font-weight:800')}>Your Note · </b>${p.myNote}` : 'Add Your Note For The Group'}</span>
+      </button>`}
+    </div>`}
     ${p.canAdd && html`<button onClick=${p.onAdd} style=${S(`height:42px;border-radius:16px;border:0;background:${p.addBg};color:${p.addFg};font-weight:900;font-stretch:100%;font-style:italic;font-size:17px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>${p.addLabel}</button>`}
     <div style=${S(`display:grid;grid-template-columns:${p.hasUrl ? '1fr 1fr 1fr' : '1fr 1fr'};gap:8px`)}>
       ${p.hasUrl && html`<button onClick=${p.openSource} style=${S(`${PEN};border:0;background:${p.srcBg};color:#fff;font-size:12.5px`)}>${p.openLabel}</button>`}

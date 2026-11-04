@@ -5,7 +5,10 @@
 // away, then pushed with the same three-way merge as the main list, guarded by a `rev` counter so
 // two people editing at once never overwrite each other.
 //
-// A stop: {id, pid, by, byName, day, p:{name,cat,area,lat,lng,url,source,address,note,price}}
+// A stop: {id, pid, by, byName, at, day, p:{name,cat,area,lat,lng,url,source,address,note,price}}
+// Votes and notes live beside the stops, one entry per person per stop, so friends voting at the same time merge cleanly:
+//   votes: [{id: stopId + ':' + userId, s: stopId, u: userId, v: 1 | -1}]
+//   notes: [{id: stopId + ':' + userId, s: stopId, u: userId, n: name, t: text, at}]
 //   pid  = the adder's own master-map place id (null for spots added straight to the list)
 //   day  = 0 for "not on a day yet", 1..days otherwise
 "use strict";
@@ -17,13 +20,14 @@ const NYCLists = (() => {
   const same = (a, b) => NYCSync.same(a, b);
   const set = p => app && app.setState(p);
   const trips = () => (app && app.state.trips) || [];
-  const normD = d => ({ stops: (d && d.stops) || [], days: (d && d.days) || 0, start: (d && d.start) || '', cats: (d && d.cats) || [], photo: (d && d.photo) || '' });
+  const normD = d => ({ stops: (d && d.stops) || [], days: (d && d.days) || 0, start: (d && d.start) || '', cats: (d && d.cats) || [], photo: (d && d.photo) || '', votes: (d && d.votes) || [], notes: (d && d.notes) || [] });
   const toTrip = r => ({ id: r.id, owner: r.owner, owner_name: r.owner_name || '', name: r.name || 'New List', share_list: !!r.share_list, share_map: !!r.share_map,
     invite_code: r.invite_code, rev: r.rev || 0, created_at: r.created_at, data: normD(r.data), members: (r.nyc_trip_members || []).map(m => ({ user_id: m.user_id, name: m.name || '' })) });
   function merge(b, l, r) {
     b = normD(b); l = normD(l); r = normD(r);
     const pick = k => same(l[k], b[k]) ? r[k] : l[k];
-    return { stops: NYCSync.mergeList(b.stops, l.stops, r.stops), cats: NYCSync.mergeList(b.cats, l.cats, r.cats), days: pick('days'), start: pick('start'), photo: pick('photo') };
+    return { stops: NYCSync.mergeList(b.stops, l.stops, r.stops), cats: NYCSync.mergeList(b.cats, l.cats, r.cats), days: pick('days'), start: pick('start'), photo: pick('photo'),
+      votes: NYCSync.mergeList(b.votes, l.votes, r.votes), notes: NYCSync.mergeList(b.notes, l.notes, r.notes) };
   }
   const missing = e => /does not exist|could not find the (table|function)|PGRST20[25]|42P01|42883/i.test(String((e && (e.message + ' ' + e.code)) || ''));
   const key = () => 'nycList.trips.' + uid;
@@ -250,6 +254,17 @@ Object.assign(Component.prototype, {
   tripTravel(t) { let min = 0; this.tripSections(t).forEach(sec => { if (!sec.flat && !sec.day) return; for (let i = 1; i < sec.stops.length; i++) {
       const q = this.stopPlace(sec.stops[i - 1]), p = this.stopPlace(sec.stops[i]), a = [q.lat, q.lng], b = [p.lat, p.lng];
       if (reach(a, b)) min += bestOf(estimate(a, b), true).min; } }); return Math.round(min); },
+  // ---- votes and per-person notes on a list's stops ----
+  voteStop(tid, sid, v) { const me = NYCLists.uid(), key = sid + ':' + me;
+    NYCLists.edit(tid, d => { const cur = (d.votes || []).find(x => x.id === key), rest = (d.votes || []).filter(x => x.id !== key);
+      return { ...d, votes: cur && cur.v === v ? rest : [...rest, { id: key, s: sid, u: me, v }] }; }); },
+  saveStopNote(tid, sid, text) { const me = NYCLists.uid(), key = sid + ':' + me, t = String(text || '').trim().slice(0, 500);
+    NYCLists.edit(tid, d => { const rest = (d.notes || []).filter(x => x.id !== key);
+      return { ...d, notes: t ? [...rest, { id: key, s: sid, u: me, n: (NYCSync.displayName && NYCSync.displayName()) || 'Me', t, at: Date.now() }] : rest }; });
+    this.setState({ stopNoteDraft: null }); this.toast(t ? 'Note Saved' : 'Note Removed'); },
+  stopTally(t, sid) { const me = NYCLists.uid(), vs = (t.data.votes || []).filter(x => x.s === sid), ns = (t.data.notes || []).filter(x => x.s === sid && x.t);
+    const mine = vs.find(x => x.u === me);
+    return { up: vs.filter(x => x.v > 0).length, down: vs.filter(x => x.v < 0).length, my: mine ? mine.v : 0, notes: ns }; },
   tripSections(t) {
     const d = t.data, n = d.days || 0, day = st => (st.day >= 1 && st.day <= n) ? st.day : 0;
     if (!n) return [{ day: 0, flat: true, stops: d.stops }];
@@ -451,7 +466,9 @@ Object.assign(Component.prototype, {
               leg = sub ? { min: Math.max(1, Math.round(sub.min)), walk: false, bullets: [...new Set(sub.legs.filter(x => x.k === 'ride').flatMap(x => x.r.slice(0, 1)))].slice(0, 2).map(bullet) }
                 : bo.mode === 'drive' ? { min: Math.max(1, Math.round(bo.min)), walk: false, bullets: [CAR] }
                 : { min: Math.max(1, Math.round(e.walk.min)), walk: true, bullets: [] }; } }
-          return { key: st.id, leg, catEmoji: emo(c), catColor: c.color, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [c.name, p.area].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
+          const ty = this.stopTally(t, st.id);
+          return { key: st.id, leg, yesN: ty.up, noN: ty.down, myVote: ty.my, notesN: ty.notes.length, canVote: perm.edit,
+            onYes: e => { e.stopPropagation(); this.voteStop(t.id, st.id, 1); }, onNo: e => { e.stopPropagation(); this.voteStop(t.id, st.id, -1); }, catEmoji: emo(c), catColor: c.color, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [c.name, p.area].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
             img: placeImg(p), badge: numbered ? (sec.flat ? c.color : dayCol(sec.day)) : c.color, badgeFg: numbered && !sec.flat ? '#fff' : fgFor(c.color),
             by: st.by === me ? '' : 'Added By ' + (st.byName || 'A Friend'), hasBy: st.by !== me, ring: s.tripSel && s.tripSel.id === st.id ? C.navy : 'transparent',
             canEdit: perm.edit, hasDays: !!(d.days), dayVal: String(sec.day), dayOpts, onDay: e => this.setStopDay(t.id, st.id, +e.target.value),
@@ -522,7 +539,18 @@ Object.assign(Component.prototype, {
           canAdd: s.tripSel.kind === 'shared' && perm.list, addLabel: onList ? 'On The List ✓' : '+ Add To This List', addBg: onList ? C.navy : C.orange, addFg: onList ? C.yellow : '#fff',
           onAdd: () => { if (onList) { this.removeStop(t.id, onList.id); this.toast('Taken Off The List'); return; } this.addStopsTo(t.id, [p], false);
             NYCLists.edit(t.id, x => { const c2 = cats[p.cat]; return c2 && !x.cats.some(y => y.id === c2.id) ? { ...x, cats: [...x.cats, { ...c2, emoji: emo(c2) }] } : null; }); this.toast('Added To “' + t.name + '”'); },
-          close: () => this.setState({ tripSel: null, confirmStopDel: false }) }; }
+          close: () => this.setState({ tripSel: null, confirmStopDel: false, stopNoteDraft: null }) };
+        if (st) { const ty = this.stopTally(t, st.id), mineN = ty.notes.find(x => x.u === me), draft = s.stopNoteDraft && s.stopNoteDraft.id === st.id ? s.stopNoteDraft.t : null;
+          const names = new Map([[t.owner, t.owner_name || 'Owner'], ...t.members.map(m => [m.user_id, m.name || 'Someone'])]);
+          const voters = (t.data.votes || []).filter(x => x.s === st.id).map(x => ({ key: x.u, up: x.v > 0, name: x.u === me ? 'You' : (names.get(x.u) || 'Someone') }));
+          const join = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' & ' + a[a.length - 1], ins = voters.filter(x => x.up).map(x => x.name), outs = voters.filter(x => !x.up).map(x => x.name);
+          const votersLine = [ins.length ? join(ins) + (ins.length > 1 || ins[0] === 'You' ? ' are in' : ' is in') : '', outs.length ? join(outs) + (outs.length > 1 || outs[0] === 'You' ? ' would skip it' : ' would skip it') : ''].filter(Boolean).join(' · ');
+          Object.assign(tsel, { canVote: perm.edit, yesN: ty.up, noN: ty.down, myVote: ty.my, voters, votersLine,
+            onYes: () => this.voteStop(t.id, st.id, 1), onNo: () => this.voteStop(t.id, st.id, -1),
+            notes: ty.notes.filter(x => x.u !== me).sort((a, b) => b.at - a.at).map(x => ({ key: x.id, name: names.get(x.u) || x.n || 'Someone', initial: (names.get(x.u) || x.n || '?')[0].toUpperCase(), text: x.t, ago: agoLabel(x.at) })),
+            myNote: mineN ? mineN.t : '', editingNote: draft != null, noteDraft: draft != null ? draft : '',
+            startNote: () => this.setState({ stopNoteDraft: { id: st.id, t: mineN ? mineN.t : '' } }), onNoteInput: e => this.setState({ stopNoteDraft: { id: st.id, t: e.target.value } }),
+            cancelNote: () => this.setState({ stopNoteDraft: null }), saveNote: () => this.saveStopNote(t.id, st.id, draft || '') }); } }
     }
 
     // Share sheet (owner).
