@@ -236,9 +236,10 @@ const TOOL = {
             address: { type: ['string', 'null'], description: 'Street address or cross streets if stated or well known; otherwise null.' },
             price: { type: ['integer', 'null'], description: 'For restaurants/bars only: 1=$ (under $20), 2=$$ ($20-40), 3=$$$ ($40-80), 4=$$$$ ($80+) per person. Null if unknown.' },
             note: { type: 'string', description: 'One short line on what to order or why to go, taken from the post. Title Case Each Word, like the app’s style. Empty string if nothing useful.' },
-            confidence: { type: 'string', enum: ['high', 'medium', 'low'] }
+            confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+            booking_url: { type: ['string', 'null'], description: 'This place’s reservation link (Resy, OpenTable, Tock, SevenRooms, Chope), copied exactly from the "Booking links in the post" list. Null if none there is for this place. Never make one up.' }
           },
-          required: ['name', 'category_id', 'neighborhood', 'address', 'price', 'note', 'confidence']
+          required: ['name', 'category_id', 'neighborhood', 'address', 'price', 'note', 'confidence', 'booking_url']
         }
       },
       summary: { type: 'string', description: 'A few words on what the post is about.' }
@@ -308,6 +309,12 @@ const OTHER_CITY = c => `\n\nThe person's map is currently set to ${(c && c.name
 // Added after localizing, so the city names in it stay as written.
 const withPostCity = t => { t.input_schema.properties.post_city = { type: 'string', enum: ['nyc', 'sg', 'hk', 'to', 'bos', 'nys', 'other', 'unknown'], description: 'Which city the places are in: nyc (New York City), sg (Singapore), hk (Hong Kong), to (Toronto), bos (Boston, including Cambridge, Somerville and Brookline), nys (New York State outside New York City), other, or unknown.' }; t.input_schema.required = [...t.input_schema.required, 'post_city']; return t; };
 
+// Reservation links (Resy, OpenTable, Tock, SevenRooms, Chope) that appear in the post or the notes. Only these
+// can be saved as a spot's booking link, so the AI can't invent one.
+const BOOK_RE = /\bhttps?:\/\/(?:[\w-]+\.)*(?:resy\.com|opentable\.[a-z.]{2,6}|exploretock\.com|tock\.com|sevenrooms\.com|chope\.co)\/[^\s"'<>)\]]*/gi;
+const bookingLinks = (post, notes) => { const all = [post.finalUrl || '', ...(post.text || []), notes || ''].join(' ').match(BOOK_RE) || [];
+  return [...new Set(all.map(u => u.replace(/[.,!?]+$/, '')))].slice(0, 12); };
+
 async function askClaude({ post, notes, transcript, frames, categories, neighborhoods, withImage, city }) {
   const cats = (categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (neighborhoods || []).slice(0, 400).join(', ');
@@ -318,7 +325,8 @@ async function askClaude({ post, notes, transcript, frames, categories, neighbor
     post.text.length ? `Post text:\n${post.text.join('\n---\n')}` : (post.source === 'video' ? '' : 'Post text: (could not be read)'),
     post.spoken ? `What is said in the video (TikTok auto-captions, may have spelling mistakes):\n${post.spoken}` : '',
     transcript ? `What is said in the video (speech-to-text; place names may be misspelled, so correct them to the real business name when you recognize it):\n${transcript}` : '',
-    notes ? `Extra notes the user typed:\n${notes}` : ''
+    notes ? `Extra notes the user typed:\n${notes}` : '',
+    bookingLinks(post, notes).length ? `Booking links in the post (match each to its place for booking_url):\n${bookingLinks(post, notes).join('\n')}` : ''
   ].filter(Boolean).join('\n\n');
   const content = [];
   const many = withImage && post.images && post.images.length > 1 ? await photosB64(post.images) : [];
@@ -397,6 +405,11 @@ module.exports = async (req, res) => {
     try { out = await askClaude({ ...args, withImage: true }); }
     catch (e) { if (post.image && e.status === 400) out = await askClaude({ ...args, withImage: false }); else throw e; }
     let places = (out.places || []).filter(p => p && p.name).slice(0, 12);
+    // Keep a booking link only if it really was in the post; a link pasted straight from a booking site goes on its one place.
+    const links = bookingLinks(post, notes);
+    places.forEach(p => { if (!p.booking_url || !links.includes(String(p.booking_url).replace(/[.,!?]+$/, ''))) p.booking_url = null; });
+    if (places.length === 1 && !places[0].booking_url && BOOK_RE.test(post.finalUrl || '')) places[0].booking_url = links[0] || null;
+    BOOK_RE.lastIndex = 0;
     if (post.source === 'gmaps') {
       places = places.slice(0, 1);
       if (places[0] && post.pin) Object.assign(places[0], { lat: post.pin.lat, lng: post.pin.lng });

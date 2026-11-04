@@ -723,7 +723,7 @@ class Component extends DCLogic {
     if(res&&res[0]){const ll=[r5(+res[0].lat),r5(+res[0].lon)];if(!ao||km(ll,ao.c)<=3)return ll;}return null;}
   async aiApply(p,multi){const s=this.state,catOk=p.category_id&&s.cats.some(c=>c.id===p.category_id),area=this.aiArea(p.neighborhood);
     this.setForm({name:p.name||s.form.name,cat:catOk?p.category_id:s.form.cat,area:area||'auto',address:p.address||'',
-      note:s.form.note.trim()&&s.form.note.trim()!==(this._aiNote||'')?s.form.note:(p.note||''),price:p.price&&p.price>=1&&p.price<=4?p.price:0,lat:null,lng:null});
+      note:s.form.note.trim()&&s.form.note.trim()!==(this._aiNote||'')?s.form.note:(p.note||''),reserve:p.booking_url||s.form.reserve||'',price:p.price&&p.price>=1&&p.price<=4?p.price:0,lat:null,lng:null});
     this._aiNote=p.note||'';
     const ll=await this.aiLocate(p,area);
     if(this.state.form.name!==p.name)return;
@@ -738,7 +738,7 @@ class Component extends DCLogic {
       if(!ll&&area){const ao=areas().find(a=>a.name===area);ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];}
       if(!ll){skipped++;continue;}
       const cat=p.category_id&&this.state.cats.some(c=>c.id===p.category_id)?p.category_id:(this.state.cats[0]||{}).id;
-      made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
+      made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
     if(s.addTarget&&made.length){const tid=s.addTarget;this.addStopsTo(tid,made,false);this.setState({aiAdding:false,addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});
       this.toast(`Added ${made.length} ${made.length===1?'Spot':'Spots'} To The List`+(skipped?` · ${skipped} Couldn’t Be Found`:''));return;}
     this.setState(st=>({aiAdding:false,addOpen:!made.length,tab:made.length?'map':st.tab,mapCats:[],selId:null,places:[...made,...st.places]}),

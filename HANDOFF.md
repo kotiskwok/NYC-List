@@ -104,7 +104,8 @@ Set these up once. Then Claude can make changes directly, from code to the live 
   - **TikTok:** caption, location tag, auto-captions, **watches the video** (frames for on-screen text plus speech-to-text), or every photo of a photo post.
   - **Instagram:** caption, **every photo of a carousel**, and **watches reels** (frames plus speech-to-text).
   - **Threads:** post text and image. **Google Maps:** the exact place and pin.
-  - Posts with several places show a checklist with **Add All N To My Map**. Every found place comes back already pinned (Google's place search; for chains, the branch at the post's street address).
+  - **Booking links:** when a post (or the notes) contains a Resy, OpenTable, Tock, SevenRooms or Chope link, the AI matches it to its place and it's saved as that spot's booking link. Pasting a booking-site link itself works too. Only links really in the post are kept.
+- Posts with several places show a checklist with **Add All N To My Map**. Every found place comes back already pinned (Google's place search; for chains, the branch at the post's street address).
   - If the spots are on **another of the app's maps** (another city, or upstate New York), it asks, e.g. "These Spots Are In Boston. **Switch To BOS** / Stay In NYC".
 - **From A Video:** pick a video saved on the phone. The app pulls the audio and stills on the phone, and AI finds the places.
 - **By Name:** suggestions from Google as you type (limited to the current map's area), or **Search The Web** (AI with web search).
