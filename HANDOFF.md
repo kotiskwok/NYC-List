@@ -74,7 +74,8 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 ### Place card (tap a pin)
 - Photo banner (your own photo, or the spot's first Google Maps photo), the category, neighborhood and source, the name in two weights, and a glass row with **From Home** (minutes, or hours for long trips) / **Price** / **Nearest station** with its line badges and walking time. On the New York State map the station cell shows the nearest Metro-North, LIRR or Amtrak station. The note shows one sentence per line.
 - Round glass buttons: open the source post (TikTok / Instagram / Threads / Google Maps), **Plan**, **Visited**, **To List**, **Photo**, **Edit**. Then a **Get There** pill.
-- **Reserve A Table** (restaurants, or any spot with a saved booking link): opens the saved link ("Book On Resy", "Book On OpenTable"…), or shows Resy / OpenTable / Google (Chope instead of Resy in Singapore and Hong Kong) searches for the spot, plus **Save A Booking Link**. The link is the **Booking Link** field in Edit.
+- **Reserve A Table** (restaurants, or any spot with a booking link): only ever the restaurant's ONE real booking page. If the spot has a saved link (from the post, or the Edit sheet's **Booking Link**) it opens it ("Book On Resy"). Otherwise **Find Their Booking Page** calls `/api/booking` (Google Places says if it takes reservations; Claude web search must cite the page, on a booking site or the restaurant's own website), saves the link on the spot and shows "Book On …". If none: "Walk-In Only" / "No Online Booking Found" (remembered 30 days, **Check Again**, **Add Their Link**).
+- **Reviews:** at the bottom of the place card. Stars, a comment and a photo; everyone who saved the same place (matched by Google place id, saved on the spot as `gid`) reads them. Edit or delete your own; Report (hidden for you; hidden for everyone at 3 reports) or Block someone. Needs `supabase/reviews.sql` run once.
 - **Swipe the card down to close it.** From Explore, that returns you to the deck.
 
 ### Get There
@@ -121,6 +122,9 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 
 ### How-to tour
 - After the welcome steps (name, home), "Show Me Around" opens a five-card tour: **Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**. Tabs on top, swipe or Next/Back, Skip anytime; the welcome toast shows when it closes. Reopen it from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
+
+### List votes and notes
+- Every stop on a shared list has **I'm In / Skip It** votes and one **note per person** ("Get the vodka pizza"). Rows show the 👍/👎 counts and a note count; the stop card shows who's in, everyone's notes and **Add Your Note For The Group**. Stored in the list's data as `votes` and `notes` arrays (one entry per person per stop, id `stopId:userId`) so friends voting at the same time merge cleanly.
 
 ### Light and dark mode
 - **Your Account → Appearance:** Automatic (follows the phone), Light or Dark. Saved per device (`localStorage['nycList.theme']`).
@@ -197,7 +201,7 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **Local copy:** `localStorage['nycList.v1']`; the current map in `localStorage['nycList.city']`. **Cloud:** one JSON row per user in `nyc_list` (row-level security).
 - **Synced snapshot:** `{places (every map's spots, each tagged city), cats, home, plan (NYC's), cities:{sg,hk,to,bos,nys}:{home, plan}, city, listOrder}`.
 - `src/sync.js` does a three-way merge against the last synced base about a second after any change, and on resume or coming back online. City, home and plan merge per map.
-- **Place:** `{id, name, cat, area, lat, lng, url, source, address, note, price 0-4, visited, city?, photo?, hours?, reserve?}` (`reserve` = booking link). `hours` = `{p:[[openDay, openMin, closeDay, closeMin]…], s: businessStatus, t: checkedAt}` or `{none:1, t}` (days 0 = Sunday, local minutes). (no `city` means NYC). Category `{id, name, color, emoji}`. Plan `{ids, start, leave, stay}`. Home `{lat, lng, area}`.
+- **Place:** `{id, name, cat, area, lat, lng, url, source, address, note, price 0-4, visited, city?, photo?, hours?, reserve?, reserveChk?, gid?}` (`reserve` = booking link; `reserveChk` = {t, r: 'walkin'|'notfound'}; `gid` = Google place id, the key for reviews). `hours` = `{p:[[openDay, openMin, closeDay, closeMin]…], s: businessStatus, t: checkedAt}` or `{none:1, t}` (days 0 = Sunday, local minutes). (no `city` means NYC). Category `{id, name, color, emoji}`. Plan `{ids, start, leave, stay}`. Home `{lat, lng, area}`.
 - **Shared lists** (`supabase/lists.sql`):
   - `nyc_trips`: owner, name, sharing flags, invite code, `rev`, and `data {stops, days, start, cats, photo}`.
   - `nyc_trip_members`, plus the functions `nyc_join_trip`, `nyc_trip_preview` and `nyc_shared_map`.
@@ -230,6 +234,7 @@ Endpoints check the caller's Supabase token, except `photo`, `geocode`, `bus` an
 | `GET /api/geocode` | OpenStreetMap address search for the iPhone app (Nominatim refuses requests without a Referer). |
 | `POST /api/hours` | Opening hours for up to 25 spots (Google Places), stored on each spot as `hours` and refreshed monthly. Powers **Open Now**. |
 | `POST /api/vibe` | **Vibe search**: Claude ranks the user's own saved spots against a plain-language request (no web search). |
+| `POST /api/booking` | A restaurant's one verified booking page (Google Places + Claude web search with citations). |
 | `POST /api/transcribe` | OpenAI speech-to-text for phone videos. |
 | `GET /api/bus` | NYC bus route lines. |
 | `GET /api/mapkit-token` | Apple Maps token, only for the live site, previews and the iPhone app. |

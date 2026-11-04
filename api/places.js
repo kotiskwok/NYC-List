@@ -1,7 +1,7 @@
 // POST /api/places  — Google's place search for the Place Name suggestions.
 //   { action: 'auto', q, near?: [lat, lng], session }  → { suggestions: [{ id, name, sub, types }] }
 //   { action: 'detail', id, session }                  → { place: { name, address, lat, lng, types, price } }
-//   { action: 'find', q, city, near? }                 → { place: {…same…} | null }  (best match for "name, address"; used to pin AI-filled spots)
+//   { action: 'find', q, city, near? }                 → { place: {…same…, gid} | null }  (best match for "name, address"; pins AI-filled spots, and gives reviews their place id)
 // Uses Places API (New). The key stays on the server; only signed-in users of this app can call it.
 // Pass the same `session` (a random id) to every 'auto' call and the final 'detail' call for one place:
 // Google then bills the typing as one session.
@@ -56,6 +56,7 @@ module.exports = async (req, res) => {
       const comp = type => ((p.addressComponents || []).find(c => (c.types || []).includes(type)) || {}).shortText || '';
       const street = [comp('street_number'), comp('route')].filter(Boolean).join(' ');
       return send(res, 200, { place: {
+        gid: p.id || id,
         name: (p.displayName && p.displayName.text) || '',
         address: street || tidy(p.shortFormattedAddress || p.formattedAddress).split(',')[0] || '',
         hood: comp('neighborhood') || comp('sublocality_level_1') || '',
@@ -69,8 +70,9 @@ module.exports = async (req, res) => {
     if (body.action === 'find') {
       const q = String(body.q || '').trim().slice(0, 200);
       if (q.length < 2) return send(res, 200, { place: null });
-      const j = await google('places:searchText', { method: 'POST', headers: { 'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.shortFormattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.addressComponents' },
-        body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', locationRestriction: { rectangle: box } }) });
+      const j = await google('places:searchText', { method: 'POST', headers: { 'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.shortFormattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.addressComponents' },
+        body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', ...(Array.isArray(body.near) && body.near.length === 2 && body.near.every(Number.isFinite)
+          ? { locationBias: { circle: { center: { latitude: body.near[0], longitude: body.near[1] }, radius: 400 } } } : { locationRestriction: { rectangle: box } }) }) });
       const p = (j.places || [])[0];
       if (!p || !p.location) return send(res, 200, { place: null });
       const comp = type => ((p.addressComponents || []).find(c => (c.types || []).includes(type)) || {}).shortText || '';
@@ -80,7 +82,7 @@ module.exports = async (req, res) => {
         address: street || tidy(p.shortFormattedAddress || p.formattedAddress).split(',')[0] || '',
         hood: comp('neighborhood') || comp('sublocality_level_1') || '',
         lat: p.location.latitude, lng: p.location.longitude,
-        types: [p.primaryType, ...(p.types || [])].filter(Boolean), price: PRICE[p.priceLevel] || 0
+        types: [p.primaryType, ...(p.types || [])].filter(Boolean), price: PRICE[p.priceLevel] || 0, gid: p.id || ''
       } });
     }
     const q = String(body.q || '').trim().slice(0, 120);

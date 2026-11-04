@@ -231,7 +231,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',bookBusy:null,stopNoteDraft:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -566,7 +566,7 @@ class Component extends DCLogic {
       if(!ll&&ao)ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];
       this.setState({saving:false});if(!ll){this.toast('Couldn’t Find It — Drop A Pin Or Pick A Neighborhood');return;}}
     const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
-    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
+    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
     if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false);this.setState({addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added To The List!');return;}
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
@@ -643,7 +643,7 @@ class Component extends DCLogic {
       const p=d&&d.place;if(this.state.form.name!==g.name)return;
       if(!p||p.lat==null){this.toast('Couldn’t Get Its Location — Drop A Pin');return;}
       const ll=[r5(p.lat),r5(p.lng)],area=hoodAt(ll)||this.aiArea(p.hood),f=this.state.form,cat=f.cat||this.gCat(p.types)||g.cat;
-      this.setForm({name:p.name||g.name,lat:ll[0],lng:ll[1],area:area||'auto',address:p.address||f.address,cat,price:f.price||(cat&&this.priced(cat)?p.price||0:0)});
+      this.setForm({name:p.name||g.name,lat:ll[0],lng:ll[1],area:area||'auto',address:p.address||f.address,cat,price:f.price||(cat&&this.priced(cat)?p.price||0:0),gid:p.gid||g.gid||''});
       this.setState({suggPicked:p.name||g.name});this.toast('Found It'+(area?' In '+area:'')+'!');return;}
     const f=this.state.form,area=hoodAt(g.ll);
     this.setState({sugg:[],suggPicked:g.name,lookResults:[],lookMsg:''});
@@ -753,6 +753,35 @@ class Component extends DCLogic {
     if(!ok||!j){this.setState({bookBusy:null});this.toast((j&&j.error)||'Couldn’t Look It Up — Check Your Connection');return;}
     const t0=Date.now();this.setState(st=>({bookBusy:null,places:st.places.map(x=>x.id!==id?x:j.url?{...x,reserve:j.url,reserveChk:null}:{...x,reserveChk:{t:t0,r:j.reason==='walkin'?'walkin':'notfound'}})}));
     this.toast(j.url?'Found It On '+(j.platform==='Website'?'Their Website':j.platform)+' — Tap To Book':j.reason==='walkin'?'Looks Like Walk-In Only':'No Online Booking Page Found');}
+  // ---- Reviews (supabase/reviews.sql): stars, a comment and a photo, shared with everyone who saved the same place ----
+  // A place is matched across people by its Google place id, looked up once and kept on the spot (p.gid).
+  async placeKey(p){if(p.gid)return 'g:'+p.gid;if(this._gidTry&&this._gidTry[p.id])return null;(this._gidTry=this._gidTry||{})[p.id]=1;
+    const g=await this.googleCall({action:'find',q:[p.name,p.address||p.area].filter(Boolean).join(', '),city:cityOf(p),near:[p.lat,p.lng]});
+    const gp=g&&g.place;if(!gp||!gp.gid||!isFinite(gp.lat)||km([gp.lat,gp.lng],[p.lat,p.lng])>0.4)return null;
+    this.setState(st=>({places:st.places.map(x=>x.id===p.id?{...x,gid:gp.gid}:x)}));return 'g:'+gp.gid;}
+  async loadReviews(p,force){const c=NYCSync.client&&NYCSync.client();if(!c||this.state.auth!=='signedIn')return;
+    const key=await this.placeKey(p);if(!key){this.setState(st=>({reviews:{...st.reviews,[p.id]:{none:true}}}));return;}
+    const cur=this.state.reviews[key];if(cur&&!force&&Date.now()-cur.t<120000)return;
+    const {data,error}=await c.from('nyc_reviews').select('id,user_id,name,stars,body,photo,created_at,updated_at').eq('place_key',key).order('created_at',{ascending:false}).limit(50);
+    if(error){if(/does not exist|42P01|PGRST20[25]/i.test(String(error.message+' '+error.code)))this._revOff=true;this.setState(st=>({reviews:{...st.reviews,[p.id]:{none:true}}}));return;}
+    this.setState(st=>({reviews:{...st.reviews,[p.id]:{key},[key]:{t:Date.now(),list:data||[]}}}));}
+  openReview(p){const key=(this.state.reviews[p.id]||{}).key;if(!key)return;const me=NYCSync.currentUser&&NYCSync.currentUser(),mine=((this.state.reviews[key]||{}).list||[]).find(r=>me&&r.user_id===me.id);
+    this.setState({reviewSheet:{pid:p.id,key,name:p.name,stars:mine?mine.stars:0,body:mine?mine.body:'',photo:mine?mine.photo:'',file:null,preview:'',busy:false,msg:'',mine:!!mine,id:mine?mine.id:null}});}
+  async saveReview(){const r=this.state.reviewSheet,c=NYCSync.client&&NYCSync.client();if(!r||r.busy||!c)return;
+    if(!r.stars){this.setState({reviewSheet:{...r,msg:'Tap The Stars To Rate It.'}});return;}
+    this.setState({reviewSheet:{...r,busy:true,msg:''}});let photo=r.photo||'';
+    if(r.file){try{const b=await shrinkImage(r.file,1000,1000),u=await NYCSync.uploadImage('review-'+r.key.replace(/[^\w-]/g,'').slice(0,60),b);if(u.error)throw new Error(photoErr(u.error));photo=u.url;}
+      catch(e){this.setState({reviewSheet:{...this.state.reviewSheet,busy:false,msg:(e&&e.message)||'Couldn’t Upload The Photo.'}});return;}}
+    const me=NYCSync.currentUser&&NYCSync.currentUser(),row={place_key:r.key,place_name:r.name.slice(0,120),name:((NYCSync.displayName&&NYCSync.displayName())||'Someone').slice(0,60),stars:r.stars,body:r.body.trim().slice(0,1000),photo,updated_at:new Date().toISOString()};
+    const {error}=await c.from('nyc_reviews').upsert({...row,user_id:me&&me.id},{onConflict:'place_key,user_id'});
+    if(error){this.setState({reviewSheet:{...this.state.reviewSheet,busy:false,msg:'Couldn’t Post It — '+(error.message||'Try Again')}});return;}
+    this.setState({reviewSheet:null});this.toast(r.mine?'Review Updated':'Review Posted');const p=this.state.places.find(x=>x.id===r.pid);if(p)this.loadReviews(p,true);}
+  async deleteReview(){const r=this.state.reviewSheet,c=NYCSync.client&&NYCSync.client();if(!r||!r.id||!c)return;
+    await c.from('nyc_reviews').delete().eq('id',r.id);this.setState({reviewSheet:null});this.toast('Review Deleted');const p=this.state.places.find(x=>x.id===r.pid);if(p)this.loadReviews(p,true);}
+  async reportReview(rv,p){const c=NYCSync.client&&NYCSync.client();if(!c)return;await c.from('nyc_review_reports').insert({review_id:rv.id,reason:'user report'});
+    this.setState({reviewMenu:null});this.toast('Thanks — We’ve Hidden It');this.loadReviews(p,true);}
+  async blockReviewer(rv,p){const c=NYCSync.client&&NYCSync.client();if(!c)return;await c.from('nyc_blocks').insert({blocked:rv.user_id});
+    this.setState({reviewMenu:null});this.toast('Blocked — You Won’t See '+(rv.name||'Their').split(' ')[0]+'’s Reviews');this.loadReviews(p,true);}
   renderVals(){const s=this.state,f=s.form,cat=Object.fromEntries(s.cats.map(c=>[c.id,c])),l=this.lists(),A=areas();
     const catOf=id=>cat[id]||{name:'Uncategorized',color:'#888'};const vis=s.places.filter(p=>p.visited).length;
     const chip=(on,label,onClick,col)=>({label,onClick,bg:on?(col||C.navy):'#fff',fg:on?'#fff':C.navy,border:on?(col||C.navy):'rgba(16,24,63,.14)'});
@@ -799,6 +828,15 @@ class Component extends DCLogic {
         sel.reserveLabel=sp.reserve?(site==='Website'?'Book On Their Website':'Book On '+site):busy?'Finding Their Booking Page…':chk==='walkin'?'Walk-In Only':chk==='notfound'?'No Online Booking Found':'Find Their Booking Page';
         sel.reserveSub=sp.reserve?'':chk==='walkin'?'Google lists it as not taking reservations.':chk==='notfound'?'They may take bookings by phone.':'';
         sel.reserveRetry=!sp.reserve&&!!chk&&!busy;}
+      {const me=NYCSync.currentUser&&NYCSync.currentUser(),rk=(s.reviews[sp.id]||{}).key,rl=rk&&s.reviews[rk]?s.reviews[rk].list:null;
+        sel.revShow=s.auth==='signedIn'&&!this._revOff&&!(s.reviews[sp.id]||{}).none;sel.revLoading=sel.revShow&&!rl;
+        if(sel.revShow&&!rk&&!(this._revQ&&this._revQ[sp.id])){(this._revQ=this._revQ||{})[sp.id]=1;setTimeout(()=>this.loadReviews(sp),0);}
+        if(rl){const n=rl.length,avg=n?rl.reduce((a,r)=>a+r.stars,0)/n:0,mine=rl.find(r=>me&&r.user_id===me.id);
+          Object.assign(sel,{revN:n,revAvg:n?(Math.round(avg*10)/10).toFixed(1):'',revStars:Math.round(avg),revMine:!!mine,revLabel:mine?'Edit Your Review':'Write A Review',
+            revList:rl.map(r=>({key:r.id,name:me&&r.user_id===me.id?'You':(r.name||'Someone'),initial:(r.name||'?')[0].toUpperCase(),stars:r.stars,body:r.body,photo:r.photo,isMine:!!(me&&r.user_id===me.id),
+              ago:new Date(r.updated_at||r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:new Date(r.updated_at||r.created_at).getFullYear()===new Date().getFullYear()?undefined:'numeric'}),
+              menuOpen:s.reviewMenu===r.id,onMenu:()=>this.setState({reviewMenu:s.reviewMenu===r.id?null:r.id}),onReport:()=>this.reportReview(r,sp),onBlock:()=>this.blockReviewer(r,sp)}))});}
+        sel.onWriteReview=()=>this.openReview(sp);}
       {const oi=openInfo(sp);sel.hours=oi?oi.label:'';sel.hoursCol=oi?(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C'):'';
         // Look up the hours the first time a spot is opened (in the background; the card updates when they arrive).
         if(needHours(sp)&&!(this._hq&&this._hq.has(sp.id)))setTimeout(()=>this.fetchHours([sp.id]),0);}
@@ -952,6 +990,11 @@ class Component extends DCLogic {
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
       onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
       onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),
+      reviewSheet:s.reviewSheet&&{...s.reviewSheet,close:()=>this.setState({reviewSheet:null}),setStars:n=>this.setState(st=>({reviewSheet:{...st.reviewSheet,stars:n,msg:''}})),
+        onBody:e=>this.setState({reviewSheet:{...this.state.reviewSheet,body:e.target.value}}),
+        onPhoto:e=>{const f0=e.target.files&&e.target.files[0];e.target.value='';if(!f0)return;const r=this.state.reviewSheet;if(r.preview)try{URL.revokeObjectURL(r.preview);}catch(x){}
+          this.setState({reviewSheet:{...r,file:f0,preview:URL.createObjectURL(f0)}});},
+        removePhoto:()=>this.setState({reviewSheet:{...this.state.reviewSheet,file:null,preview:'',photo:''}}),save:()=>this.saveReview(),del:()=>this.deleteReview()},
       themeOpts:[['system','Automatic','M12 3a9 9 0 1 0 0 18V3z M12 3a9 9 0 0 1 0 18'],['light','Light','M12 7a5 5 0 1 0 0 10a5 5 0 1 0 0-10 M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4'],['dark','Dark','M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z']].map(([k,l,ic])=>({key:k,label:l,icon:ic,on:(window.THEME_PREF?THEME_PREF():'system')===k,onClick:()=>window.setThemePref&&setThemePref(k)})),showReserveField:!!(f.reserve||(f.cat&&this.priced(f.cat))),
       pasteUrl:()=>navigator.clipboard?.readText().then(t=>{this.setForm({url:t.trim()});this.aiAuto(t.trim(),true);}).catch(()=>this.toast('Long-Press The Field To Paste')),
       hasSrcBadge:!!fsrc,srcBadge:fsrc?(fsrc==='link'?'Website Link':SRC[fsrc].label+' Link Detected'):'',srcBadgeBg:fsrc?SRC[fsrc].bg:C.navy,

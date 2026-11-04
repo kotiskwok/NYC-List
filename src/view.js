@@ -616,7 +616,61 @@ function PlaceCard(v) {
       <button class="lg" onClick=${v.openRoute} style=${S('flex:1;height:58px;border-radius:999px;border:0;background:#10183F;color:#ffffff;display:flex;align-items:center;padding-left:24px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25)')}>Get There</button>
       <button onClick=${v.openRoute} aria-label="Get There" style=${S('margin-left:8px;width:58px;height:58px;flex:none;border-radius:50%;border:0;background:#FF6B1A;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.4)}</button>
     </div>
+    ${sel.revShow && Reviews(sel)}
   </section>`;
+}
+
+// Reviews on the place card: everyone who saved this place can read them (supabase/reviews.sql).
+const STAR = 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z';
+const Stars = (n, px, gap) => html`<span aria-label=${n + ' Out Of 5 Stars'} role="img" style=${S(`display:inline-flex;gap:${gap || 1}px`)}>${[1, 2, 3, 4, 5].map(k => html`<svg key=${k} width=${px} height=${px} viewBox="0 0 24 24" aria-hidden="true"><path d=${STAR} fill=${k <= n ? '#FFC425' : 'none'} stroke=${k <= n ? '#F5AE10' : icoCol('#A3A9C6')} stroke-width="1.8" stroke-linejoin="round"></path></svg>`)}</span>`;
+function Reviews(sel) {
+  return html`
+    <div style=${S('display:flex;flex-direction:column;gap:10px;padding-top:4px;border-top:1px solid rgba(16,24,63,.1)')}>
+      <div style=${S('display:flex;align-items:center;gap:10px;padding-top:10px')}>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}>
+          <span style=${S('font-size:22px;letter-spacing:-.6px;font-weight:900;font-style:italic')}>Reviews</span>
+          ${sel.revLoading ? html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>Loading…</span>` : sel.revN ? html`<span style=${S('display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#4A5275')}>${Stars(sel.revStars, 14)}<b style=${S('color:#10183F')}>${sel.revAvg}</b> · ${sel.revN} ${sel.revN === 1 ? 'Review' : 'Reviews'}</span>` : html`<span style=${S('font-size:12.5px;font-weight:600;color:#4A5275')}>No reviews yet — be the first.</span>`}
+        </span>
+        ${!sel.revLoading && html`<button onClick=${sel.onWriteReview} style=${S(`flex:none;height:40px;padding:0 14px;border-radius:999px;border:0;background:${sel.revMine ? tintOf('#1B3DB8') : '#10183F'};color:${sel.revMine ? inkOf('#1B3DB8') : '#FFFFFF'};font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px`)}>${Ico(sel.revMine ? 'M4 20h4L19 9l-4-4L4 16z' : 'M12 5v14M5 12h14', 15, 'currentColor', 2.6)}${sel.revLabel}</button>`}
+      </div>
+      ${(sel.revList || []).map(r => html`
+      <article key=${r.key} style=${S('display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:20px;background:rgba(16,24,63,.05)')}>
+        <div style=${S('display:flex;align-items:center;gap:9px')}>
+          <span style=${S(`width:30px;height:30px;flex:none;border-radius:50%;background:${r.isMine ? '#FF6B1A' : '#1B3DB8'};color:#FFFFFF;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center`)}>${r.initial}</span>
+          <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><b style=${S('font-size:13.5px;font-weight:800')}>${r.name}</b><span style=${S('display:flex;align-items:center;gap:6px')}>${Stars(r.stars, 12)}<span style=${S(`${MONO};font-size:9.5px;font-weight:700;color:#4A5275`)}>${r.ago.toUpperCase()}</span></span></span>
+          ${!r.isMine && html`<button onClick=${r.onMenu} aria-label="More" aria-expanded=${r.menuOpen} style=${S('width:32px;height:32px;flex:none;border-radius:50%;border:0;background:transparent;color:#4A5275;cursor:pointer;font-size:18px;font-weight:900;line-height:1')}>···</button>`}
+        </div>
+        ${r.menuOpen && html`<div style=${S('display:flex;gap:6px;flex-wrap:wrap')}>
+          <button onClick=${r.onReport} style=${S(`height:34px;padding:0 12px;border-radius:999px;border:0;background:${tintOf('#E8242C')};color:${inkOf('#E8242C')};font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer`)}>Report Review</button>
+          <button onClick=${r.onBlock} style=${S('height:34px;padding:0 12px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer')}>Block ${r.name.split(' ')[0]}</button>
+        </div>`}
+        ${r.body && html`<p style=${S('margin:0;font-size:14px;line-height:1.45;font-weight:500;color:#10183F;overflow-wrap:anywhere;white-space:pre-line')}>${r.body}</p>`}
+        ${r.photo && html`<img src=${r.photo} alt=${'Photo From ' + r.name} loading="lazy" style=${S('width:100%;max-height:240px;object-fit:cover;border-radius:14px;display:block')}/>`}
+      </article>`)}
+    </div>`;
+}
+function ReviewSheet(v) {
+  const r = v.reviewSheet, img = r.preview || r.photo;
+  return html`
+  <div onClick=${r.close} style=${S('position:absolute;inset:0;z-index:1100;background:rgba(16,24,63,.32);display:flex;flex-direction:column;justify-content:flex-end')}>
+    <div role="dialog" aria-modal="true" aria-label=${'Review ' + r.name} class="lg noscroll" onClick=${e => e.stopPropagation()} style=${S(`${GL2};border-bottom:0;border-radius:34px 34px 0 0;padding:18px 18px ${B(26)};display:flex;flex-direction:column;gap:14px;max-height:calc(100% - var(--st) - 40px);overflow-y:auto`)}>
+      <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
+        <span style=${S('min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:1px;color:#4A5275`)}>${r.mine ? 'EDIT YOUR REVIEW' : 'YOUR REVIEW'}</span><span style=${S('font-size:24px;font-weight:900;font-style:italic;letter-spacing:-.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${r.name}</span></span>
+        <button onClick=${r.close} style=${S('flex:none;height:38px;padding:0 16px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer')}>Cancel</button>
+      </div>
+      <div role="radiogroup" aria-label="Your Rating" style=${S('display:flex;justify-content:center;gap:6px')}>
+        ${[1, 2, 3, 4, 5].map(k => html`<button key=${k} role="radio" aria-checked=${r.stars === k} aria-label=${k + (k === 1 ? ' Star' : ' Stars')} onClick=${() => r.setStars(k)} style=${S('width:52px;height:52px;border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center')}><svg width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d=${STAR} fill=${k <= r.stars ? '#FFC425' : 'none'} stroke=${k <= r.stars ? '#F5AE10' : icoCol('#A3A9C6')} stroke-width="1.6" stroke-linejoin="round"></path></svg></button>`)}
+      </div>
+      <label for="rev-body" style=${S('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)')}>Your Comment</label>
+      <textarea id="rev-body" value=${r.body} onInput=${r.onBody} rows="4" maxlength="1000" placeholder="What did you order? Was it worth the line? Tips for the next person…" style=${S('border-radius:18px;border:1.5px solid rgba(16,24,63,.14);background:#FFFFFF;padding:12px 14px;font-family:inherit;font-size:15px;line-height:1.45;color:#10183F;resize:none;outline:none')}></textarea>
+      ${img ? html`<div style=${S('position:relative;border-radius:18px;overflow:hidden')}><img src=${img} alt="Your Photo" style=${S('width:100%;max-height:220px;object-fit:cover;display:block')}/><button onClick=${r.removePhoto} aria-label="Remove Photo" style=${S('position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(16,24,63,.6);color:#FFFFFF;font-weight:800;cursor:pointer')}>✕</button></div>`
+        : html`<label style=${S(`position:relative;height:52px;border-radius:18px;border:1.5px dashed rgba(16,24,63,.25);display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;color:${inkOf('#F45FA0')};cursor:pointer`)}>${Ico('M4 8h3l2-3h6l2 3h3v11H4z M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 18, 'currentColor', 2.2)}Add A Photo<input type="file" accept="image/*" onChange=${r.onPhoto} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')}/></label>`}
+      ${r.msg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C')}>${r.msg}</div>`}
+      <button onClick=${r.save} disabled=${r.busy} class=${r.busy ? 'ai-busy' : ''} style=${S('height:54px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-size:16px;font-weight:900;font-style:italic;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${r.busy ? 'Posting…' : r.mine ? 'Update Review' : 'Post Review'}</button>
+      <span style=${S('font-size:11.5px;line-height:1.4;color:#4A5275;text-align:center')}>Other Spotted In users who saved this place can read your review and see your first name. Keep it kind — no hate, harassment or spam. Reported reviews are hidden.</span>
+      ${r.mine && html`<button onClick=${r.del} style=${S('align-self:center;border:0;background:none;color:#E8242C;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;padding:4px')}>Delete My Review</button>`}
+    </div>
+  </div>`;
 }
 
 // Drag a sheet by its header: down calls onDown (e.g. shrink it), up calls onUp (e.g. grow it). The sheet is the
@@ -1680,6 +1734,7 @@ function App(v) {
         ${v.authOpen && AuthScreen(v)}
         ${v.cityOpen && CityPicker(v)}
         ${v.obOpen && Onboarding(v)}
+        ${v.reviewSheet && ReviewSheet(v)}
         ${v.tourOpen && !v.obOpen && Tour(v)}
         ${v.hasToast && html`
         <div role="status" style=${S(`position:absolute;top:${T(54)};left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none`)}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${v.toast}</div></div>`}

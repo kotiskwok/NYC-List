@@ -9,6 +9,9 @@
     },
     "api/bus.js": {
       "maxDuration": 60
+    },
+    "api/booking.js": {
+      "maxDuration": 60
     }
   },
   "headers": [
