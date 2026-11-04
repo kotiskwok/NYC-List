@@ -116,6 +116,9 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 - **iPhone app:** **Share → Spotted In** from any app. A dark glass **ticket** drops in at the top. A blue stub shows a yellow pin with ✓ and SAVED, then a tear line, "Saved To Spotted In", **FROM** (TikTok / Instagram / Threads / Google Maps / site) and **TO** (My Map · current map), with **Undo** and **Done**. It closes by itself after about 3 seconds. The app fills the spot in the next time it opens.
 - **Website:** `https://nyc-lovat.vercel.app/?add=<link>` opens Add A Spot with the link. Android's share menu works through the web manifest, and an iPhone Shortcut can open that link.
 
+### Round buttons (design "Option A · Flat Solid")
+- No gloss or glow: main actions (Get There arrow, deck Plan, tab-bar +, Start Route) are solid orange with a white icon and one small shadow; secondary round actions are a soft tint of their color with a deeper icon (`tintOf` / `inkOf` in `view.js`, brighter in dark mode). Skip is a soft red tint.
+
 ### Light and dark mode
 - **Your Account → Appearance:** Automatic (follows the phone), Light or Dark. Saved per device (`localStorage['nycList.theme']`).
 - How it works: views are written in light colors; in dark mode `S()` in `view.js` swaps navy text, white/cream glass, navy fills and shadows for dark versions (`darkVal`), keeping text on colored fills. `index.html` has the dark `--bgfx`. Apple Maps switches to its dark scheme; the iPhone status bar follows (`NYCNative.statusBar`). New styles: keep using `#10183F` text, `#fff`/`#FFFFFF` fills and `rgba(16,24,63,…)` tints and they'll flip automatically.

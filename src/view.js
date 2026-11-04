@@ -75,6 +75,14 @@ const CatIcon = (em, px, col0) => { const col = icoCol(col0); return CAT_ICON[em
   ? html`<svg width=${px} height=${px} viewBox="0 0 24 24" fill="none" stroke=${col} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${CAT_ICON[em]}></path></svg>`
   : html`<span class="emo" aria-hidden="true" style=${S(`font-size:${Math.round(px * .95)}px`)}>${em}</span>`; };
 const Ico = (d, px, col, sw) => html`<svg width=${px || 20} height=${px || 20} viewBox="0 0 24 24" fill="none" stroke=${icoCol(col) || 'currentColor'} stroke-width=${sw || 2.2} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${d}></path></svg>`;
+// Flat round buttons (design "Option A"): a soft tint of the action's color with a deeper icon of the same hue.
+const INK = { '#ff6b1a': '#E8561A', '#1f9d6b': '#16805A', '#7a4fd6': '#5E35C0', '#f45fa0': '#C93A80', '#1b3db8': '#1B3DB8', '#e8242c': '#D11F27', '#10183f': '#10183F' };
+const INK_DK = { '#ff6b1a': '#FF9A5C', '#1f9d6b': '#4FD1A0', '#7a4fd6': '#B596F5', '#f45fa0': '#FF8CC4', '#1b3db8': '#8FA6FF', '#e8242c': '#FF6B6F' };
+const lum = c => { const n = parseInt(String(c).slice(1, 7), 16); return ((n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11) / 255; };
+const inkOf = c => { const k = String(c || '').toLowerCase();
+  if (THEME.dark) return INK_DK[k] || (/^#[0-9a-f]{6}$/i.test(k) && lum(k) < .35 ? '#EEF0FA' : c || '#EEF0FA');
+  return INK[k] || c || '#10183F'; };
+const tintOf = c => /^#[0-9a-f]{6}$/i.test(c || '') ? (THEME.dark && lum(c) < .35 ? 'rgba(255,255,255,.1)' : c + (THEME.dark ? '38' : '1F')) : 'rgba(16,24,63,.08)';
 const BACK = 'M15 5l-7 7 7 7', ARROW_NE = 'M7 17L17 7M9 7h8v8';
 const MONO = 'font-family:var(--mono)';
 const Grab = () => html`<div aria-hidden="true" style=${S('align-self:center;width:40px;height:5px;border-radius:3px;background:rgba(16,24,63,.2);flex:none')}></div>`;
@@ -249,8 +257,8 @@ function DeckCard(c, i, v) {
         ${(c.why || c.hours) && html`<div style=${S('font-size:12px;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (c.why ? '#7A4FD6' : c.hoursCol))}>${c.why || c.hours}</div>`}
       </div>
       ${front && html`
-      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" class="lg" style=${S(`${GL};width:46px;height:46px;flex:none;border-radius:50%;color:#E8242C;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
-      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckPlan} aria-label="Add To Plan" style=${S('width:50px;height:50px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 2px 1px rgba(255,255,255,.55),0 10px 22px rgba(255,107,26,.38)')}>${Ico('M12 5v14M5 12h14', 20, 'currentColor', 2.8)}</button>`}
+      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" style=${S(`width:46px;height:46px;flex:none;border-radius:50%;border:0;background:rgba(232,36,44,.12);color:#E8242C;display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
+      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckPlan} aria-label="Add To Plan" style=${S('width:50px;height:50px;flex:none;border-radius:50%;border:0;background:#FF6B1A;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M12 5v14M5 12h14', 20, 'currentColor', 2.8)}</button>`}
     </div>
   </div>`;
 }
@@ -492,7 +500,7 @@ function PlanScreen(v) {
     ${v.planHas && html`
     <div style=${S(`position:absolute;left:16px;right:16px;bottom:${B(104)};z-index:700;display:flex`)}>
       <button onClick=${v.startRoute} disabled=${v.planStopsN < 2 && v.planFromFirst} style=${S(`flex:1;height:56px;border-radius:999px;border:0;background:#10183F;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 22px;font-size:16px;font-weight:900;font-style:italic;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25);opacity:${v.planStopsN < 2 && v.planFromFirst ? .5 : 1}`)}>Start Route In Google Maps
-        <span style=${S('width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 2px 1px rgba(255,255,255,.55)')}>${Ico('M5 12h14M13 6l6 6-6 6', 18, '#fff', 2.6)}</span></button>
+        <span style=${S('width:44px;height:44px;border-radius:50%;background:#FF6B1A;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 18, '#fff', 2.6)}</span></button>
     </div>`}
   </div>`;
 }
@@ -538,7 +546,7 @@ function PlaceCard(v) {
   const cell = 'min-width:0;display:flex;flex-direction:column;gap:5px;padding:0 12px';
   const bubble = (go, label, d, col, on) => html`
     <button onClick=${go} aria-label=${label} aria-pressed=${on ? 'true' : null} style=${S('flex:1;min-width:0;border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:#10183F')}>
-      <span class="lg" style=${S(`width:54px;height:54px;border-radius:50%;${on ? `background:${on.bg};color:${on.fg};border:1px solid rgba(255,255,255,.6);box-shadow:inset 0 2px 1px rgba(255,255,255,.45),0 10px 22px rgba(16,24,63,.18)` : GL + ';color:' + col};display:flex;align-items:center;justify-content:center`)}>${Ico(d, 21, 'currentColor', 2.4)}</span>
+      <span style=${S(`width:54px;height:54px;border-radius:50%;border:0;${on ? `background:${on.bg};color:${on.fg};box-shadow:0 4px 10px rgba(16,24,63,.18)` : `background:${tintOf(col)};color:${inkOf(col)}`};display:flex;align-items:center;justify-content:center`)}>${Ico(d, 21, 'currentColor', 2.4)}</span>
       <span style=${S('max-width:100%;font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${label}</span>
     </button>`;
   const inPlan = sel.planBg !== '#fff', visited = sel.visBg !== '#fff';
@@ -583,7 +591,7 @@ function PlaceCard(v) {
       ${bubble(v.addToListSel, 'To List', 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01', '#7A4FD6')}
       ${!sel.img && html`
       <label style=${S('position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:#10183F')}>
-        <span class=${sel.photoBusy ? 'lg ai-busy' : 'lg'} style=${S(`width:54px;height:54px;border-radius:50%;${GL};color:#F45FA0;display:flex;align-items:center;justify-content:center`)}>${Ico('M4 8h3l2-3h6l2 3h3v11H4z M12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 21, 'currentColor', 2.2)}</span>
+        <span class=${sel.photoBusy ? 'ai-busy' : ''} style=${S(`width:54px;height:54px;border-radius:50%;border:0;background:${tintOf('#F45FA0')};color:${inkOf('#F45FA0')};display:flex;align-items:center;justify-content:center`)}>${Ico('M4 8h3l2-3h6l2 3h3v11H4z M12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 21, 'currentColor', 2.2)}</span>
         <span style=${S('font-size:11px;font-weight:800;white-space:nowrap')}>${sel.photoBusy ? 'Saving…' : 'Photo'}</span>
         <input type="file" accept="image/*" aria-label="Add A Photo Of This Spot" onChange=${sel.onPhoto} disabled=${sel.photoBusy} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')}/>
       </label>`}
@@ -604,7 +612,7 @@ function PlaceCard(v) {
     </div>`}
     <div style=${S('display:flex;align-items:center')}>
       <button class="lg" onClick=${v.openRoute} style=${S('flex:1;height:58px;border-radius:999px;border:0;background:#10183F;color:#ffffff;display:flex;align-items:center;padding-left:24px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25)')}>Get There</button>
-      <button onClick=${v.openRoute} aria-label="Get There" style=${S('margin-left:8px;width:58px;height:58px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 3px 1px rgba(255,255,255,.55),0 12px 26px rgba(255,107,26,.42)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.4)}</button>
+      <button onClick=${v.openRoute} aria-label="Get There" style=${S('margin-left:8px;width:58px;height:58px;flex:none;border-radius:50%;border:0;background:#FF6B1A;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.4)}</button>
     </div>
   </section>`;
 }
@@ -939,12 +947,12 @@ function ListsScreen(v) {
         </div>
       </div>`; })}
       ${t.routeDirs && html`
-      <button onClick=${t.routeDirs} style=${S('height:56px;border-radius:999px;border:0;background:#10183F;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 22px;font-size:16px;font-weight:900;font-style:italic;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25)')}>${t.routeLabel} In Google Maps<span style=${S('width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 2px 1px rgba(255,255,255,.55)')}>${Ico('M5 12h14M13 6l6 6-6 6', 18, '#fff', 2.6)}</span></button>`}
+      <button onClick=${t.routeDirs} style=${S('height:56px;border-radius:999px;border:0;background:#10183F;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 22px;font-size:16px;font-weight:900;font-style:italic;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25)')}>${t.routeLabel} In Google Maps<span style=${S('width:44px;height:44px;border-radius:50%;background:#FF6B1A;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 18, '#fff', 2.6)}</span></button>`}
       ${t.canEdit && html`
       <div style=${S('display:flex;align-items:center;gap:8px;margin-top:2px')}>
         <div style=${S('flex:1;display:flex;align-items:center;min-width:0')}>
           <button onClick=${t.openPick} style=${S('flex:1;min-width:0;height:52px;border-radius:999px;border:0;background:#10183F;color:#fff;display:flex;align-items:center;padding-left:20px;font-size:14.5px;font-weight:800;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 10px 22px rgba(16,24,63,.22)')}>+ From My Map</button>
-          <button onClick=${t.openPick} aria-label="Add From My Map" style=${S('margin-left:8px;width:52px;height:52px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 3px 1px rgba(255,255,255,.55)')}>${Ico('M5 12h14M13 6l6 6-6 6', 18, 'currentColor', 2.4)}</button>
+          <button onClick=${t.openPick} aria-label="Add From My Map" style=${S('margin-left:8px;width:52px;height:52px;flex:none;border-radius:50%;border:0;background:#FF6B1A;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 18, 'currentColor', 2.4)}</button>
         </div>
         <button class="lg" onClick=${t.openAddNew} style=${S(`height:52px;padding:0 16px;flex:none;border-radius:999px;${GL};color:#10183F;font-weight:800;font-size:14px;cursor:pointer`)}>+ New Spot</button>
       </div>
@@ -1144,7 +1152,7 @@ function TabBar(v) {
     ${tab(v.goPlan, v.tabPlanFg, 'Route', html`<span style=${S(`position:relative;display:flex;margin-right:${v.planCount > 0 && on(v.tabPlanFg) ? 8 : 0}px`)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"></path></svg>${v.planCount > 0 && html`<span style=${S('position:absolute;top:-7px;right:-11px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#FF6B1A;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #FFFFFF')}>${v.planCount}</span>`}</span>`)}
     ${tab(v.goLists, v.tabListFg, 'Lists', html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg>`)}
   </nav>
-  <button onClick=${v.openAdd} aria-label="Add A Spot" class="lg" style=${S(`position:absolute;right:16px;bottom:${B(22)};z-index:950;width:64px;height:64px;border-radius:50%;${GLX_LIGHT};color:#FF6B1A;display:${show};align-items:center;justify-content:center;cursor:pointer;padding:0`)}>${Ico('M12 5v14M5 12h14', 26, 'currentColor', 2.8)}</button>`;
+  <button onClick=${v.openAdd} aria-label="Add A Spot" style=${S(`position:absolute;right:16px;bottom:${B(22)};z-index:950;width:64px;height:64px;border-radius:50%;border:0;background:#FF6B1A;box-shadow:0 6px 14px rgba(255,107,26,.32);color:#FFFFFF;display:${show};align-items:center;justify-content:center;cursor:pointer;padding:0`)}>${Ico('M12 5v14M5 12h14', 26, 'currentColor', 2.8)}</button>`;
 }
 
 function AddSheet(v) {
@@ -1450,7 +1458,7 @@ function Onboarding(v) {
   const go = (label, onClick, type) => html`
     <div style=${S('align-self:stretch;display:flex;align-items:center')}>
       <button type=${type || 'button'} onClick=${onClick} style=${S('flex:1;min-width:0;height:58px;border-radius:999px;border:0;background:#10183F;color:#fff;font-size:17px;font-weight:900;font-style:italic;cursor:pointer;text-align:left;padding-left:24px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25)')}>${label}</button>
-      <button type=${type || 'button'} onClick=${onClick} aria-label=${label} style=${S('margin-left:8px;width:58px;height:58px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 28%,#FFB27F,#FF6B1A 58%,#E8561A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 3px 1px rgba(255,255,255,.55),0 12px 26px rgba(255,107,26,.4)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.4)}</button>
+      <button type=${type || 'button'} onClick=${onClick} aria-label=${label} style=${S('margin-left:8px;width:58px;height:58px;flex:none;border-radius:50%;border:0;background:#FF6B1A;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.4)}</button>
     </div>`;
   const back = step > 0 && step < 3 && html`<button onClick=${v.obBack} style=${S('align-self:flex-start;border:0;background:none;color:#1B3DB8;font-weight:800;font-size:14px;cursor:pointer;padding:4px 0')}>← Back</button>`;
   const field = 'width:100%;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.85);box-shadow:inset 0 2px 1px #fff,0 8px 20px rgba(16,24,63,.08);padding:0 20px;font-family:inherit;font-size:17px;font-weight:700;color:#10183F;outline:none;box-sizing:border-box';
