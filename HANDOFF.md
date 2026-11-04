@@ -118,8 +118,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 
 ### Explore tab
 - **Title:** "Where We Going Today?" (before 5pm) or "Where We Going Tonight?".
-- **Greeting bubble** built from your spots: "Okay bestie, 10 spots are open now." / "Win Son Bakery is only 11 min away!" (or "You've got 14 spots saved." / "Pick a vibe or let me choose.").
-- **Vibe chips:** Something Cozy, Cheap Eats, Date Night run vibe search; **Surprise Me** reshuffles the deck.
+- **Greeting bubble** built from your spots: "Okay bestie, 10 spots are open now." / "Win Son Bakery is only 11 min away!" (or "You've got 14 spots saved." / "Type a vibe and I'll find it.").
 - **Ask Spotted Anything…** search (name, area, address, note). Typing a phrase shows a purple **✨ Vibe Search** pill: AI ranks your own saved spots best first, with a short reason on each deck card. **Back To Keywords** returns to normal search.
 - Toggles **Open Now** and **Hide Visited**; category chips; a glass **matches** card; filters (price for restaurants, neighborhoods by region).
 - **Shuffle The Deck:** swipe right (or orange **+**) adds to the plan, left (or **✕**) skips, tap opens the spot. The card floods green or red while dragging. **See All** shows matches as a list or map, with Add All To Plan.

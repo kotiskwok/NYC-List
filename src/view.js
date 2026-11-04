@@ -290,9 +290,6 @@ function ExploreScreen(v) {
         </div>
         <h1 style=${S('margin:0 4px;font-size:38px;line-height:.98;font-weight:900;font-style:italic;letter-spacing:-1.6px;color:#10183F')}>${v.exTitleA} <span style=${S('font-weight:200;font-style:normal')}>${v.exTitleB}</span></h1>
         <div style=${S('align-self:flex-start;max-width:300px;padding:10px 14px;border-radius:22px 22px 22px 6px;background:#FFFFFF;box-shadow:0 6px 14px rgba(16,24,63,.07);font-size:15px;line-height:1.35;color:#10183F')}><span style=${S('display:block')}>${v.exGreeting.lead}${v.exGreeting.bold && html`<b style=${S('font-weight:800')}>${v.exGreeting.bold}</b>`}${v.exGreeting.tail}</span>${v.exGreeting.next && html`<span style=${S('display:block')}>${v.exGreeting.next}</span>`}</div>
-        <div class="noscroll" style=${S('display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:0 16px')}>
-          ${v.exVibes.map((c, i) => html`<button key=${i} onClick=${c.onClick} style=${S(`flex:none;height:38px;padding:0 14px;border-radius:999px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;white-space:nowrap;${c.hot ? 'border:0;background:#FF6B1A;color:#FFFFFF' : 'border:1.5px solid #10183F;background:#FFFFFF;color:#10183F'}`)}>${c.label}</button>`)}
-        </div>
         <div style=${S('display:flex;gap:8px')}>
           <label class="lg" style=${S(`${GL};flex:1;min-width:0;height:50px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 8px 0 16px`)}>
             ${Ico('M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14 M20 20l-3.5-3.5', 18, '#4A5275')}
