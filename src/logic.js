@@ -74,7 +74,7 @@ const photoErr=e=>e==='setup'?'Photos need one setup step. Run supabase/avatars.
 // A spot's picture: the photo you added, else (once GOOGLE_MAPS_API_KEY is set) its first Google Maps photo via /api/photo.
 const GPHOTO={on:false};
 const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&isFinite(p.lng)?API('/api/photo?q='+encodeURIComponent([p.name,p.address||p.area,CITIES[cityOf(p)].q].filter(Boolean).join(', '))+'&ll='+(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)+(NATIVE?'&app=ios':'')):null);
-// Map layers you turned on (subway, bus routes, Citi Bike) are remembered on this device.
+// Map layers you turned on (subway, bus routes, Citi Bike) are remembered on this device. Transit lines start off (sub2) so the map stays clean and fast.
 const LAYERS=(()=>{try{return JSON.parse(localStorage.getItem('nycList.layers'))||{};}catch(e){return {};}})();
 const saveLayers=o=>{try{localStorage.setItem('nycList.layers',JSON.stringify(o));}catch(e){}};
 // Route lines for the map layers, per city and kind: NYC buses from MTA data (/api/bus); the rest are OpenStreetMap files
@@ -232,7 +232,7 @@ class Component extends DCLogic {
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
       exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
-      showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
+      showSubway:LAYERS.sub2===true,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
       newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,authName:'',acctDel:0};})();
@@ -284,9 +284,9 @@ class Component extends DCLogic {
     if(this.maps&&this._ms!==this.props.mapStyle){const first=this._ms===undefined;this._ms=this.props.mapStyle;if(!first)this.allMaps().forEach(m=>this.drawBase(m));}
     if(this.maps&&this._ss!==s.showSubway){const first=this._ss===undefined;this._ss=s.showSubway;STON=s.showSubway;this.allMaps().forEach(m=>{s.showSubway?m.subway.addTo(m.map):m.subway.remove();if(!first&&m.streets)m.streets.redraw();});}
     const lk=[s.showBus,s.showBike,s.showTram,s.showFerry,s.city].join();
-    if(this.maps&&this._lk!==lk){this._lk=lk;saveLayers({sub:s.showSubway,bus:s.showBus,bike:s.showBike,tram:s.showTram,ferry:s.showFerry});
+    if(this.maps&&this._lk!==lk){this._lk=lk;saveLayers({sub2:s.showSubway,bus:s.showBus,bike:s.showBike,tram:s.showTram,ferry:s.showFerry});
       this.allMaps().forEach(m=>this.fillLayers(m));clearInterval(this._bikeT);if(s.showBike&&CUR.bike)this._bikeT=setInterval(()=>this.refreshBikes(),60000);}
-    if(this._ssv!==s.showSubway){this._ssv=s.showSubway;saveLayers({sub:s.showSubway,bus:s.showBus,bike:s.showBike,tram:s.showTram,ferry:s.showFerry});}
+    if(this._ssv!==s.showSubway){this._ssv=s.showSubway;saveLayers({sub2:s.showSubway,bus:s.showBus,bike:s.showBike,tram:s.showTram,ferry:s.showFerry});}
     this.syncMaps();
     const vk=s.tab+s.exView+s.exStage+s.placing+(s.routeFor||'')+(s.tripId||'')+this.tripViewEff(this.tripCur());
     if(this.maps&&vk!==this._vk){this._vk=vk;setTimeout(()=>this.refreshVisible(),60);setTimeout(()=>this.refreshVisible(),300);}}
