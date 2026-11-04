@@ -1404,6 +1404,11 @@ function AccountSheet(v) {
         <span style=${S('display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#3C4466')}><span style=${S(`width:9px;height:9px;border-radius:50%;background:${v.syncDot}`)}></span>${v.syncLabel}</span>
       </div>
       <div style=${S('font-size:13px;line-height:1.4;color:#3C4466')}>Your spots, categories, home and day plan sync to every device you sign in on.</div>
+      <button onClick=${v.openTour} style=${S(`${ROW};height:52px;border-radius:18px;padding:0 10px 0 14px;display:flex;align-items:center;gap:12px;color:#10183F;font-family:inherit;cursor:pointer;text-align:left`)}>
+        <span style=${S(`width:34px;height:34px;flex:none;border-radius:50%;background:${tintOf('#1B3DB8')};color:${inkOf('#1B3DB8')};display:flex;align-items:center;justify-content:center`)}>${Ico('M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7v.5 M12 17h.01 M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 18, 'currentColor', 2.2)}</span>
+        <span style=${S('flex:1;font-size:15px;font-weight:800')}>How To Use Spotted In</span>
+        ${Ico('M9 6l6 6-6 6', 16, '#4A5275', 2.4)}
+      </button>
       <div style=${S('display:flex;flex-direction:column;gap:7px')}>
         <span style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Appearance</span>
         <div role="radiogroup" aria-label="Appearance" style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>
@@ -1508,8 +1513,67 @@ function Onboarding(v) {
     ${step === 3 && html`
       ${sign('Last Stop: The Whole City')}
       <div style=${S('margin-top:auto')}>${art('🚕', '#00933C')}</div>
-      ${title('You’re All Set, ' + v.obFirst + '!', 'Tap + To Save A Spot From TikTok, Instagram, Threads Or Google Maps. We’ll Pin It On Your Map So You Never Forget Where That Cute Bakery Was.')}
-      <div style=${S('margin-top:auto;align-self:stretch')}>${go('Start Spotting', v.obDone)}</div>`}
+      ${title('You’re All Set, ' + v.obFirst + '!', 'Here’s A 30-Second Tour Of How Spotted In Works — Five Quick Stops, And You Can Skip Anytime.')}
+      <div style=${S('margin-top:auto;align-self:stretch')}>${go('Show Me Around', v.obDone)}</div>`}
+  </div>`;
+}
+
+// How-to tour: five short cards (Save, Map, Explore, Plan, Lists). Swipe or tap Next; Skip closes it.
+const TOUR = [
+  { key: 'save', col: '#FF6B1A', icon: 'M12 5v14M5 12h14', kicker: 'STEP 1 · SAVE', a: 'Save', b: 'A Spot',
+    lines: [['M7 17L17 7M9 7h8v8', 'Share a TikTok, Instagram, Threads or Google Maps post to Spotted In, or tap + and paste the link.'],
+      ['M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.3z', 'AI reads the post, even the video, and fills in the name, address and neighborhood.'],
+      ['M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z', 'Check it, pick a category, and it’s pinned on your map.']] },
+  { key: 'map', col: '#1B3DB8', icon: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z M12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5', kicker: 'STEP 2 · MAP', a: 'Your', b: 'Map',
+    lines: [['M4 6h16M7 12h10M10 18h4', 'Filter by category, or tap Open Now to see what’s open right now.'],
+      ['M12 7v5l3 2 M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'Tap a pin for travel time, the nearest subway, hours, price and your notes.'],
+      ['M5 12h14M13 6l6 6-6 6', 'Get There shows routes; restaurants get Reserve A Table.']] },
+  { key: 'explore', col: '#7A4FD6', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18 M15.5 8.5l-2 5-5 2 2-5z', kicker: 'STEP 3 · EXPLORE', a: 'Where', b: 'To Today?',
+    lines: [['M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14 M20 20l-3.5-3.5', 'Search your spots, or type a vibe like “cozy cafe to work” and tap ✨ Vibe Search.'],
+      ['M5 12h14M13 6l6 6-6 6', 'Swipe the deck: right adds a spot to today’s plan, left skips it.'],
+      ['M5 12l5 5 9-10', 'Hide spots you’ve visited, and filter by price or neighborhood.']] },
+  { key: 'plan', col: '#1F9D6B', icon: 'M6 18a2.5 2.5 0 1 0 0-.01 M18 6a2.5 2.5 0 1 0 0-.01 M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5', kicker: 'STEP 4 · PLAN', a: 'Plan', b: 'Your Day',
+    lines: [['M12 5v14M5 12h14', 'Tap + Plan on any spot to add it to your day.'],
+      ['M8 6h13M8 12h13M8 18h13', 'Start from home, where you are, or the first stop, then reorder the stops.'],
+      ['M5 12h14M13 6l6 6-6 6', 'See the whole route with subway lines and walking times between stops.']] },
+  { key: 'lists', col: '#F45FA0', icon: 'M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z', kicker: 'STEP 5 · LISTS', a: 'Lists', b: 'With Friends',
+    lines: [['M12 5v14M5 12h14', 'Make a list for a trip, a birthday or a friend’s visit, with dates if you like.'],
+      ['M16 11a3 3 0 1 0 0-.01 M8 11a3 3 0 1 0 0-.01 M3 20a5 5 0 0 1 10 0 M11 20a5 5 0 0 1 10 0', 'Invite friends: they add spots, and you see when they’re editing.'],
+      ['M4 8h3l2-3h6l2 3h3v11H4z', 'Give each list a photo; hold a pass to reorder your wallet.']] }
+];
+function Tour(v) {
+  const i = v.tourStep, last = i === TOUR.length - 1, t = TOUR[i];
+  let x0 = null;
+  const down = e => { x0 = e.clientX; }, up = e => { if (x0 == null) return; const dx = e.clientX - x0; x0 = null; if (dx < -40 && !last) v.tourGo(i + 1); else if (dx > 40 && i > 0) v.tourGo(i - 1); };
+  return html`
+  <div data-screen-label="How To" role="dialog" aria-modal="true" aria-label="How To Use Spotted In" class="noscroll" onPointerDown=${down} onPointerUp=${up}
+    style=${S(`position:absolute;inset:0;z-index:1270;background:var(--bgfx);overflow-y:auto;padding:${T(56)} 20px ${B(28)};display:flex;flex-direction:column;gap:18px;color:#10183F;touch-action:pan-y`)}>
+    <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
+      <span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#4A5275`)}>${v.tourFirst ? 'WELCOME, ' + v.tourName.toUpperCase() + ' · QUICK TOUR' : 'HOW TO USE SPOTTED IN'}</span>
+      <button onClick=${v.tourClose} style=${S('height:36px;padding:0 14px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer')}>${last ? 'Close' : 'Skip'}</button>
+    </div>
+    <div role="tablist" aria-label="Tour Steps" style=${S('display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>
+      ${TOUR.map((s, k) => html`<button key=${s.key} role="tab" aria-selected=${k === i} aria-label=${s.a + ' ' + s.b} onClick=${() => v.tourGo(k)} style=${S(`height:40px;border:0;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${k === i ? s.col : 'transparent'};color:${k === i ? '#FFFFFF' : '#4A5275'};box-shadow:${k === i ? '0 4px 10px rgba(16,24,63,.16)' : 'none'}`)}>${Ico(s.icon, 18, 'currentColor', 2.3)}</button>`)}
+    </div>
+    <div key=${t.key} style=${S(`position:relative;flex:none;height:210px;border-radius:30px;overflow:hidden;background:${t.col};display:flex;align-items:center;justify-content:center;box-shadow:0 18px 36px rgba(16,24,63,.18)`)}>
+      <span aria-hidden="true" style=${S(`position:absolute;inset:0;${SHEEN}`)}></span>
+      <span style=${S('position:relative;width:96px;height:96px;border-radius:50%;background:#FFFFFF38;border:1px solid #FFFFFF80;display:flex;align-items:center;justify-content:center;color:#FFFFFF')}>${Ico(t.icon, 44, '#FFFFFF', 2.2)}</span>
+      <span style=${S(`position:absolute;left:16px;top:14px;${MONO};font-size:10.5px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.9)`)}>${t.kicker}</span>
+      <span style=${S(`position:absolute;right:16px;top:14px;${MONO};font-size:10.5px;font-weight:700;color:rgba(255,255,255,.9)`)}>${String(i + 1).padStart(2, '0')} / 05</span>
+    </div>
+    <h1 style=${S('margin:4px 2px 0;font-size:38px;line-height:1;letter-spacing:-1.5px;color:#10183F')}><span style=${S('font-weight:900;font-style:italic')}>${t.a}</span> <span style=${S('font-weight:200')}>${t.b}</span></h1>
+    <div style=${S('display:flex;flex-direction:column;gap:10px')}>
+      ${t.lines.map(([ic, txt], k) => html`
+      <div key=${k} class="lg" style=${S(`${ROW};border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:12px`)}>
+        <span style=${S(`width:36px;height:36px;flex:none;border-radius:50%;background:${tintOf(t.col)};color:${inkOf(t.col)};display:flex;align-items:center;justify-content:center`)}>${Ico(ic, 18, 'currentColor', 2.3)}</span>
+        <span style=${S('flex:1;min-width:0;font-size:14.5px;line-height:1.4;font-weight:600;color:#10183F')}>${txt}</span>
+      </div>`)}
+    </div>
+    <div style=${S('margin-top:auto;display:flex;align-items:center;gap:10px;padding-top:6px')}>
+      ${i > 0 && html`<button onClick=${() => v.tourGo(i - 1)} aria-label="Back" style=${S('width:58px;height:58px;flex:none;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${Ico(BACK, 20, 'currentColor', 2.4)}</button>`}
+      <button onClick=${last ? v.tourClose : () => v.tourGo(i + 1)} style=${S('flex:1;min-width:0;height:58px;border-radius:999px;border:0;background:#10183F;color:#FFFFFF;font-family:inherit;font-size:17px;font-weight:900;font-style:italic;cursor:pointer;text-align:left;padding-left:24px')}>${last ? 'Start Spotting' : 'Next: ' + TOUR[i + 1].a + ' ' + TOUR[i + 1].b}</button>
+      <button onClick=${last ? v.tourClose : () => v.tourGo(i + 1)} aria-label=${last ? 'Start Spotting' : 'Next'} style=${S('width:58px;height:58px;flex:none;border-radius:50%;border:0;background:#FF6B1A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 20, 'currentColor', 2.6)}</button>
+    </div>
   </div>`;
 }
 
@@ -1581,6 +1645,7 @@ function App(v) {
         ${v.authOpen && AuthScreen(v)}
         ${v.cityOpen && CityPicker(v)}
         ${v.obOpen && Onboarding(v)}
+        ${v.tourOpen && !v.obOpen && Tour(v)}
         ${v.hasToast && html`
         <div role="status" style=${S(`position:absolute;top:${T(54)};left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none`)}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${v.toast}</div></div>`}
       </div>

@@ -119,6 +119,9 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 ### Round buttons (design "Option A · Flat Solid")
 - No gloss or glow: main actions (Get There arrow, deck Plan, tab-bar +, Start Route) are solid orange with a white icon and one small shadow; secondary round actions are a soft tint of their color with a deeper icon (`tintOf` / `inkOf` in `view.js`, brighter in dark mode). Skip is a soft red tint.
 
+### How-to tour
+- After the welcome steps (name, home), "Show Me Around" opens a five-card tour: **Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**. Tabs on top, swipe or Next/Back, Skip anytime; the welcome toast shows when it closes. Reopen it from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
+
 ### Light and dark mode
 - **Your Account → Appearance:** Automatic (follows the phone), Light or Dark. Saved per device (`localStorage['nycList.theme']`).
 - How it works: views are written in light colors; in dark mode `S()` in `view.js` swaps navy text, white/cream glass, navy fills and shadows for dark versions (`darkVal`), keeping text on colored fills. `index.html` has the dark `--bgfx`. Apple Maps switches to its dark scheme; the iPhone status bar follows (`NYCNative.statusBar`). New styles: keep using `#10183F` text, `#fff`/`#FFFFFF` fills and `rgba(16,24,63,…)` tints and they'll flip automatically.

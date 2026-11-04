@@ -236,7 +236,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',reserveOpen:false,listsTab:null,themeV:0,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',reserveOpen:false,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub!==false,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -974,7 +974,13 @@ class Component extends DCLogic {
       obPick:r=>this.setState({obHome:r,obRes:[],obAddr:r.label}),
       obHomeNext:()=>this.setState({obStep:3,obMsg:''}),obSkipHome:()=>this.setState({obStep:3,obHome:null,obMsg:''}),
       obDone:()=>{const name=(this.state.obName||'').trim(),h=this.state.obHome;if(h)this.setState({home:{lat:h.lat,lng:h.lng,area:h.area}});
-        this.setState({obNeed:false,obStep:0});if(window.NYCSync)NYCSync.finishOnboarding(name);this.toast('Welcome To The City, '+(name.split(/\s+/)[0]||'Friend')+'!');},
+        this.setState({obNeed:false,obStep:0,tourOpen:true,tourStep:0,tourFirst:true,tab:'map',selId:null});if(window.NYCSync)NYCSync.finishOnboarding(name);},
+      // How-to tour: five swipeable cards after sign-up, and again from Your Account → How To Use Spotted In.
+      tourOpen:s.tourOpen,tourStep:s.tourStep,tourFirst:s.tourFirst,tourName:(((window.NYCSync&&NYCSync.displayName&&NYCSync.displayName())||s.obName||'').trim().split(/\s+/)[0])||'Friend',
+      tourGo:i=>this.setState({tourStep:Math.max(0,Math.min(4,i))}),
+      tourClose:()=>{const first=this.state.tourFirst;this.setState({tourOpen:false,tourStep:0,tourFirst:false});
+        if(first)this.toast('Welcome To The City, '+((((window.NYCSync&&NYCSync.displayName&&NYCSync.displayName())||this.state.obName||'').trim().split(/\s+/)[0])||'Friend')+'!');},
+      openTour:()=>this.setState({acctOpen:false,tourOpen:true,tourStep:0,tourFirst:false}),
       showPass:s.showPass,toggleShowPass:()=>this.setState({showPass:!s.showPass}),
       authOpen:s.auth==='signedOut',authUp:s.authMode==='up',authEmail:s.authEmail,authPass:s.authPass,authMsg:s.authMsg,hasAuthMsg:!!s.authMsg,
       authBtn:s.authBusy?'One Sec…':s.authMode==='up'?'Create My Account':'Sign In',authTitle:s.authMode==='up'?'Make Your Account':'Welcome Back',
