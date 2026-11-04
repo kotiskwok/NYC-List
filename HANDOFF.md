@@ -39,6 +39,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 | **Claude desktop app on the Mac, linked to the chat** | Updating the Xcode project on the Mac: `git pull`, copying the website into the app, `npx cap sync ios`. | Open the chat in the Claude desktop app and choose **Link to this computer**. Approve folder access to **Documents › Spotted In App** and the **delete permission** (git needs it to replace files). Keep the Mac awake with the app open while Claude works. |
 | **Built-in browser** (the browser pane in the Claude desktop app) | Checking the live site, Vercel deploys and logs, running SQL in Supabase, App Store Connect / TestFlight, Google Cloud, and reading Instagram / TikTok posts. | Stay signed in to these sites in the browser pane and approve them when Claude asks: `nyc-lovat.vercel.app`, `vercel.com`, `github.com`, `supabase.com`, `appstoreconnect.apple.com`, `developer.apple.com`, `console.cloud.google.com`, `platform.openai.com`, `console.anthropic.com`, `instagram.com`, `tiktok.com`. |
 | **Computer use: Xcode** (optional) | Looking at Xcode. Xcode is click-only for Claude, so it can't use Xcode's menus or archive. | Approve Xcode when Claude asks. **You** do Product → Archive → Upload. |
+| **Google Play Console** (for the Android app, §8b) | Creating the Play listing, uploading Android builds, managing the closed test and testers. | Kotis makes the developer account at play.google.com/console ($25 one-time, ID verification). Then approve `play.google.com` in the built-in browser so Claude can fill in the listing. |
 | **Design canvas "Spotted In Icon Options"** (claude.ai artifact) | Laying out visual options to compare before building: icons, share card, wallet, buttons, reviews, personality. | https://claude.ai/artifact/7mWakGhfPe7dfWubzZyqbW. Ask Claude to add a new row of options to it. |
 
 **What Claude won't do (you do these):** type or paste passwords or API keys, accept Apple agreements, and press Archive or Upload in Xcode. Claude opens the right page and tells you exactly what to click.
@@ -267,6 +268,30 @@ Changes only in `api/` or `data/routes/` go live right away without a new build.
 
 ---
 
+## 8b. Android app (Google Play), planned, not built yet
+
+The plan is to publish Spotted In on Google Play from the same code, using Capacitor's Android platform next to the iPhone one.
+
+### What Claude builds (in the repo)
+- **`native/android/`**: `npx cap add android`, package id `com.kotiskwok.nyclist`, same app name, icon and launch screen, portrait.
+- **Share → Spotted In on Android:** an intent filter for shared text/links in `AndroidManifest.xml` plus a small plugin that hands the link to the app (the Android version of the iPhone share inbox). The ticket card is iPhone-only; Android shows a short "Saved To Spotted In" toast instead.
+- **`src/native.js`:** make location, haptics, status bar and the share inbox work on Android too (`Capacitor.getPlatform()` checks).
+- **A GitHub Action** that builds the signed `.aab` (the file Google Play wants), so no Android Studio is needed. It reads the signing key from GitHub secrets.
+- Version code in `native/android/app/build.gradle` (`versionCode`), bumped for each upload, like `CURRENT_PROJECT_VERSION` on iPhone.
+
+### What Kotis does
+- Make the Google Play developer account ($25 one-time, ID verification).
+- Create the upload signing key and add it and its password to GitHub → Settings → Secrets (Claude gives the exact commands but never handles the key or password).
+- Upload the first `.aab` in Play Console (Claude can then fill in the listing, privacy form and content rating in the built-in browser).
+
+### Google Play's testing rule
+New personal developer accounts must run a **closed test with at least 12 testers for 14 days in a row** before the app can go to production. Testers need an Android phone and must opt in through the Play test link. Android friends act as the Friends Beta for Android.
+
+### Listing
+Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also needs a 512² icon, a 1024×500 feature graphic and phone screenshots (Claude can make these). Data safety answers match the App Store privacy answers.
+
+---
+
 ## 9. File map
 
 | File | What's in it |
@@ -289,7 +314,7 @@ Changes only in `api/` or `data/routes/` go live right away without a new build.
 | `vercel.json` | Function limits, `includeFiles` for ffmpeg, cache headers (`/path/:path*` patterns) |
 | `config.js` | Supabase URL and publishable key, `siteUrl` for the iPhone app |
 | `privacy.html`, `support.html` | App Store privacy and support pages |
-| `native/` | iPhone app: Xcode project, Share extension, `scripts/copy-web.mjs`, `design/app-icon.html`, `APP_STORE.md`, `README.md` |
+| `native/` | iPhone app (and, once built, `native/android/` for Android): Xcode project, Share extension, `scripts/copy-web.mjs`, `design/app-icon.html`, `APP_STORE.md`, `README.md` |
 | `CLAUDE.md` | Short rules for Claude in the repo |
 | `HANDOFF.md` | This document (also in the project as `claude/HANDOFF.md`) |
 
@@ -318,3 +343,4 @@ Changes only in `api/` or `data/routes/` go live right away without a new build.
 - **Delete My Account** needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel before full App Store review.
 - **Terms of use** for reviews (Apple asks for this with user posts).
 - Saving a shared link in the background, without opening the app.
+- **Android app on Google Play** (plan in §8b).
