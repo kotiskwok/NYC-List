@@ -79,6 +79,6 @@ module.exports = async (req, res) => {
     res.setHeader('cache-control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800');
     res.end(JSON.stringify(memo));
   } catch (e) {
-    send(res, 502, { error: 'Bus Routes Aren’t Available Right Now.' });
+    send(res, 502, { error: 'Bus routes aren’t available right now.' });
   }
 };

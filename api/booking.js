@@ -46,13 +46,13 @@ async function googleInfo(body, city) {
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
-  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI Isn’t Set Up Yet — Add ANTHROPIC_API_KEY In Vercel.' });
+  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI isn’t set up yet. Add ANTHROPIC_API_KEY in Vercel.' });
   if (!(await requireUser(req, res))) return;
   let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
   const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
   body = { name: clip(body.name, 100), address: clip(body.address, 120), area: clip(body.area, 60), city: body.city,
     ll: Array.isArray(body.ll) && body.ll.length === 2 && body.ll.every(Number.isFinite) ? body.ll : null };
-  if (body.name.length < 2) return send(res, 400, { error: 'Missing The Restaurant’s Name.' });
+  if (body.name.length < 2) return send(res, 400, { error: 'Missing the restaurant’s name.' });
   const city = cityFor(body.city);
 
   const g = await googleInfo(body, city);
@@ -80,7 +80,7 @@ Call booking_link with the result.`;
         body: JSON.stringify({ model: MODEL, max_tokens: 1200, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, TOOL], messages })
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) return send(res, 502, { error: 'Couldn’t Look It Up Right Now — Try Again.' });
+      if (!r.ok) return send(res, 502, { error: 'Couldn’t look it up right now. Try again?' });
       (j.content || []).forEach(b => { if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) b.content.forEach(x => x && x.url && seen.add(norm(x.url))); });
       const use = (j.content || []).find(b => b.type === 'tool_use' && b.name === 'booking_link');
       if (use) { out = use.input; break; }
@@ -95,6 +95,6 @@ Call booking_link with the result.`;
     if (okHost && found) return send(res, 200, { url, platform: PLATFORM(h) });
     return send(res, 200, { url: null, reason: out && out.takes_reservations === 'no' ? 'walkin' : 'notfound' });
   } catch (e) {
-    return send(res, 502, { error: 'Couldn’t Look It Up Right Now — Try Again.' });
+    return send(res, 502, { error: 'Couldn’t look it up right now. Try again?' });
   }
 };

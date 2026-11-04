@@ -313,7 +313,7 @@ function ExploreScreen(v) {
           ${mono('✨ VIBE MATCHES · BEST FIRST', '#7A4FD6')}<span style=${S('flex:1')}></span>
           <button onClick=${v.clearVibe} style=${S(`border:0;background:none;padding:4px 0;cursor:pointer;${MONO};font-size:10.5px;font-weight:700;color:#1B3DB8`)}>BACK TO KEYWORDS</button>
         </div>`}
-        ${v.vibeMsg && html`<div style=${S('padding:0 4px;font-size:13px;font-weight:700;color:#E8242C')}>${v.vibeMsg}</div>`}
+        ${v.vibeMsg && html`<div style=${S('padding:0 4px;font-size:13px;font-weight:700;color:#E8242C')}>${Lines(v.vibeMsg)}</div>`}
         ${v.exFiltersOpen && html`
         <div class="lg" style=${S(`${GL};border-radius:26px;padding:14px;display:flex;flex-direction:column;gap:12px`)}>
           ${v.exShowPrice && html`
@@ -359,7 +359,7 @@ function ExploreScreen(v) {
         </div>
         <div style=${S('position:relative;height:340px;margin:2px 8px 0')}>
           ${v.deckEmpty ? endCard('Nothing', 'Matches Yet', 'Nothing fits that, bestie. Try fewer filters or go spot something new!', [pill('Clear Filters', v.clearExAll), pill('Add A Spot', v.openAdd, true)])
-            : v.deckDone ? endCard('That’s All', v.deckTotal, 'You saw every single one!! Shuffle for a new order or see them all at once.', [pill('See All', v.showResults), pill('Shuffle Again', v.deckShuffle, true)])
+            : v.deckDone ? endCard('That’s All', v.deckTotal, 'You saw every single one. Shuffle for a new order, or see them all at once.', [pill('See All', v.showResults), pill('Shuffle Again', v.deckShuffle, true)])
             : v.deckCards.map((c, i) => DeckCard(c, i, v)).reverse()}
         </div>
         ${!v.deckEmpty && !v.deckDone && html`<div style=${S('display:flex;justify-content:center;gap:22px;padding-top:6px')}>${mono('← SKIP', '#E8242C')}${mono('TAP TO OPEN', '#1B3DB8')}${mono('PLAN →', '#1F9D6B')}</div>`}
@@ -399,7 +399,7 @@ function ExploreScreen(v) {
           ${v.noResults && html`
           <div style=${S('text-align:center;padding:40px 20px;display:flex;flex-direction:column;gap:12px;align-items:center')}>
             <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:24px;color:#1B3DB8')}>Nothing Here Yet</div>
-            <div style=${S('font-size:14px;color:#4A5275')}>Try Another Area, Or Save A Spot You Spotted Online.</div>
+            <div style=${S('font-size:14px;color:#4A5275')}>Try another area, or save a spot you saw online.</div>
             <button onClick=${v.openAdd} style=${S('height:46px;padding:0 20px;border:0;border-radius:999px;background:#FF6B1A;color:#fff;font-weight:800;font-size:15px;cursor:pointer')}>Add A Spot</button>
           </div>`}
         </div>
@@ -769,7 +769,7 @@ function RouteSheet(v) {
         </div>
         <button onClick=${o.onGoogle} style=${S('height:40px;border-radius:12px;border:2px solid #1B3DB8;background:#fff;color:#1B3DB8;font-weight:800;font-size:13px;cursor:pointer')}>${o.gLabel}</button>
       </div>`)}
-      <div style=${S('font-size:11px;color:#6A7090;text-align:center')}>Estimates From Distance & Nearby Lines — Google Maps Has Live Times.</div>
+      <div style=${S('font-size:11px;color:#6A7090;text-align:center')}>Estimates from distance and nearby lines. Google Maps has live times.</div>
     </div>
   </div>`;
 }
@@ -842,11 +842,11 @@ function ListsScreen(v) {
         ${v.listTabs.map(t => html`<button key=${t.key} role="tab" aria-selected=${t.on} onClick=${t.onClick} style=${S(`height:36px;border:0;border-radius:999px;font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;background:${t.on ? '#FFFFFF' : 'transparent'};box-shadow:${t.on ? '0 4px 10px rgba(16,24,63,.1)' : 'none'};font-weight:${t.on ? 800 : 700};color:${t.on ? '#10183F' : '#4A5275'}`)}>${t.label}</button>`)}
       </div>`}
       ${v.walletDragging && html`<div style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#FF6B1A;padding:0 4px`)}>DRAG TO REORDER · LET GO TO DROP</div>`}
-      ${v.listsLocal && Msg('Sign In To Use Lists', 'Lists Live In Your Account So You Can Share Them With Friends.')}
-      ${v.listsMissing && Msg('One Quick Setup Step', 'Lists Need Their Database Tables. Run supabase/lists.sql Once In Supabase → SQL Editor, Then Come Back.', 'Check Again', v.retryLists)}
+      ${v.listsLocal && Msg('Sign In To Use Lists', 'Lists live in your account so you can share them with friends.')}
+      ${v.listsMissing && Msg('One Quick Setup Step', 'Lists need their database tables. Run supabase/lists.sql once in Supabase → SQL Editor, then come back.', 'Check Again', v.retryLists)}
       ${v.listsLoading && html`<div role="status" style=${S('text-align:center;font-weight:700;color:#4A5275;padding:20px')}>Loading Your Lists…</div>`}
-      ${v.listsError && Msg('Can’t Load Lists Right Now', 'Check Your Connection And Try Again.', 'Try Again', v.retryLists)}
-      ${v.listsEmpty && Msg('No Lists Yet', 'Make One For A Friend’s Visit, A Birthday Or A Weekend — Then Invite Them To Add Spots Too.')}
+      ${v.listsError && Msg('Can’t Load Lists Right Now', 'Check your connection and try again.', 'Try Again', v.retryLists)}
+      ${v.listsEmpty && Msg('No Lists Yet', 'Make one for a friend’s visit, a birthday or a weekend away. Then invite them to add spots too.')}
       ${v.listCards.length > 0 && html`
       <div ref=${v.walletRef} style=${S('display:flex;flex-direction:column;padding-top:4px')}>
         ${[...v.listCards].reverse().map((c, i, arr) => { const front = i === arr.length - 1, lift = c.lifted ? ';box-shadow:0 30px 60px rgba(16,24,63,.38),0 8px 18px rgba(16,24,63,.2)' : '';
@@ -963,7 +963,7 @@ function ListsScreen(v) {
       <div role="tablist" aria-label="Days" class="noscroll lg" style=${S(`${GL};display:flex;gap:4px;padding:4px;border-radius:999px;overflow-x:auto`)}>
         ${t.dayChips.map(c => html`<button key=${c.key} role="tab" aria-selected=${c.on} onClick=${c.onClick} style=${S(`flex:1 0 auto;min-width:64px;height:46px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;${c.on ? 'background:#10183F;color:#fff;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25)' : `background:transparent;color:${c.pink ? '#F45FA0' : '#10183F'}`}`)}><span style=${S(`${MONO};font-size:9px;font-weight:700;color:${c.on ? '#FFC425' : c.pink ? '#F45FA0' : '#4A5275'}`)}>${c.date}</span><span style=${S('font-size:13px;font-weight:800')}>${c.short}</span></button>`)}
       </div>`}
-      ${t.empty && Msg('Nothing On The List Yet', t.canEdit ? 'Pull Spots From Your Map, Or Add A Brand-New One You Saw Online.' : 'Spots Will Show Up Here As They’re Added.')}
+      ${t.empty && Msg('Nothing On The List Yet', t.canEdit ? 'Pull spots from your map, or add a brand-new one you saw online.' : 'Spots will show up here as they’re added.')}
       ${t.sections.map(sec => { const waiting = /^Not On/.test(sec.title || ''), n = (sec.rows || []).length;
         return html`
       <div key=${sec.key} style=${S('display:flex;flex-direction:column;gap:0')}>
@@ -982,7 +982,7 @@ function ListsScreen(v) {
         </div>`}
         <div class="lg" style=${S(`position:relative;z-index:2;${GL};border-radius:28px;padding:6px`)}>
           ${!sec.hasTitle && sec.canRemove && html`<div style=${S('display:flex;justify-content:flex-end;padding:4px 6px 0')}><button onClick=${sec.onRemove} style=${S('border:0;background:none;color:#E8242C;font-weight:700;font-size:12px;cursor:pointer;padding:2px')}>Remove This Day</button></div>`}
-          ${sec.empty && html`<div style=${S('padding:14px;text-align:center;font-size:12.5px;font-weight:600;color:#5A6080')}>Pick This Day On A Spot To Move It Here</div>`}
+          ${sec.empty && html`<div style=${S('padding:14px;text-align:center;font-size:12.5px;font-weight:600;color:#5A6080')}>Pick this day on a spot to move it here.</div>`}
           ${sec.rows.map((r, ri) => html`
           <div key=${r.key} style=${S('display:flex;flex-direction:column')}>
             ${r.leg && html`
@@ -1201,7 +1201,7 @@ function ListChooser(v) {
   return Sheet('Add “' + c.name + '” To A List', c.close, html`
     ${c.setupMsg && html`<div style=${S('font-size:13px;font-weight:700;color:#E8242C')}>${c.setupMsg}</div>`}
     ${c.rows.map(CheckRow)}
-    ${c.empty && c.ready && html`<div style=${S('text-align:center;padding:6px;font-size:13px;font-weight:600;color:#4A5275')}>No Lists Yet — Make Your First One.</div>`}
+    ${c.empty && c.ready && html`<div style=${S('text-align:center;padding:6px;font-size:13px;font-weight:600;color:#4A5275')}>No lists yet. Make your first one!</div>`}
     ${!c.setupMsg && html`<button onClick=${c.newList} style=${S('height:46px;border-radius:14px;border:1.5px dashed rgba(16,24,63,.32);background:transparent;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>+ New List</button>`}`);
 }
 
@@ -1223,7 +1223,7 @@ function NewTripSheet(v) {
       <div style=${S('display:flex;gap:6px;flex-wrap:wrap')}>
         ${n.dayChips.map((c, i) => html`<button key=${i} onClick=${c.onClick} style=${S(`height:38px;min-width:42px;padding:0 13px;border-radius:999px;border:2px solid ${c.border};background:${c.bg};color:${c.fg};font-weight:800;font-size:13px;cursor:pointer`)}>${c.label}</button>`)}
       </div>
-      <div style=${S('font-size:12px;color:#5A6080')}>Optional — You Can Add Or Remove Days Any Time.</div>
+      <div style=${S('font-size:12px;color:#5A6080')}>Optional. You can add or remove days anytime.</div>
     </div>
     ${n.showStart && html`
     <div style=${S('display:flex;flex-direction:column;gap:8px')}>
@@ -1255,8 +1255,8 @@ function AddSheet(v) {
   const lab = S('font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.2px;color:#3A4470');
   const inp = 'border-radius:16px;border:1.5px solid rgba(16,24,63,.12);background:rgba(255,255,255,.75);padding:0 14px;font-family:inherit;font-size:15px;color:#10183F;outline:none';
   const col6 = S('display:flex;flex-direction:column;gap:6px');
-  const hint = t => html`<div style=${S('font-size:12px;line-height:1.4;color:#4A5275')}>${t}</div>`;
-  const status = t => html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${t}</div>`;
+  const hint = t => html`<div style=${S('font-size:12px;line-height:1.4;color:#4A5275')}>${Lines(t)}</div>`;
+  const status = t => html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#1B3DB8;line-height:1.35')}>${Lines(t)}</div>`;
   const plain = t => String(t || '').replace(/^[^A-Za-z0-9]+/, '').replace(/…$/, '');
   const sparkle = html`<span style=${S('width:34px;height:34px;flex:none;border-radius:12px;background:#FFC425;color:#10183F;display:flex;align-items:center;justify-content:center')}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20 10l-5.8 1.7L12 18l-2.2-6.3L4 10l5.8-1.7zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"></path></svg></span>`;
   const darkCard = 'border-radius:22px;padding:14px;background:#10183F;color:#fff;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(16,24,63,.3)';
@@ -1307,7 +1307,7 @@ function AddSheet(v) {
     </div>`}
     ${v.aiHasMsg && status(v.aiMsg)}
     ${found}
-    ${!f.url && hint('Paste A Post Or A Google Maps Link And AI Fills In The Rest — Including What’s Said Out Loud.')}`;
+    ${!f.url && hint('Paste a post or a Google Maps link and AI fills in the rest. It even listens to what’s said out loud.')}`;
 
   const videoBlock = html`
     <div style=${col6}>
@@ -1333,7 +1333,7 @@ function AddSheet(v) {
     </div>`}
     ${v.aiHasMsg && status(v.aiMsg)}
     ${found}
-    ${hint('The Video Stays On Your Phone — Only The Sound And Three Stills Are Sent So AI Can Find The Places.')}`;
+    ${hint('The video stays on your phone. Only the sound and three stills are sent so AI can find the places.')}`;
 
   const nameField = html`
     <div style=${col6}>
@@ -1367,7 +1367,7 @@ function AddSheet(v) {
         <input id="f-look" value=${v.lookQ} onChange=${v.onLookQ} onKeyDown=${v.onLookKey} placeholder="Search An Address Or Place" style=${S(`flex:1;min-width:0;height:52px;${inp}`)} />
         <button onClick=${v.runLookup} style=${S('flex:none;height:52px;padding:0 16px;border-radius:16px;border:0;background:#1B3DB8;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${v.lookBtn}</button>
       </div>
-      ${v.lookHasMsg && html`<div style=${S('font-size:12px;font-weight:600;color:#E8242C')}>${v.lookMsg}</div>`}
+      ${v.lookHasMsg && html`<div style=${S('font-size:12px;font-weight:600;color:#E8242C')}>${Lines(v.lookMsg)}</div>`}
       ${v.lookHasResults && html`
       <div style=${S(`display:flex;flex-direction:column;border-radius:18px;overflow:hidden;${ROW}`)}>
         ${v.lookResults.map((r, i) => html`
@@ -1382,7 +1382,7 @@ function AddSheet(v) {
       </div>`}
       ${v.noPin && html`
         <button onClick=${v.startPlacing} style=${S('height:52px;border-radius:16px;border:1.5px dashed #1B3DB8;background:rgba(255,255,255,.5);color:#1B3DB8;font-weight:800;font-size:15px;cursor:pointer')}>Drop A Pin On The Map</button>
-        ${hint('Or Just Pick A Neighborhood Below And We’ll Place It There.')}`}
+        ${hint('Or just pick a neighborhood below and I’ll place it there.')}`}
     </div>
     <div style=${col6}>
       <span style=${lab}>CATEGORY</span>
@@ -1428,13 +1428,13 @@ function AddSheet(v) {
     <div style=${col6}>
       <label for="f-note" style=${lab}>NOTES</label>
       <textarea id="f-note" value=${f.note} onChange=${v.onNote} placeholder="What To Order, When To Go…" rows="3" style=${S(`${inp};padding:12px 14px;resize:none;line-height:1.45`)}></textarea>
-      ${hint('Each Sentence Shows On Its Own Line.')}
+      ${hint('Each sentence shows on its own line.')}
     </div>
     ${v.showReserveField && html`
     <div style=${col6}>
       <label for="f-reserve" style=${lab}>BOOKING LINK</label>
       <input id="f-reserve" type="url" inputmode="url" value=${f.reserve || ""} onChange=${v.onReserveField} placeholder="Resy, OpenTable, Tock Or Their Website" style=${S(`height:52px;${inp}`)} />
-      ${hint('Optional — The Place Card’s Reserve Button Opens It.')}
+      ${hint('Optional. The place card’s Reserve button opens it.')}
     </div>`}
     ${f.id && html`<div style=${S('display:flex;justify-content:center')}><button onClick=${() => { const sure = v.delLabel !== 'Delete'; v.deleteSel(); if (sure) v.closeAdd(); }} style=${S('border:0;background:none;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer;padding:8px')}>${v.delLabel === 'Delete' ? 'Delete This Spot' : v.delLabel}</button></div>`}`;
 
@@ -1492,7 +1492,7 @@ function AccountSheet(v) {
           </div>
         </div>
       </div>
-      ${v.avatarMsg && html`<div role="status" style=${S('font-size:12.5px;font-weight:700;color:#E8242C;margin-top:-6px')}>${v.avatarMsg}</div>`}
+      ${v.avatarMsg && html`<div role="status" style=${S('font-size:12.5px;font-weight:700;color:#E8242C;margin-top:-6px')}>${Lines(v.avatarMsg)}</div>`}
       <div style=${S('background:#fff;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:6px')}>
         <span style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Signed In As</span>
         <span style=${S('font-weight:800;font-size:15px;word-break:break-all')}>${v.syncEmail}</span>
@@ -1517,7 +1517,7 @@ function AccountSheet(v) {
       </div>
       <div style=${S('display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center')}>
         <button onClick=${v.deleteAccount} style=${S('border:0;background:none;color:#E8242C;font-weight:700;font-size:12.5px;cursor:pointer;padding:6px')}>${v.delAcctLabel}</button>
-        <span style=${S('font-size:11px;color:#6A7090')}>Deletes Your Account, Your Map And The Lists You Made. <a href=${v.privacyUrl} target="_blank" rel="noopener">Privacy Policy</a></span>
+        <span style=${S('font-size:11px;color:#6A7090')}>Deletes your account, your map and the lists you made. <a href=${v.privacyUrl} target="_blank" rel="noopener">Privacy Policy</a></span>
       </div>
     </div>
   </div>`;
@@ -1562,20 +1562,20 @@ function Onboarding(v) {
     </div>`;
   const back = step > 0 && step < 3 && html`<button onClick=${v.obBack} style=${S('align-self:flex-start;border:0;background:none;color:#1B3DB8;font-weight:800;font-size:14px;cursor:pointer;padding:4px 0')}>← Back</button>`;
   const field = 'width:100%;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.85);box-shadow:inset 0 2px 1px #fff,0 8px 20px rgba(16,24,63,.08);padding:0 20px;font-family:inherit;font-size:17px;font-weight:700;color:#10183F;outline:none;box-sizing:border-box';
-  const msg = v.obMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C')}>${v.obMsg}</div>`;
+  const msg = v.obMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C')}>${Lines(v.obMsg)}</div>`;
   return html`
   <div data-screen-label="Welcome" class="noscroll" style=${S(`position:absolute;inset:0;z-index:1260;background:var(--bgfx);overflow-y:auto;padding:${T(58)} 22px ${B(30)};display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;color:#10183F`)}>
     <div aria-hidden="true" style=${S('position:absolute;left:0;right:0;top:0;height:10px;background:repeating-linear-gradient(90deg,#111 0 10px,#FFC425 10px 20px);opacity:.9')}></div>
     ${step === 0 && html`
       ${sign('The Spotted In Express')}
       <div style=${S('margin-top:auto')}>${art('🗽', '#FFC425')}</div>
-      ${title('Welcome Aboard!', 'Your Map Of Every Café, Bakery, Restaurant And Cute Shop You Spot Online. Stand Clear Of The Closing Doors — We’ll Set You Up In Two Quick Stops.')}
+      ${title('Welcome Aboard!', 'Your map of every café, bakery, restaurant and cute shop you spot online. Stand clear of the closing doors. We’ll set you up in two quick stops.')}
       <div style=${S('margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:10px')}>${go('Let’s Ride', v.obStart)}</div>`}
     ${step === 1 && html`
       ${sign('Next Stop: You')}
       ${back}
       ${art('🥯', '#EE352E')}
-      ${title('How Do You Want Us To Call You?', 'Your Bodega Guy Knows You By Name. So Should We. Friends On Your Shared Lists See It Too.')}
+      ${title('How Do You Want Us To Call You?', 'Your bodega guy knows you by name. So should we. Friends on your shared lists see it too.')}
       <form onSubmit=${v.obNameNext} style=${S('align-self:stretch;display:flex;flex-direction:column;gap:12px;margin-top:auto')}>
         <label for="ob-name" style=${S('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)')}>First Name</label>
         <input id="ob-name" autocomplete="given-name" autocapitalize="words" value=${v.obName} onChange=${v.onObName} placeholder="First Name Or Nickname" maxlength="40" style=${S(field + ';text-align:center')}/>
@@ -1586,7 +1586,7 @@ function Onboarding(v) {
       ${sign('Next Stop: Home Base')}
       ${back}
       ${art('🏠', '#FCCC0A')}
-      ${title('Where’s Home, ' + v.obFirst + '?', 'Pick Your City, Then Your Address If You Like. We’ll Use It To Show How Far Each Spot Is From Your Couch. It Stays Private To Your Account.')}
+      ${title('Where’s Home, ' + v.obFirst + '?', 'Pick your city, then your address if you like. We’ll use it to show how far each spot is from your couch. It stays private to your account.')}
       <div role="radiogroup" aria-label="Your City" style=${S('align-self:stretch;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px')}>
         ${v.cityRows.filter(c => c.id !== 'nys').map(c => html`<button key=${c.id} type="button" role="radio" aria-checked=${c.on} onClick=${c.onClick} style=${S(`height:62px;border-radius:20px;border:${c.on ? '0' : '1px solid rgba(255,255,255,.95)'};background:${c.on ? '#10183F' : 'rgba(255,255,255,.75)'};color:${c.on ? '#fff' : '#10183F'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:${c.on ? '0 8px 18px rgba(16,24,63,.25)' : 'inset 0 2px 1px #fff'}`)}><span class="emo" aria-hidden="true" style=${S('font-size:20px')}>${c.emoji}</span><span style=${S('font-size:12px;font-weight:900;font-style:italic')}>${c.short}</span></button>`)}
       </div>
@@ -1608,7 +1608,7 @@ function Onboarding(v) {
     ${step === 3 && html`
       ${sign('Last Stop: The Whole City')}
       <div style=${S('margin-top:auto')}>${art('🚕', '#00933C')}</div>
-      ${title('You’re All Set, ' + v.obFirst + '!', 'Here’s A 30-Second Tour Of How Spotted In Works — Five Quick Stops, And You Can Skip Anytime.')}
+      ${title('You’re All Set, ' + v.obFirst + '!', 'Here’s a 30-second tour of how Spotted In works. Five quick stops, and you can skip anytime.')}
       <div style=${S('margin-top:auto;align-self:stretch')}>${go('Show Me Around', v.obDone)}</div>`}
   </div>`;
 }
@@ -1679,7 +1679,7 @@ function AuthScreen(v) {
     <div style=${S('margin-top:auto')}>${Logo(true)}</div>
     <div style=${S('display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff')}>
       <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:40px;line-height:.95;letter-spacing:-.02em;color:#fff')}>${v.authTitle}</div>
-      <div style=${S('font-size:15px;font-weight:600;color:#C9D0F0')}>Sign In To Keep Your Spots In Sync On Every Device.</div>
+      <div style=${S('font-size:15px;font-weight:600;color:#C9D0F0')}>Sign in to keep your spots in sync on every device.</div>
     </div>
     ${v.hasJoin && html`
     <div style=${S('align-self:stretch;width:100%;max-width:420px;margin:0 auto;background:#F45FA0;color:#fff;border:1.5px solid rgba(16,24,63,.14);border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;gap:3px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>
@@ -1702,9 +1702,9 @@ function AuthScreen(v) {
           <input id="auth-pass" name="password" type=${v.showPass ? 'text' : 'password'} autocomplete=${v.authUp ? 'new-password' : 'current-password'} autocapitalize="off" autocorrect="off" spellcheck="false" value=${v.authPass} onChange=${v.onAuthPass} placeholder=${v.authUp ? 'At Least 6 Characters' : 'Your Password'} style=${S('flex:1;min-width:0;height:52px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:0 54px 0 14px;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none')} />
           <button type="button" onClick=${v.toggleShowPass} aria-label=${v.showPass ? 'Hide Password' : 'Show Password'} aria-pressed=${v.showPass} style=${S('position:absolute;right:6px;top:6px;width:40px;height:40px;border-radius:12px;border:0;background:rgba(16,24,63,.06);color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${v.showPass ? Ico('M3 3l18 18 M10.6 10.6a2 2 0 0 0 2.8 2.8 M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 5 10 7a13 13 0 0 1-3 3.8 M6.1 6.1A13 13 0 0 0 2 12c1 2 5 7 10 7a9.7 9.7 0 0 0 4-.9', 20, 'currentColor', 2) : Ico('M2 12c1-2 5-7 10-7s9 5 10 7c-1 2-5 7-10 7S3 14 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 20, 'currentColor', 2)}</button>
         </div>
-        ${!v.authUp && html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>You Stay Signed In On This Phone. Your iPhone Can Also Save This Password For Next Time.</span>`}
+        ${!v.authUp && html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>You stay signed in on this phone. Your iPhone can also save this password for next time.</span>`}
       </div>
-      ${v.hasAuthMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C;line-height:1.35')}>${v.authMsg}</div>`}
+      ${v.hasAuthMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C;line-height:1.35')}>${Lines(v.authMsg)}</div>`}
       <button type="submit" style=${S('height:52px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:20px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>${v.authBtn}</button>
     </form>
     <button onClick=${v.authToggle} style=${S('align-self:center;margin-bottom:auto;border:0;background:none;color:#FFC425;font-weight:800;font-size:14px;cursor:pointer;padding:8px')}>${v.authSwitch}</button>

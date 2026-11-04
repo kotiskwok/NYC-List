@@ -45,13 +45,13 @@ module.exports = async (req, res) => {
     // No photo: cache the 404 too, so a spot without photos isn't looked up again on every view.
     if (!photo) { res.statusCode = 404; res.setHeader('content-type', 'application/json'); res.setHeader('cache-control', 'public, max-age=86400, s-maxage=604800'); return res.end('{"error":"No Photo."}'); }
     const img = await g(photo.name + '/media?maxWidthPx=600&maxHeightPx=600', { method: 'GET' }, key);
-    if (!img.ok) return send(res, 502, { error: 'Photo Unavailable.' });
+    if (!img.ok) return send(res, 502, { error: 'Photo unavailable.' });
     const buf = Buffer.from(await img.arrayBuffer());
     res.statusCode = 200;
     res.setHeader('content-type', img.headers.get('content-type') || 'image/jpeg');
     res.setHeader('cache-control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
     res.end(buf);
   } catch (e) {
-    send(res, 502, { error: 'Photo Unavailable.' });
+    send(res, 502, { error: 'Photo unavailable.' });
   }
 };

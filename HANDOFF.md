@@ -120,6 +120,12 @@ Set these up once. Then Claude can make changes directly, from code to the live 
 ### Round buttons (design "Option A · Flat Solid")
 - No gloss or glow: main actions (Get There arrow, deck Plan, tab-bar +, Start Route) are solid orange with a white icon and one small shadow; secondary round actions are a soft tint of their color with a deeper icon (`tintOf` / `inkOf` in `view.js`, brighter in dark mode). Skip is a soft red tint.
 
+### Voice and copy rules (Kotis's rules — follow them for every new string)
+- **Voice:** friendly group-chat energy, playful and a little extra ("Stuck it on the map!!", "Been there, ate that.", "Your map is empty, bestie.", "They're asleep" → hours show "Asleep · Back Tue 8 AM"). Use **"!!" sparingly** (only the save toast and the welcome toast); "!" now and then; mostly plain periods. Errors stay calm and helpful ("Couldn't reach the server. Check your connection?").
+- **Capitalization:** Title Case for titles, headings, buttons, chips, labels and tags ("Where We Going Tonight?", "Something Cozy", "Add Their Link"). Full sentences use normal sentence case.
+- **One sentence per line:** messages, toasts, empty states, hints and tips render through `Lines()` / `noteLines()` in `view.js`, which puts each sentence on its own line — so write separate sentences rather than joining them with dashes.
+- **Explore** opens with "Where We Going Today/Tonight?" (after 5pm), a greeting bubble built from your spots ("Okay bestie, 10 spots are open now." / "Win Son Bakery is only 11 min away!"), vibe chips (Something Cozy, Cheap Eats, Date Night run vibe search; Surprise Me reshuffles) and the "Ask Spotted Anything…" search bar.
+
 ### How-to tour
 - After the welcome steps (name, home), "Show Me Around" opens a five-card tour: **Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**. Tabs on top, swipe or Next/Back, Skip anytime; the welcome toast shows when it closes. Reopen it from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
 

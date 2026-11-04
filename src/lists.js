@@ -99,11 +99,11 @@ const NYCLists = (() => {
       if (error) { if (missing(error)) { clearCode(); await refresh(); return; } throw error; }
       clearCode();
       await refresh();
-      if (!data) { app.toast('That Invite Link Was Replaced — Ask For A New One'); return; }
+      if (!data) { app.toast('That invite link was replaced. Ask for a new one.'); return; }
       const t = trips().find(x => x.id === data);
       set({ tab: 'lists', tripId: data, tripView: t && !t.share_list && t.owner !== uid ? 'map' : 'list', tripSel: null, selId: null, routeFor: null, addOpen: false });
-      if (t && t.owner !== uid) { app.toast('You Joined “' + t.name + '”!'); if (t.share_map) loadSharedMap(t.id); }
-    } catch (e) { await refresh(); app.toast('Couldn’t Join The List Yet — Check Your Connection'); }
+      if (t && t.owner !== uid) { app.toast('You joined “' + t.name + '”!'); if (t.share_map) loadSharedMap(t.id); }
+    } catch (e) { await refresh(); app.toast('Couldn’t join the list yet. Check your connection?'); }
   }
 
   async function create(fields) {
@@ -135,7 +135,7 @@ const NYCLists = (() => {
         if (!row) {   // deleted, or you were taken off it
           dirty.delete(id); delete bases[id];
           set({ trips: trips().filter(t => t.id !== id), tripId: app.state.tripId === id ? null : app.state.tripId, tripSel: app.state.tripId === id ? null : app.state.tripSel });
-          app.toast('That List Isn’t Shared With You Anymore'); break;
+          app.toast('That list isn’t shared with you anymore.'); break;
         }
         const remote = normD(row.data), target = merge(bases[id] || remote, local, remote);
         let rev = row.rev;
@@ -163,23 +163,23 @@ const NYCLists = (() => {
   async function meta(id, patch) {
     set({ trips: trips().map(t => t.id === id ? { ...t, ...patch } : t) }); persist();
     try { const { error } = await sb().from(T).update(patch).eq('id', id); if (error) throw error; return true; }
-    catch (e) { app.toast('Couldn’t Save That — Check Your Connection'); refresh(); return false; }
+    catch (e) { app.toast('Couldn’t save that. Check your connection?'); refresh(); return false; }
   }
   const newCode = id => meta(id, { invite_code: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, '').slice(0, 14) });
   async function removeMember(id, userId) {
     set({ trips: trips().map(t => t.id === id ? { ...t, members: t.members.filter(m => m.user_id !== userId) } : t) });
     const { error } = await sb().from(M).delete().eq('trip_id', id).eq('user_id', userId);
-    if (error) app.toast('Couldn’t Remove Them — Check Your Connection'); refresh();
+    if (error) app.toast('Couldn’t remove them. Check your connection?'); refresh();
   }
   async function leave(id) {
     const { error } = await sb().from(M).delete().eq('trip_id', id).eq('user_id', uid);
-    if (error) { app.toast('Couldn’t Leave — Check Your Connection'); return; }
-    dropLocal(id); app.toast('You Left The List');
+    if (error) { app.toast('Couldn’t leave. Check your connection?'); return; }
+    dropLocal(id); app.toast('You left the list.');
   }
   async function remove(id) {
     const { error } = await sb().from(T).delete().eq('id', id);
-    if (error) { app.toast('Couldn’t Delete It — Check Your Connection'); return; }
-    dropLocal(id); app.toast('List Deleted');
+    if (error) { app.toast('Couldn’t delete it. Check your connection?'); return; }
+    dropLocal(id); app.toast('List deleted.');
   }
   function dropLocal(id) { delete bases[id]; dirty.delete(id); set({ trips: trips().filter(t => t.id !== id), tripId: null, tripSel: null }); persist(); }
 
@@ -237,11 +237,11 @@ const gSearch = p => 'https://www.google.com/maps/search/?api=1&query=' + encode
 Object.assign(Component.prototype, {
   tripCur() { const s = this.state; return s.trips.find(t => t.id === s.tripId) || null; },
   // A list's own picture (instead of its initial), saved in the uploader's photo folder and shared through the list's data.
-  pickTripPhoto(id, file) { if (!file) return; if (!window.NYCSync || this.state.auth !== 'signedIn') { this.toast('Sign In To Add Photos'); return; }
+  pickTripPhoto(id, file) { if (!file) return; if (!window.NYCSync || this.state.auth !== 'signedIn') { this.toast('Sign in to add photos.'); return; }
     this.setState({ tripPhotoBusy: true });
     shrinkImage(file, 480, 480).then(b => NYCSync.uploadImage('list-' + id, b)).then(r => { this.setState({ tripPhotoBusy: false });
-      if (r.error) { this.toast(photoErr(r.error)); return; } NYCLists.edit(id, d => ({ ...d, photo: r.url })); this.toast('List Photo Saved'); })
-      .catch(e => { this.setState({ tripPhotoBusy: false }); this.toast((e && e.message) || 'Couldn’t Upload It'); }); },
+      if (r.error) { this.toast(photoErr(r.error)); return; } NYCLists.edit(id, d => ({ ...d, photo: r.url })); this.toast('List photo saved. Cute.'); })
+      .catch(e => { this.setState({ tripPhotoBusy: false }); this.toast((e && e.message) || 'Couldn’t upload it.'); }); },
   tripPerm(t) { const me = NYCLists.uid(), own = !!t && t.owner === me;
     return { own, edit: !!t && (own || t.share_list), list: !!t && (own || t.share_list), map: !!t && !own && t.share_map }; },
   tripViewEff(t) { const p = this.tripPerm(t); if (!t) return 'list'; if (!p.list) return 'map'; return this.state.tripView === 'map' && p.map ? 'map' : 'list'; },
@@ -261,7 +261,7 @@ Object.assign(Component.prototype, {
   saveStopNote(tid, sid, text) { const me = NYCLists.uid(), key = sid + ':' + me, t = String(text || '').trim().slice(0, 500);
     NYCLists.edit(tid, d => { const rest = (d.notes || []).filter(x => x.id !== key);
       return { ...d, notes: t ? [...rest, { id: key, s: sid, u: me, n: (NYCSync.displayName && NYCSync.displayName()) || 'Me', t, at: Date.now() }] : rest }; });
-    this.setState({ stopNoteDraft: null }); this.toast(t ? 'Note Saved' : 'Note Removed'); },
+    this.setState({ stopNoteDraft: null }); this.toast(t ? 'Note saved.' : 'Note removed.'); },
   stopTally(t, sid) { const me = NYCLists.uid(), vs = (t.data.votes || []).filter(x => x.s === sid), ns = (t.data.notes || []).filter(x => x.s === sid && x.t);
     const mine = vs.find(x => x.u === me);
     return { up: vs.filter(x => x.v > 0).length, down: vs.filter(x => x.v < 0).length, my: mine ? mine.v : 0, notes: ns }; },
@@ -307,7 +307,7 @@ Object.assign(Component.prototype, {
     const home = CITY_ORDER.find(k => inBox([np.lat, np.lng], CITIES[k])) || CUR.id; np.city = home;
     if (home === CUR.id) this.setState(st => ({ places: [np, ...st.places], ...(newCats ? { cats: newCats } : {}) }));
     else this.setState(st => ({ otherPlaces: [np, ...(st.otherPlaces || [])], ...(newCats ? { cats: newCats } : {}) }));
-    this.toast(home === CUR.id ? 'Saved To Your Map!' : 'Saved To Your ' + CITIES[home].name + ' Map!');
+    this.toast(home === CUR.id ? 'Saved to your map.' : 'Saved to your ' + CITIES[home].name + ' map.');
   },
   openTrip(id) { const t = this.state.trips.find(x => x.id === id); const p = this.tripPerm(t);
     this.setState({ tab: 'lists', tripId: id, tripStopMap: false, tripDay: 'all', tripView: p.list ? 'list' : 'map', tripSel: null, selId: null, routeFor: null, tripShareOpen: false, tripEditOpen: false, confirmTripDel: false });
@@ -320,11 +320,11 @@ Object.assign(Component.prototype, {
       const t = await NYCLists.create({ name, data: { stops: [], days: s.newTripDays || 0, start: s.newTripStart || '', cats: [] } });
       const pid = s.newTripAddPid; const p = pid && this.state.places.find(x => x.id === pid);
       this.setState({ newTripOpen: false, newTripBusy: false, newTripName: '', newTripDays: 0, newTripStart: '', newTripAddPid: null, listChoose: null });
-      if (p) { this.addStopsTo(t.id, [p], true); this.toast('Added To “' + t.name + '”'); }
-      else { this.openTrip(t.id); this.toast('List Made — Now Add Some Spots'); }
+      if (p) { this.addStopsTo(t.id, [p], true); this.toast('Added to “' + t.name + '”.'); }
+      else { this.openTrip(t.id); this.toast('List made. Now fill it up!'); }
     } catch (e) {
       const m = String(e && e.message || ''); this.setState({ newTripBusy: false });
-      this.toast(/does not exist|could not find/i.test(m) ? 'Lists Need The One-Time Database Setup First' : 'Couldn’t Make The List — Check Your Connection');
+      this.toast(/does not exist|could not find/i.test(m) ? 'Lists need the one-time database setup first.' : 'Couldn’t make the list. Check your connection?');
     }
   },
   inviteLink(t) { return SITE() + '/?join=' + encodeURIComponent(t.invite_code); },
@@ -334,7 +334,7 @@ Object.assign(Component.prototype, {
     if (navigator.share) { try { await navigator.share({ title: t.name, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     this.copyInvite(t); },
   copyInvite(t) { const v = this.inviteText(t) + '\n' + this.inviteLink(t);
-    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => this.toast('Invite Link Copied!')).catch(() => this.toast('Press And Hold The Link To Copy It')); },
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => this.toast('Invite link copied. Go send it!')).catch(() => this.toast('Press and hold the link to copy it.')); },
   setShare(t, mode) { NYCLists.meta(t.id, { share_list: mode !== 'map', share_map: mode !== 'list' }); },
 
   // ---- map on a list's page ----
@@ -405,7 +405,7 @@ Object.assign(Component.prototype, {
     const sub = vis.reverse(), all = this._walletAll || front, pos = all.map((id, i) => front.includes(id) ? i : -1).filter(i => i >= 0), full = [...all];
     pos.forEach((i, k) => { full[i] = sub[k]; });
     this.setState({ walletDrag: null, ...(wd.over !== wd.from ? { listOrder: full } : {}) });
-    if (wd.over !== wd.from) this.toast('List Order Saved');
+    if (wd.over !== wd.from) this.toast('New order, saved.');
   },
   // Stops the page scrolling while a card is lifted (iOS needs a non-passive touchmove listener).
   walletRef(el) { if (!el || el._wl) return; el._wl = 1; el.addEventListener('touchmove', e => { if (this._wd && e.cancelable) e.preventDefault(); }, { passive: false }); },
@@ -504,7 +504,7 @@ Object.assign(Component.prototype, {
         hasToggle: perm.list && perm.map, listTabBg: view === 'list' ? '#FFFFFF' : 'transparent', listTabFg: view === 'list' ? C.blue : '#fff', mapTabBg: view === 'map' ? '#FFFFFF' : 'transparent', mapTabFg: view === 'map' ? C.blue : '#fff',
         mapTabLabel: (t.owner_name ? t.owner_name.split(' ')[0] + '’s' : 'Their') + ' Map',
         viewList: () => this.setState({ tripView: 'list', tripSel: null }), viewMap: () => { this.setState({ tripView: 'map', tripSel: null }); NYCLists.loadSharedMap(t.id); },
-        mapNote: !sm ? 'Loading The Map…' : sm.off ? 'This Map Isn’t Shared Anymore.' : sm.places.length ? `${sm.places.length} Spots · Tap A Pin To Add It${perm.list ? ' To The List' : ''} Or Save It` : 'No Spots On This Map Yet.',
+        mapNote: !sm ? 'Loading The Map…' : sm.off ? 'This map isn’t shared anymore.' : sm.places.length ? `${sm.places.length} Spots · Tap A Pin To Add It${perm.list ? ' To The List' : ''} Or Save It` : 'No Spots On This Map Yet.',
         wbg: w.bg, wfg: w.fg, range: dateRange(d.start, d.days), cd: countdown(d.start, d.days), bigN: shownRows.length,
         bigLbl: oneDay ? (shownRows.length === 1 ? 'stop' : 'stops') + (oneDay.day ? ' · Day ' + oneDay.day : ' · Not On A Day') : (shownRows.length === 1 ? 'spot' : 'spots'),
         travel: travel ? fmtShort(travel).toUpperCase() + ' TRAVEL' : '', spotsTop: perm.list ? nSp + (nSp === 1 ? ' SPOT' : ' SPOTS') : 'VIEW ONLY', spotsBot: d.days ? d.days + (d.days === 1 ? ' DAY' : ' DAYS') : '',
@@ -517,7 +517,7 @@ Object.assign(Component.prototype, {
         people, openShare: () => this.setState({ tripShareOpen: true, tripSel: null }), back: () => this.setState({ tripId: null, tripSel: null, tripStopMap: false }),
         delLabel: perm.own ? (s.confirmTripDel ? 'Tap Again To Delete This List' : 'Delete List') : (s.confirmTripDel ? 'Tap Again To Leave' : 'Leave This List'),
         onDel: () => { if (!s.confirmTripDel) return this.setState({ confirmTripDel: true }); this.setState({ confirmTripDel: false }); perm.own ? NYCLists.remove(t.id) : NYCLists.leave(t.id); },
-        syncNote: ({ saving: 'Saving…', offline: 'Offline — Saves When You’re Back Online' })[s.tripsSync] || '' };
+        syncNote: ({ saving: 'Saving…', offline: 'Offline. Saves when you’re back online.' })[s.tripsSync] || '' };
     }
 
     // The card for a tapped stop or a tapped pin on a friend's map.
@@ -535,10 +535,10 @@ Object.assign(Component.prototype, {
           hasUrl: !!p.url, srcBg: src.bg, openLabel: 'Open ' + src.label, openSource: () => window.open(p.url, '_blank'), openDirs: () => window.open(gSearch(p), '_blank'),
           saveLabel: saved ? 'On Your Map ✓' : 'Save To My Map', saveBg: saved ? C.green : '#fff', saveFg: saved ? '#fff' : C.green, onSave: () => { if (!saved) this.saveToMyMap(p, cats); },
           isStop: !!st, canRemove: !!st && perm.edit, delLabel: s.confirmStopDel ? 'Tap Again To Remove' : 'Remove From List',
-          onRemove: () => { if (!s.confirmStopDel) return this.setState({ confirmStopDel: true }); this.removeStop(t.id, st.id); this.setState({ tripSel: null, confirmStopDel: false }); this.toast('Removed From The List'); },
+          onRemove: () => { if (!s.confirmStopDel) return this.setState({ confirmStopDel: true }); this.removeStop(t.id, st.id); this.setState({ tripSel: null, confirmStopDel: false }); this.toast('Removed from the list.'); },
           canAdd: s.tripSel.kind === 'shared' && perm.list, addLabel: onList ? 'On The List ✓' : '+ Add To This List', addBg: onList ? C.navy : C.orange, addFg: onList ? C.yellow : '#fff',
-          onAdd: () => { if (onList) { this.removeStop(t.id, onList.id); this.toast('Taken Off The List'); return; } this.addStopsTo(t.id, [p], false);
-            NYCLists.edit(t.id, x => { const c2 = cats[p.cat]; return c2 && !x.cats.some(y => y.id === c2.id) ? { ...x, cats: [...x.cats, { ...c2, emoji: emo(c2) }] } : null; }); this.toast('Added To “' + t.name + '”'); },
+          onAdd: () => { if (onList) { this.removeStop(t.id, onList.id); this.toast('Taken off the list.'); return; } this.addStopsTo(t.id, [p], false);
+            NYCLists.edit(t.id, x => { const c2 = cats[p.cat]; return c2 && !x.cats.some(y => y.id === c2.id) ? { ...x, cats: [...x.cats, { ...c2, emoji: emo(c2) }] } : null; }); this.toast('Added to “' + t.name + '”.'); },
           close: () => this.setState({ tripSel: null, confirmStopDel: false, stopNoteDraft: null }) };
         if (st) { const ty = this.stopTally(t, st.id), mineN = ty.notes.find(x => x.u === me), draft = s.stopNoteDraft && s.stopNoteDraft.id === st.id ? s.stopNoteDraft.t : null;
           const names = new Map([[t.owner, t.owner_name || 'Owner'], ...t.members.map(m => [m.user_id, m.name || 'Someone'])]);
@@ -561,8 +561,8 @@ Object.assign(Component.prototype, {
       share = { name: t.name,
         opts: [opt('list', 'Just This List', 'They Can Add, Sort And Remove Spots On It'), opt('map', 'Just My Map', 'They Can Look Around All Your Saved Spots — View Only'), opt('both', 'Both', 'The List To Plan Together, Plus A Look At Your Map')],
         link: this.inviteLink(t), share: () => this.shareInvite(t), copy: () => this.copyInvite(t), canNativeShare: !!navigator.share,
-        newLink: () => { if (!s.confirmNewLink) return this.setState({ confirmNewLink: true }); this.setState({ confirmNewLink: false }); NYCLists.newCode(t.id).then(ok => ok && this.toast('New Link Made — The Old One No Longer Works')); },
-        newLinkLabel: s.confirmNewLink ? 'Tap Again — The Old Link Will Stop Working' : 'Make A New Link',
+        newLink: () => { if (!s.confirmNewLink) return this.setState({ confirmNewLink: true }); this.setState({ confirmNewLink: false }); NYCLists.newCode(t.id).then(ok => ok && this.toast('New link made. The old one stopped working.')); },
+        newLinkLabel: s.confirmNewLink ? 'Tap again. The old link will stop working.' : 'Make A New Link',
         people: t.members.map(m => ({ key: m.user_id, name: m.name || 'Someone', onRemove: () => NYCLists.removeMember(t.id, m.user_id) })), hasPeople: !!t.members.length,
         close: () => this.setState({ tripShareOpen: false, confirmNewLink: false }) };
     }
@@ -585,10 +585,10 @@ Object.assign(Component.prototype, {
         saveBg: (!perm.own || (s.tripEditName || '').trim()) ? C.orange : '#A9ADC2',
         save: () => {
           const nm = toTitle((s.tripEditName || '').trim());
-          if (perm.own && !nm) { this.toast('Give The List A Name'); return; }
+          if (perm.own && !nm) { this.toast('Give the list a name first.'); return; }
           if (perm.own && nm !== t.name) NYCLists.meta(t.id, { name: nm });
           NYCLists.edit(t.id, x => ({ ...x, days, start: days ? start : x.start, stops: x.stops.map(st => st.day > days ? { ...st, day: 0 } : st) }));
-          this.setState({ tripEditOpen: false }); this.toast('List Updated');
+          this.setState({ tripEditOpen: false }); this.toast('List updated.');
         },
         close: () => this.setState({ tripEditOpen: false }) };
     }
@@ -599,7 +599,7 @@ Object.assign(Component.prototype, {
       const q = (s.tripPickQ || '').trim().toLowerCase(), have = new Set(t.data.stops.filter(st => st.by === me && st.pid).map(st => st.pid)), catOf = id => s.cats.find(c => c.id === id) || { name: 'Spot', color: '#888' };
       const list = s.places.filter(p => !q || (p.name + ' ' + p.area + ' ' + catOf(p.cat).name).toLowerCase().includes(q));
       pick = { title: 'Add To “' + t.name + '”', q: s.tripPickQ || '', onQ: e => this.setState({ tripPickQ: e.target.value }), close: () => this.setState({ tripPickOpen: false }),
-        count: t.data.stops.length, empty: !list.length, emptyMsg: s.places.length ? 'No Spots Match That' : 'Your Map Is Empty — Use “+ New Spot” To Add One Straight To The List.',
+        count: t.data.stops.length, empty: !list.length, emptyMsg: s.places.length ? 'No Spots Match That' : 'Your map is empty, bestie. Use “+ New Spot” to add one straight to the list.',
         rows: list.map(p => { const c = catOf(p.cat), on = have.has(p.id); return { key: p.id, name: p.name, catName: c.name, catBg: c.color, emoji: emo(c), area: p.area, chk: on ? '✓' : '', chkBg: on ? C.orange : '#fff', ring: on ? C.orange : 'transparent', onClick: () => this.toggleMapStop(t.id, p) }; }) };
     }
 
@@ -607,9 +607,9 @@ Object.assign(Component.prototype, {
     let choose = null;
     if (s.listChoose) {
       const p = s.places.find(x => x.id === s.listChoose);
-      if (p) choose = { name: p.name, close: () => this.setState({ listChoose: null }), empty: !s.trips.some(tr => this.tripPerm(tr).edit), ready: s.tripsState === 'ready', setupMsg: s.tripsState === 'missing' ? 'Lists Need The One-Time Database Setup First.' : '',
+      if (p) choose = { name: p.name, close: () => this.setState({ listChoose: null }), empty: !s.trips.some(tr => this.tripPerm(tr).edit), ready: s.tripsState === 'ready', setupMsg: s.tripsState === 'missing' ? 'Lists need the one-time database setup first.' : '',
         rows: s.trips.filter(tr => this.tripPerm(tr).edit).map(tr => { const on = tr.data.stops.some(st => st.by === me && st.pid === p.id);
-          return { key: tr.id, name: tr.name, sub: who(tr), chk: on ? '✓' : '', chkBg: on ? C.orange : '#fff', ring: on ? C.orange : 'transparent', onClick: () => { this.toggleMapStop(tr.id, p); this.toast(on ? 'Taken Off “' + tr.name + '”' : 'Added To “' + tr.name + '”'); } }; }),
+          return { key: tr.id, name: tr.name, sub: who(tr), chk: on ? '✓' : '', chkBg: on ? C.orange : '#fff', ring: on ? C.orange : 'transparent', onClick: () => { this.toggleMapStop(tr.id, p); this.toast(on ? 'Taken off “' + tr.name + '”.' : 'Added to “' + tr.name + '”.'); } }; }),
         newList: () => this.setState({ newTripOpen: true, newTripName: '', newTripDays: 0, newTripStart: '', newTripAddPid: p.id }) };
     }
 

@@ -27,12 +27,12 @@ async function transcribe(buf, model, hint) {
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
-  if (!process.env.OPENAI_API_KEY) return send(res, 503, { error: 'Listening To Videos Isn’t Set Up Yet — Add OPENAI_API_KEY In Vercel.' });
+  if (!process.env.OPENAI_API_KEY) return send(res, 503, { error: 'Listening to videos isn’t set up yet. Add OPENAI_API_KEY in Vercel.' });
   if (!(await requireUser(req, res))) return;
 
   let buf;
-  try { buf = await readRaw(req); } catch (e) { return send(res, 400, { error: 'Couldn’t Read The Audio.' }); }
-  if (!buf || buf.length < 1000) return send(res, 400, { error: 'That Clip Has No Audio.' });
+  try { buf = await readRaw(req); } catch (e) { return send(res, 400, { error: 'Couldn’t read the audio.' }); }
+  if (!buf || buf.length < 1000) return send(res, 400, { error: 'That clip has no audio.' });
 
   try {
     let text;
@@ -41,6 +41,6 @@ module.exports = async (req, res) => {
     catch (e) { if (MODEL !== 'whisper-1' && (e.status === 400 || e.status === 404)) text = await transcribe(buf, 'whisper-1', hint); else throw e; }
     return send(res, 200, { text });
   } catch (e) {
-    return send(res, 502, { error: 'Couldn’t Listen To The Video Right Now — ' + (e.message || 'Try Again') });
+    return send(res, 502, { error: 'Couldn’t listen to the video right now. ' + (e.message || 'Try Again') });
   }
 };

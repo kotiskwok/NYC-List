@@ -28,12 +28,12 @@ function send(res, code, body) {
 // Only people signed in to this app (checked with Supabase) may use the paid AI services.
 async function requireUser(req, res) {
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (!token) { send(res, 401, { error: 'Sign In To Use AI Fill.' }); return null; }
+  if (!token) { send(res, 401, { error: 'Sign in to use AI fill.' }); return null; }
   try {
     const u = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: SUPABASE_KEY, authorization: 'Bearer ' + token } });
-    if (!u.ok) { send(res, 401, { error: 'Your Sign-In Expired — Sign In Again.' }); return null; }
+    if (!u.ok) { send(res, 401, { error: 'Your sign-in expired. Sign in again?' }); return null; }
     return await u.json();
-  } catch (e) { send(res, 502, { error: 'Couldn’t Check Your Sign-In. Try Again.' }); return null; }
+  } catch (e) { send(res, 502, { error: 'Couldn’t check your sign-in. Try again?' }); return null; }
 }
 
 async function readRaw(req) {

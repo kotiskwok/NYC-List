@@ -15,8 +15,8 @@ module.exports = async (req, res) => {
     const r = await fetch('https://nominatim.openstreetmap.org/search?' + p, { signal: ac.signal, headers: { 'user-agent': 'SpottedIn/1.0 (https://nyc-lovat.vercel.app)', referer: 'https://nyc-lovat.vercel.app/', 'accept-language': 'en' } });
     clearTimeout(t);
     const txt = await r.text();
-    if (!r.ok || txt[0] !== '[') return send(res, 502, { error: 'Address Search Unavailable.' });
+    if (!r.ok || txt[0] !== '[') return send(res, 502, { error: 'Address search is unavailable.' });
     res.statusCode = 200; res.setHeader('content-type', 'application/json'); res.setHeader('cache-control', 'public, max-age=3600, s-maxage=86400');
     res.end(txt);
-  } catch (e) { send(res, 502, { error: 'Address Search Unavailable.' }); }
+  } catch (e) { send(res, 502, { error: 'Address search is unavailable.' }); }
 };

@@ -30,7 +30,7 @@ function keyHint(raw) {
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   const team = process.env.MAPKIT_TEAM_ID, kid = process.env.MAPKIT_KEY_ID, raw = process.env.MAPKIT_PRIVATE_KEY;
-  if (!team || !kid || !raw) return send(res, 503, { error: 'Apple Maps Isn’t Set Up Yet.' });
+  if (!team || !kid || !raw) return send(res, 503, { error: 'Apple Maps isn’t set up yet.' });
 
   const origin = String(req.headers.origin || ''), ref = String(req.headers.referer || '');
   let host = '';

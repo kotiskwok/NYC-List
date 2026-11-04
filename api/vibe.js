@@ -35,11 +35,11 @@ const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
-  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI Isn’t Set Up Yet — Add ANTHROPIC_API_KEY In Vercel.' });
+  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI isn’t set up yet. Add ANTHROPIC_API_KEY in Vercel.' });
   if (!(await requireUser(req, res))) return;
   let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
   const q = clip(body.q, 160);
-  if (q.length < 2) return send(res, 400, { error: 'Type What You’re In The Mood For.' });
+  if (q.length < 2) return send(res, 400, { error: 'Type what you’re in the mood for.' });
   const spots = (Array.isArray(body.spots) ? body.spots : []).slice(0, 500).filter(s => s && s.id && s.n);
   if (!spots.length) return send(res, 200, { matches: [] });
   const city = cityFor(body.city);
@@ -64,7 +64,7 @@ Call pick_spots with your picks.`;
       body: JSON.stringify({ model: MODEL, max_tokens: 1500, tools: [TOOL], tool_choice: { type: 'tool', name: 'pick_spots' }, messages: [{ role: 'user', content: prompt }] })
     });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return send(res, 502, { error: 'Vibe Search Didn’t Work Right Now — ' + ((j.error && j.error.message) || 'Try Again') });
+    if (!r.ok) return send(res, 502, { error: 'Vibe search didn’t work right now. ' + ((j.error && j.error.message) || 'Try Again') });
     const use = (j.content || []).find(b => b.type === 'tool_use' && b.name === 'pick_spots');
     const seen = new Set(), matches = [];
     for (const m of ((use && use.input && use.input.matches) || [])) {
@@ -75,6 +75,6 @@ Call pick_spots with your picks.`;
     }
     return send(res, 200, { matches });
   } catch (e) {
-    return send(res, 502, { error: 'Vibe Search Didn’t Work Right Now — Try Again.' });
+    return send(res, 502, { error: 'Vibe search didn’t work right now. Try again?' });
   }
 };

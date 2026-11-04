@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) return send(res, 503, { error: 'Account Deletion Isn’t Set Up Yet. Email kwokshulum@gmail.com And It’ll Be Done By Hand.' });
+  if (!key) return send(res, 503, { error: 'Account deletion isn’t set up yet. Email kwokshulum@gmail.com and it’ll be done by hand.' });
   const user = await requireUser(req, res);
   if (!user) return;
   try {
@@ -26,9 +26,9 @@ module.exports = async (req, res) => {
     const r = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + encodeURIComponent(user.id), {
       method: 'DELETE', headers: { apikey: key, authorization: 'Bearer ' + key }
     });
-    if (!r.ok) return send(res, 502, { error: 'Couldn’t Delete The Account Right Now. Try Again In A Minute.' });
+    if (!r.ok) return send(res, 502, { error: 'Couldn’t delete the account right now. Try again in a minute.' });
     send(res, 200, { ok: true });
   } catch (e) {
-    send(res, 502, { error: 'Couldn’t Delete The Account Right Now. Try Again In A Minute.' });
+    send(res, 502, { error: 'Couldn’t delete the account right now. Try again in a minute.' });
   }
 };

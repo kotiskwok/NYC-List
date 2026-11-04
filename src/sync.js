@@ -118,18 +118,18 @@ const NYCSync = (() => {
 
   const friendly = m => {
     m = String(m || '');
-    if (/invalid login/i.test(m)) return 'That Email And Password Don’t Match. Try Again.';
-    if (/not confirmed/i.test(m)) return 'Confirm Your Email First — Check Your Inbox For The Link.';
-    if (/already registered|already exists/i.test(m)) return 'You Already Have An Account. Sign In Instead.';
-    if (/signups not allowed|signup is disabled/i.test(m)) return 'New Accounts Are Turned Off For This App Right Now. Ask The Person Who Invited You To Turn Them On.';
-    if (/fetch|network/i.test(m)) return 'Can’t Reach The Server. Check Your Connection.';
+    if (/invalid login/i.test(m)) return 'That email and password don’t match. Try again?';
+    if (/not confirmed/i.test(m)) return 'Confirm your email first. Check your inbox for the link.';
+    if (/already registered|already exists/i.test(m)) return 'You already have an account. Sign in instead.';
+    if (/signups not allowed|signup is disabled/i.test(m)) return 'New accounts are turned off right now. Ask the person who invited you to turn them on.';
+    if (/fetch|network/i.test(m)) return 'Can’t reach the server. Check your connection?';
     return m;
   };
 
   async function submit() {
     if (!sb) return;
     const s = app.state, email = (s.authEmail || '').trim(), password = s.authPass || '';
-    if (!email || !password) { set({ authMsg: 'Enter Your Email And Password.' }); return; }
+    if (!email || !password) { set({ authMsg: 'Enter your email and password.' }); return; }
     if (s.authMode === 'up' && password.length < 6) { set({ authMsg: 'Use At Least 6 Characters For Your Password.' }); return; }
     set({ authBusy: true, authMsg: '' });
     try {
@@ -139,7 +139,7 @@ const NYCSync = (() => {
         : await sb.auth.signInWithPassword({ email, password });
       if (r.error) { set({ authBusy: false, authMsg: friendly(r.error.message) }); return; }
       if (s.authMode === 'up' && !r.data.session) {
-        set({ authBusy: false, authMode: 'in', authPass: '', authMsg: 'Almost There — Tap The Link We Emailed You, Then Sign In Here.' });
+        set({ authBusy: false, authMode: 'in', authPass: '', authMsg: 'Almost there. Tap the link we emailed you, then sign in here.' });
         return;
       }
       set({ authBusy: false });
@@ -174,7 +174,7 @@ const NYCSync = (() => {
   // Any photo you add (a spot's or a list's) goes in your own folder of the same bucket: <user id>/<name>.jpg.
   // Answers { url } with a cache-busting version, or { error } ('setup' when avatars.sql hasn't been run).
   async function uploadImage(name, blob) {
-    if (!sb || !user) return { error: 'Sign In To Add Photos.' };
+    if (!sb || !user) return { error: 'Sign in to add photos.' };
     const path = user.id + '/' + name + '.jpg';
     const up = await sb.storage.from(AVATAR).upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '300' });
     if (up.error) return { error: /bucket|not found/i.test(up.error.message || '') ? 'setup' : (up.error.message || 'Upload Failed.') };
@@ -182,7 +182,7 @@ const NYCSync = (() => {
   }
   async function removeImage(name) { if (!sb || !user) return; try { await sb.storage.from(AVATAR).remove([user.id + '/' + name + '.jpg']); } catch (e) {} }
   async function setAvatar(blob) {
-    if (!sb || !user) return { error: 'Sign In First.' };
+    if (!sb || !user) return { error: 'Sign in first.' };
     const up = await sb.storage.from(AVATAR).upload(user.id + '/avatar.jpg', blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '300' });
     if (up.error) return { error: /bucket|not found/i.test(up.error.message || '') ? 'setup' : (up.error.message || 'Upload Failed.') };
     const v = Date.now();
@@ -190,9 +190,9 @@ const NYCSync = (() => {
     set({ avatarV: v }); return { ok: true };
   }
   async function removeAvatar() {
-    if (!sb || !user) return { error: 'Sign In First.' };
+    if (!sb || !user) return { error: 'Sign in first.' };
     const r = await sb.storage.from(AVATAR).remove([user.id + '/avatar.jpg']);
-    if (r.error) return { error: r.error.message || 'Couldn’t Remove It.' };
+    if (r.error) return { error: r.error.message || 'Couldn’t remove it.' };
     try { const u = await sb.auth.updateUser({ data: { avatar_v: null } }); if (u.data && u.data.user) user = u.data.user; } catch (e) {}
     set({ avatarV: 0 }); return { ok: true };
   }

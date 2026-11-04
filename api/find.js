@@ -36,11 +36,11 @@ const TOOL = {
 module.exports = async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
-  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI Isn’t Set Up Yet — Add ANTHROPIC_API_KEY In Vercel.' });
+  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI isn’t set up yet. Add ANTHROPIC_API_KEY in Vercel.' });
   if (!(await requireUser(req, res))) return;
   let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
   const q = String(body.q || '').trim().slice(0, 120);
-  if (q.length < 2) return send(res, 400, { error: 'Type A Place Name First.' });
+  if (q.length < 2) return send(res, 400, { error: 'Type a place name first.' });
   const cats = (body.categories || []).map(c => `- ${c.id}: ${c.name}`).join('\n');
   const hoods = (body.neighborhoods || []).slice(0, 400).join(', ');
   const city = cityFor(body.city), tool = localizeObj(TOOL, city);
@@ -70,7 +70,7 @@ When you are done, call save_places.`, city);
         body: JSON.stringify({ model: MODEL, max_tokens: 2000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, tool], messages })
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) return send(res, 502, { error: 'Web Search Didn’t Work Right Now — ' + ((j.error && j.error.message) || 'Try Again') });
+      if (!r.ok) return send(res, 502, { error: 'Web search didn’t work right now. ' + ((j.error && j.error.message) || 'Try Again') });
       const use = (j.content || []).find(b => b.type === 'tool_use' && b.name === 'save_places');
       if (use) { out = use.input; break; }
       if (j.stop_reason === 'pause_turn') { messages.push({ role: 'assistant', content: j.content }); continue; }
@@ -78,8 +78,8 @@ When you are done, call save_places.`, city);
       messages.push({ role: 'assistant', content: j.content }, { role: 'user', content: 'Now call save_places with what you found (an empty list if nothing).' });
     }
     const places = ((out && out.places) || []).filter(p => p && p.name).slice(0, 5);
-    return send(res, 200, { places, message: places.length ? '' : localize('Couldn’t Find "' + q + '" In NYC. Try Pasting Its Google Maps Link.', city) });
+    return send(res, 200, { places, message: places.length ? '' : localize('Couldn’t find "' + q + '" in NYC. Try pasting its Google Maps link.', city) });
   } catch (e) {
-    return send(res, 502, { error: 'Web Search Didn’t Work Right Now — Try Again.' });
+    return send(res, 502, { error: 'Web search didn’t work right now. Try again?' });
   }
 };
