@@ -103,6 +103,8 @@ const noteLines = txt => {
   });
   return out;
 };
+// One sentence per line (the app's style for messages, tips and empty states).
+const Lines = txt => noteLines(txt).map((l, i) => html`<span key=${i} style=${S('display:block')}>${l}</span>`);
 const Note = (txt, extra) => html`<div style=${S(`display:flex;flex-direction:column;gap:3px;${extra || ''}`)}>${noteLines(txt).map((l, i) => html`<span key=${i}>${l}</span>`)}</div>`;
 
 // The Spotted In logo (design "E2a", same as the app icon): SPOTTED in chunky yellow with a stacked red-orange
@@ -270,7 +272,7 @@ function ExploreScreen(v) {
   const endCard = (title, light, body, btns) => html`
     <div class="lg" style=${S(`position:absolute;left:0;right:0;top:0;${GL};border-radius:32px;padding:26px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center`)}>
       <div style=${S('font-size:26px;letter-spacing:-.8px;line-height:1.1')}><span style=${S('font-weight:900;font-style:italic')}>${title}</span> <span style=${S('font-weight:200')}>${light}</span></div>
-      <div style=${S('font-size:14px;font-weight:500;color:#4A5275;line-height:1.4')}>${body}</div>
+      <div style=${S('font-size:14px;font-weight:500;color:#4A5275;line-height:1.4')}>${Lines(body)}</div>
       <div style=${S('display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;justify-content:center')}>${btns}</div>
     </div>`;
   const pill = (label, onClick, dark) => html`<button onClick=${onClick} style=${S(`height:44px;padding:0 18px;border-radius:999px;border:${dark ? '0' : '1.5px solid rgba(16,24,63,.14)'};background:${dark ? '#10183F' : 'rgba(255,255,255,.7)'};color:${dark ? '#fff' : '#10183F'};font-weight:800;font-size:14px;cursor:pointer`)}>${label}</button>`;
@@ -287,7 +289,7 @@ function ExploreScreen(v) {
           </span>
         </div>
         <h1 style=${S('margin:0 4px;font-size:38px;line-height:.98;font-weight:900;font-style:italic;letter-spacing:-1.6px;color:#10183F')}>${v.exTitleA} <span style=${S('font-weight:200;font-style:normal')}>${v.exTitleB}</span></h1>
-        <div style=${S('align-self:flex-start;max-width:300px;padding:10px 14px;border-radius:22px 22px 22px 6px;background:#FFFFFF;box-shadow:0 6px 14px rgba(16,24,63,.07);font-size:15px;line-height:1.35;color:#10183F')}>${v.exGreeting.lead}${v.exGreeting.bold && html`<b style=${S('font-weight:800')}>${v.exGreeting.bold}</b>`}${v.exGreeting.tail}</div>
+        <div style=${S('align-self:flex-start;max-width:300px;padding:10px 14px;border-radius:22px 22px 22px 6px;background:#FFFFFF;box-shadow:0 6px 14px rgba(16,24,63,.07);font-size:15px;line-height:1.35;color:#10183F')}><span style=${S('display:block')}>${v.exGreeting.lead}${v.exGreeting.bold && html`<b style=${S('font-weight:800')}>${v.exGreeting.bold}</b>`}${v.exGreeting.tail}</span>${v.exGreeting.next && html`<span style=${S('display:block')}>${v.exGreeting.next}</span>`}</div>
         <div class="noscroll" style=${S('display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:0 16px')}>
           ${v.exVibes.map((c, i) => html`<button key=${i} onClick=${c.onClick} style=${S(`flex:none;height:38px;padding:0 14px;border-radius:999px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;white-space:nowrap;${c.hot ? 'border:0;background:#FF6B1A;color:#FFFFFF' : 'border:1.5px solid #10183F;background:#FFFFFF;color:#10183F'}`)}>${c.label}</button>`)}
         </div>
@@ -611,7 +613,7 @@ function PlaceCard(v) {
       </button>
       ${(sel.reserveSub || sel.reserveRetry) && html`
       <div style=${S('display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:0 8px;font-size:12.5px;font-weight:600;color:#4A5275')}>
-        ${sel.reserveSub && html`<span>${sel.reserveSub}</span>`}
+        ${sel.reserveSub && html`<span>${Lines(sel.reserveSub)}</span>`}
         <button onClick=${v.editSel} style=${S('border:0;background:none;padding:2px 0;color:#1B3DB8;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer')}>Add Their Link</button>
         ${sel.reserveRetry && html`<button onClick=${v.retryReserve} style=${S('border:0;background:none;padding:2px 0;color:#1B3DB8;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer')}>Check Again</button>`}
       </div>`}
@@ -809,7 +811,7 @@ const Sheet = (title, close, body, closeLabel, z) => html`
 const Msg = (title, text, btn, onBtn) => html`
   <div style=${S('background:#fff;border-radius:22px;padding:22px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center')}>
     <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:20px;color:#1B3DB8')}>${title}</div>
-    <div style=${S('font-size:13px;line-height:1.4;color:#4A5275')}>${text}</div>
+    <div style=${S('font-size:13px;line-height:1.4;color:#4A5275')}>${Lines(text)}</div>
     ${btn && html`<button onClick=${onBtn} style=${S('margin-top:4px;height:42px;padding:0 18px;border:0;border-radius:999px;background:#FF6B1A;color:#fff;font-weight:800;font-size:14px;cursor:pointer')}>${btn}</button>`}
   </div>`;
 
@@ -1659,7 +1661,7 @@ function Tour(v) {
       ${t.lines.map(([ic, txt], k) => html`
       <div key=${k} class="lg" style=${S(`${ROW};border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:12px`)}>
         <span style=${S(`width:36px;height:36px;flex:none;border-radius:50%;background:${tintOf(t.col)};color:${inkOf(t.col)};display:flex;align-items:center;justify-content:center`)}>${Ico(ic, 18, 'currentColor', 2.3)}</span>
-        <span style=${S('flex:1;min-width:0;font-size:14.5px;line-height:1.4;font-weight:600;color:#10183F')}>${txt}</span>
+        <span style=${S('flex:1;min-width:0;font-size:14.5px;line-height:1.4;font-weight:600;color:#10183F')}>${Lines(txt)}</span>
       </div>`)}
     </div>
     <div style=${S('margin-top:auto;display:flex;align-items:center;gap:10px;padding-top:6px')}>
@@ -1741,7 +1743,7 @@ function App(v) {
         ${v.reviewSheet && ReviewSheet(v)}
         ${v.tourOpen && !v.obOpen && Tour(v)}
         ${v.hasToast && html`
-        <div role="status" style=${S(`position:absolute;top:${T(54)};left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none`)}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${v.toast}</div></div>`}
+        <div role="status" style=${S(`position:absolute;top:${T(54)};left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none`)}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:24px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${Lines(v.toast)}</div></div>`}
       </div>
     </div>
   </div>`;

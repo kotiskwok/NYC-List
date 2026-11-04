@@ -925,9 +925,10 @@ class Component extends DCLogic {
       exTitleA:'Where We',exTitleB:new Date().getHours()>=17||new Date().getHours()<4?'Going Tonight?':'Going Today?',
       exGreeting:(()=>{const now=cityNow(CUR.id),open=s.places.filter(p=>{const o=openInfo(p,now);return o&&o.open;}),known=s.places.some(p=>p.hours&&!p.hours.none);
         const ref=s.here||(s.home?[s.home.lat,s.home.lng]:null),near=ref?[...(known?open:s.places)].filter(p=>reach(ref,[p.lat,p.lng])).map(p=>({p,m:bestOf(estimate(ref,[p.lat,p.lng])).min})).sort((a,b)=>a.m-b.m)[0]:null;
-        if(!s.places.length)return {lead:'Your map is empty, bestie.',bold:'',tail:' Save a spot you saw online and I’ll take it from there!'};
-        if(known&&open.length)return {lead:'Okay bestie, ',bold:open.length+(open.length===1?' spot is':' spots are')+' open right now',tail:near?' and '+near.p.name+' is only '+Math.max(1,Math.round(near.m))+' min away!!':'!!'};
-        return {lead:'You’ve got ',bold:s.places.length+(s.places.length===1?' spot':' spots')+' saved',tail:near?' and '+near.p.name+' is only '+Math.max(1,Math.round(near.m))+' min away!!':'. Pick a vibe or let me choose!!'};})(),
+        if(!s.places.length)return {lead:'Your map is empty, bestie.',bold:'',tail:'',next:'Save a spot you saw online and I’ll take it from there!'};
+        const far=near?near.p.name+' is only '+Math.max(1,Math.round(near.m))+' min away!!':'';
+        if(known&&open.length)return {lead:'Okay bestie, ',bold:open.length+(open.length===1?' spot is':' spots are')+' open now',tail:'!!',next:far||'Pick a vibe or let me choose!!'};
+        return {lead:'You’ve got ',bold:s.places.length+(s.places.length===1?' spot':' spots')+' saved',tail:'.',next:far||'Pick a vibe or let me choose!!'};})(),
       exVibes:[['Something Cozy','something cozy'],['Cheap Eats','cheap eats under $20'],['Date Night','date night'],['Surprise Me!!','']].map(([l,q])=>({label:l,hot:!q,
         onClick:()=>{if(!q){this.setState(st=>({exQuery:'',vibe:null,deckSeed:st.deckSeed+1,deck:{key:'',pos:0}}));this.toast('Shuffled. Trust me on this one.');return;}
           this.setState({exQuery:q},()=>this.runVibe());}})),openNow:s.openNow,openNowLabel:s.openNow&&s.hoursBusy?'CHECKING…':'OPEN NOW',toggleOpenNow:()=>this.toggleOpenNow(),
