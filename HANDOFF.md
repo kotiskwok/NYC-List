@@ -267,36 +267,72 @@ Endpoints check the caller's Supabase token, except `photo`, `geocode`, `bus` an
 ### App Store Connect / TestFlight
 - App **"Spotted in: Places To Go"** (Apple ID `6828702049`), version 1.0. Listing text, privacy answers and review notes: `native/APP_STORE.md`. Screenshots: `native/screenshots/`.
 - **TestFlight groups:** **Kotis' Inner Circle** (internal, builds arrive right away) and **Friends Beta** (external; Beta App Review for the first build, then a public invite link once "Ready to Test").
-- **What to Test** uses the same standing notes for every build (see §3):
+- **What to Test** uses the same standing notes for every build (see §3). TestFlight allows 4,000 characters; these are about 3,500.
 
 ```
-Hiii! Thank you for testing my app ♡
-Spotted In is my map of all the places I keep saving from TikTok and Instagram and never actually going to.
+Hiii! Thank you so much for testing my app ♡
+Spotted In is my map of all the places I keep saving from TikTok, Instagram and Threads and never actually going to.
+It turns those posts into a map you'll actually use, then helps you plan the day and go with friends.
 
-Save A Spot
-Tap Share → Spotted In on any TikTok, Instagram or Threads post, or paste a link with the orange +.
-It reads the caption, photos and video, then pins the place on your map.
+GETTING STARTED
+Make an account with your email and a password.
+Pick your home city and add your home address if you want travel times from home.
+The quick tour shows you around (you can reopen it anytime from Your Account).
 
-Your Map
-Every spot shows its hours, the nearest station and how long it takes to get there from home.
-Pick your city with the yellow button: NYC, Singapore, Hong Kong, Toronto, Boston or New York State.
+SAVE A SPOT
+On any TikTok, Instagram, Threads or Google Maps post, tap Share → Spotted In.
+A little ticket pops up and the spot fills itself in next time you open the app.
+You can also tap the orange + and paste a link.
+The AI reads the caption, every photo, the text on screen and what's said in the video, then pins the place on your map.
+Posts with lots of places give you a checklist, so you can add them all at once.
+No link? Search By Name, or pick a video from your camera roll.
 
-Explore
-Swipe up through your spots, one big photo at a time.
-Filter by Open Now or a category, or search a vibe like "somewhere cozy".
-Tap Plan to add one to your day.
+YOUR MAP
+Every spot gets a pin with its category icon or photo.
+Filter by category, or tap Open Now to see only what's open right now.
+Tap a pin for the place card: photo, hours, price, the nearest station and how long it takes from home.
+From there you can mark it Visited, add it to your plan or a list, add your own photo, or edit it.
+Restaurants get Reserve A Table, which finds their real booking page.
+Get There shows the subway or train route next to walking, and opens Google Maps for live times.
+Map Layers turns on subway lines, buses and bike docks if you want them.
 
-Plan Your Day
-The route tab puts your plan in order and tells you when you'll be done.
+SIX CITIES
+Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston and New York State.
+Each one uses its own transit for travel times.
+New York State is for day trips and weekends, with driving and Metro-North, LIRR and Amtrak.
 
-Lists With Friends
-Make a list for a trip or a visit, invite your friends and plan the days together.
+EXPLORE
+Swipe up through your saved spots, one big photo at a time.
+Tap Plan to add one to your day, Go for directions, or Share to send it to a friend.
+Use the dropdowns for Open Now, Haven't Been, or one category.
+The search button finds spots by name or area.
+Type a vibe like "somewhere cozy for a rainy day" and Vibe Search picks the best matches from your own spots.
 
-Reviews
-Rate and review the spots you've been to, and see what others think.
+PLAN YOUR DAY
+The route tab lines up your plan on the map with numbered stops.
+Set when you're leaving and how long you'll stay at each place.
+It shows your arrival times, the train lines between stops and when you'll be done.
+Auto-Order sorts the stops for you, and Start Route opens it all in Google Maps.
 
-Please try saving a few spots from posts you've actually been meaning to try.
-Tell me anything that's confusing, broken or missing.
+LISTS WITH FRIENDS
+Make a list for a trip or a visit, like "Sonia's Visit".
+Each list is a boarding pass in your wallet, with a countdown to the trip.
+Inside, the days run down a timeline, so you can add spots straight to Day 1 or Day 2.
+Invite friends with a link, and everyone can add spots, vote I'm In or Skip It, and leave notes for the group.
+You'll see when a friend is looking at the list, and changes show up for everyone within a second.
+
+REVIEWS
+Rate the spots you've been to with stars, a comment and a photo.
+Everyone who saved the same place can read them.
+You can report or block anyone, anytime.
+
+LIGHT AND DARK
+Spotted In follows your phone's light or dark mode, or pick one in Your Account → Appearance.
+
+WHAT I'D LOVE YOU TO TRY
+Save a few spots from posts you've actually been meaning to go to.
+Switch cities, plan a day and make a list with a friend.
+Tell me anything that's confusing, broken, slow or missing.
 Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and, for full App Store review, terms of use that forbid abusive content.
