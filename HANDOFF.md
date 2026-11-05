@@ -88,7 +88,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - **Chips:** All Spots, **Open Now** (only spots open right now, in that map's local time), then the categories.
 - **Pins:** a frosted ring with the category's line icon, or the spot's photo.
 - **Nearest To You** card, once your location is known. **My Location** button (if location fails, tap where you are).
-- **Map Layers** (per map; bike docks show live counts):
+- **Map Layers** (per map; bike docks show live counts). Everything starts **off**, transit lines and stations too, so the map stays clean and fast (`LAYERS.sub2` in `logic.js`):
 
 | Map | Layers |
 |---|---|
@@ -116,12 +116,11 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - On the NYS map: **Drive**, and **Train** (subway to Grand Central or Penn, regional train, then a walk or short drive). The fastest is marked.
 - Each option opens Google Maps for live times. Drag the sheet down to shrink it to a small bar above the tab bar.
 
-### Explore tab
-- **Title:** "Where We Going Today?" (before 5pm) or "Where We Going Tonight?".
-- **Greeting bubble** built from your spots: "Okay bestie, 10 spots are open now." / "Win Son Bakery is only 11 min away!" (or "You've got 14 spots saved." / "Type a vibe and I'll find it.").
-- **Ask Spotted Anything…** search (name, area, address, note). Typing a phrase shows a purple **✨ Vibe Search** pill: AI ranks your own saved spots best first, with a short reason on each deck card. **Back To Keywords** returns to normal search.
-- Toggles **Open Now** and **Hide Visited**; category chips; a glass **matches** card; filters (price for restaurants, neighborhoods by region).
-- **Shuffle The Deck:** swipe right (or orange **+**) adds to the plan, left (or **✕**) skips, tap opens the spot. The card floods green or red while dragging. **See All** shows matches as a list or map, with Add All To Plan.
+### Explore tab ("Full-Photo Feed", design EX6)
+- Every match fills the screen with its photo (or its category colour and icon); **swipe up** for the next one (scroll snapping). The page shows category · area · price, the name in two weights, hours and minutes away, a ✨ reason in vibe search, and "Swipe Up For The Next One · 3 / 14".
+- Down the right side: **Plan** (orange; **In Plan** in blue once added), **Go** (Get There) and **Share** (share sheet, or copies the link). Tap the photo to open the place card.
+- On top: a **When** dropdown (**Anytime / Open Now / Haven't Been**), a **category** dropdown (**All Spots** or one category, with counts) and a **search** button. Search opens **Ask Spotted Anything…** (typing a phrase shows the purple **✨ Vibe Search** pill), price for restaurants, neighborhoods by region, **Clear All**, **See All As A List** (list or map, Add All To Plan) and **Show N Spots**.
+- The feed ends with "That's All" (**See All** / **Shuffle Again**). Code: `FeedScreen`, `FeedPage`, `FeedSearch` in `view.js`; `feedItems`, `feedCats`, `feedWhen` in `renderVals()`.
 
 ### Route tab (Plan A Day)
 - Full-screen map with the dotted route and numbered pins. A glass panel shows total travel, a ride-vs-walk bar, when you're done, and **Start From** (First Stop / Home / My Location).
@@ -132,7 +131,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - **Tabs:** **Upcoming** (dated, not over), **Anytime** (no dates, or done), **Shared** (with or from friends).
 - **Boarding-pass wallet:** the front list is a pass with its photo on top (and a **Photo** button), a three-letter code (SON), name and countdown; then arrive/depart dates, Spots / Days / Travel, a torn perforation, and a stub with the people, "Sonia Is Here · Editing" when someone has it open, and a barcode. Lists behind show as colour tabs with their code and countdown. **Hold a pass and drag to reorder** (haptics on iPhone); the order syncs.
 - **Live line** below the wallet: the latest spot a friend added in the last 3 days ("Sonia added Lucali to Day 1 · 2 MIN"), or Up Next.
-- **Inside a list:** day chips with dates, a day colour per pin, travel time between stops, a **Route ↗** per day; add spots **From My Map** or as a **New Spot**. **Edit** changes name, days, start date and photo.
+- **Inside a list ("Day Timeline", design LS4):** a slim header (back, the list name and dates (tap to **Edit** name, days, start date, photo), a map button, the people (tap to **Share & Invite**)). The days run down a timeline, each with its date, **Route ↗**, its stops (photo, area, who added it, "2 IN" tallies) with travel time between them, and a dashed **Add To Day N** slot. Spots on no day sit under **Whenever**; **Add Day N** / **Sort Into Days** ends the timeline. Tap a stop to move it between days (day chips) or reorder it (↑ ↓). The **From My Map** picker adds straight to the chosen day and has **Paste A Link Or Search** for a new spot.
 - **Per stop:** **I'm In / Skip It** votes with counts and who's in, and one **note per person** for the group ("Add Your Note For The Group").
 - **Share & Invite** (owner): **Just This List** (friends can add, sort, remove), **Just My Map** (view-only, never your home) or **Both**, by invite link `/?join=<code>`. Friends sign up with a name and land on the list. Edits sync within about a second.
 
