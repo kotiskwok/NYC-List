@@ -231,11 +231,11 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,feedMenu:'',deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub2===true,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
-      newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,authName:'',acctDel:0};})();
+      newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,addTargetDay:0,tripPickDay:0,authName:'',acctDel:0};})();
 
   // ---- cloud sync hooks (used by sync.js) ----
   // Synced data keeps every city's spots in one list (each tagged with its city); home and plan are NYC's for older
@@ -567,7 +567,7 @@ class Component extends DCLogic {
       this.setState({saving:false});if(!ll){this.toast('Couldn’t find it. Drop a pin or pick a neighborhood.');return;}}
     const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
     const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
-    if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false);this.setState({addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added to the list.');return;}
+    if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false,s.addTargetDay);this.setState({addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added to the list.');return;}
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
     this.toast(orig?'Saved. Looking good!':'Stuck it on the map!!');}
@@ -734,7 +734,7 @@ class Component extends DCLogic {
       if(!ll){skipped++;continue;}
       const cat=p.category_id&&this.state.cats.some(c=>c.id===p.category_id)?p.category_id:(this.state.cats[0]||{}).id;
       made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
-    if(s.addTarget&&made.length){const tid=s.addTarget;this.addStopsTo(tid,made,false);this.setState({aiAdding:false,addOpen:false,addTarget:null,tab:'lists',tripId:tid,tripView:'list',tripSel:null});
+    if(s.addTarget&&made.length){const tid=s.addTarget;this.addStopsTo(tid,made,false,s.addTargetDay);this.setState({aiAdding:false,addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});
       this.toast(`Added ${made.length} ${made.length===1?'Spot':'Spots'} To The List`+(skipped?` · ${skipped} Couldn’t Be Found`:''));return;}
     this.setState(st=>({aiAdding:false,addOpen:!made.length,tab:made.length?'map':st.tab,mapCats:[],selId:null,places:[...made,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps&&made.length){this.maps.main.map.invalidateSize();this.fit(this.maps.main,made,{padding:[70,70],maxZoom:15});}},120));
@@ -810,6 +810,28 @@ class Component extends DCLogic {
         idx:String(dpos+i+1).padStart(2,'0'),meta:[p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:'',m!=null?Math.max(1,Math.round(m))+' MIN '+(s.here?'AWAY':'FROM HOME'):c.name].filter(Boolean).join(' · ').toUpperCase(),
         why:vb&&vb.why[p.id]?'✨ '+vb.why[p.id]:'',hours:oi?oi.label:'',hoursCol:oi?(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C'):'',
         onDown:e=>this.deckDown(e),onMove:e=>this.deckMove(e),onUp:()=>this.deckUp(p.id),onCancel:()=>{this._dg=null;this.setState({deckDx:0});}};});
+    // Explore feed ("Full-Photo Feed"): every match as a full-screen photo page, swipe up for the next one.
+    // Travel minutes are cached per spot and starting point so long feeds stay quick.
+    const fRef=dref?dref.map(x=>x.toFixed(4)).join(','):'',fc=this._feedMin||(this._feedMin=new Map());if(fc.size>800)fc.clear();
+    const feedMin=p=>{const k=p.id+'|'+fRef+'|'+p.lat+','+p.lng;if(!fc.has(k))fc.set(k,tripMin(p));return fc.get(k);};
+    const feedItems=deck.map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=feedMin(p),oi=openInfo(p,dnow),ip=inPlan(p.id);
+      return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:ip,
+        tag:[c.name,p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:''].filter(Boolean).join(' · ').toUpperCase(),
+        hours:oi?oi.label:'',hoursCol:oi?(oi.open?(oi.soon?'#FFB27A':'#5BE0A6'):'#FF8A8F'):'',
+        away:m!=null?Math.max(1,Math.round(m))+' min '+(s.here?'away':'from home'):'',why:vb&&vb.why[p.id]?'✨ '+vb.why[p.id]:'',
+        idx:(i+1)+' / '+deck.length,last:i===deck.length-1,
+        onOpen:()=>this.setState({selId:p.id,confirmDel:false,feedMenu:''}),
+        onPlan:e=>{e.stopPropagation();this.togglePlan(p.id);try{window.NYCNative&&NYCNative.tap&&NYCNative.tap();}catch(_){}},
+        onGo:e=>{e.stopPropagation();this.openRouteFor(p.id);},
+        onShare:async e=>{e.stopPropagation();const url=p.url||gSearch(p),text=p.name+' · spotted on Spotted In';
+          if(navigator.share){try{await navigator.share({title:p.name,text,url});return;}catch(x){if(x&&x.name==='AbortError')return;}}
+          (navigator.clipboard?navigator.clipboard.writeText(p.name+'\n'+url):Promise.reject()).then(()=>this.toast('Link copied. Go send it!')).catch(()=>this.toast('Couldn’t copy the link.'));}};});
+    const oneCat=s.exCats.length===1?s.cats.find(c=>c.id===s.exCats[0]):null;
+    const feedCats=[{key:'all',label:'All Spots',on:!s.exCats.length,col:'',n:s.places.length,onClick:()=>this.setState({exCats:[],feedMenu:''})},
+      ...s.cats.filter(c=>s.places.some(p=>p.cat===c.id)).map(c=>({key:c.id,label:c.name,on:s.exCats.length===1&&s.exCats[0]===c.id,col:c.color,n:s.places.filter(p=>p.cat===c.id).length,onClick:()=>this.setState({exCats:[c.id],feedMenu:''})}))];
+    const feedWhen=[{key:'any',label:'Anytime',on:!s.openNow&&!s.hideVisited,onClick:()=>this.setState({openNow:false,hideVisited:false,feedMenu:''})},
+      {key:'open',label:'Open Now',on:s.openNow,onClick:()=>{if(!s.openNow)this.toggleOpenNow();this.setState({feedMenu:''});}},
+      {key:'new',label:'Haven’t Been',on:s.hideVisited,onClick:()=>this.setState({hideVisited:!s.hideVisited,feedMenu:''})}];
     const catCount={};l.ex.forEach(p=>{catCount[p.cat]=(catCount[p.cat]||0)+1;});
     const exBar=Object.entries(catCount).map(([id,k])=>({col:catOf(id).color,n:k}));
     const exFilterN=s.exAreas.length+s.exPrices.length+(s.hideVisited?1:0)+(s.openNow?1:0);
@@ -943,6 +965,12 @@ class Component extends DCLogic {
       exQuery:s.exQuery,onExQuery:e=>this.setState({exQuery:e.target.value}),clearExQuery:()=>this.setState({exQuery:''}),
       toggleExFilters:()=>this.setState({exFilters:!s.exFilters}),closeExFilters:()=>this.setState({exFilters:false}),
       clearExAll:()=>this.setState({exCats:[],exAreas:[],exPrices:[],hideVisited:false,openNow:false,exQuery:'',vibe:null,vibeMsg:''}),
+      feedItems,feedKey:this.deckKeyNow(),feedCats,feedWhen,feedMenu:s.feedMenu,
+      feedCatLabel:s.exCats.length>1?s.exCats.length+' Categories':oneCat?oneCat.name:'All Spots',
+      feedWhenLabel:s.openNow&&s.hideVisited?'Open · New':s.openNow?(s.hoursBusy?'Checking…':'Open Now'):s.hideVisited?'Haven’t Been':'Anytime',
+      feedWhenOn:s.openNow||s.hideVisited,feedCatOn:!!s.exCats.length,feedSearchN:s.exAreas.length+s.exPrices.length+(s.exQuery.trim()?1:0)+(vb?1:0),
+      openFeedMenu:k=>this.setState({feedMenu:s.feedMenu===k?'':k,exFilters:false}),closeFeedMenu:()=>this.setState({feedMenu:''}),
+      openFeedSearch:()=>this.setState({exFilters:true,feedMenu:''}),
       deckCards,deckDx:s.deckDx,deckFly:s.deckFly,deckDone:!!n&&dpos>=n,deckEmpty:!n,deckTotal:String(n).padStart(2,'0'),
       deckSkip:()=>this.deckAct('skip'),deckPlan:()=>this.deckAct('plan'),deckOpen:()=>{const p=this.deckList()[this.deckPos()];if(p)this.setState({selId:p.id,confirmDel:false});},deckShuffle:()=>this.setState({deckSeed:s.deckSeed+1,deckDx:0,deckFly:''}),
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',

@@ -272,11 +272,11 @@ Object.assign(Component.prototype, {
     for (let k = 0; k <= n; k++) { const stops = d.stops.filter(st => day(st) === k); if (k > 0 || stops.length) out.push({ day: k, stops }); }
     return out;
   },
-  addStopsTo(tripId, places, fromMap) {
+  addStopsTo(tripId, places, fromMap, day) {
     const me = NYCLists.uid(), name = NYCLists.myName(), cats = this.state.cats;
     NYCLists.edit(tripId, d => {
       const have = new Set(d.stops.filter(st => st.by === me && st.pid).map(st => st.pid));
-      const add = places.filter(p => !(fromMap && have.has(p.id))).map(p => ({ id: sid(), pid: fromMap ? p.id : null, by: me, byName: name, at: Date.now(), day: 0, p: NYCLists.snap(p) }));
+      const add = places.filter(p => !(fromMap && have.has(p.id))).map(p => ({ id: sid(), pid: fromMap ? p.id : null, by: me, byName: name, at: Date.now(), day: day || 0, p: NYCLists.snap(p) }));
       if (!add.length) return null;
       const catIds = new Set(d.cats.map(c => c.id)), newCats = [];
       add.forEach(st => { const c = cats.find(x => x.id === st.p.cat); if (c && !catIds.has(c.id)) { catIds.add(c.id); newCats.push({ ...c, emoji: emo(c) }); } });
@@ -284,9 +284,9 @@ Object.assign(Component.prototype, {
     });
   },
   removeStop(tripId, stopId) { NYCLists.edit(tripId, d => ({ ...d, stops: d.stops.filter(st => st.id !== stopId) })); },
-  toggleMapStop(tripId, p) { const t = this.state.trips.find(x => x.id === tripId); if (!t) return; const me = NYCLists.uid();
+  toggleMapStop(tripId, p, day) { const t = this.state.trips.find(x => x.id === tripId); if (!t) return; const me = NYCLists.uid();
     const st = t.data.stops.find(x => x.by === me && x.pid === p.id);
-    if (st) this.removeStop(tripId, st.id); else this.addStopsTo(tripId, [p], true); },
+    if (st) this.removeStop(tripId, st.id); else this.addStopsTo(tripId, [p], true, day); },
   setStopDay(tripId, stopId, day) { NYCLists.edit(tripId, d => {
       // Move it to the end of its new day so the order inside each day stays meaningful.
       const st = d.stops.find(x => x.id === stopId); if (!st) return null;
@@ -468,9 +468,9 @@ Object.assign(Component.prototype, {
                 : { min: Math.max(1, Math.round(e.walk.min)), walk: true, bullets: [] }; } }
           const ty = this.stopTally(t, st.id);
           return { key: st.id, leg, yesN: ty.up, noN: ty.down, myVote: ty.my, notesN: ty.notes.length, canVote: perm.edit,
-            onYes: e => { e.stopPropagation(); this.voteStop(t.id, st.id, 1); }, onNo: e => { e.stopPropagation(); this.voteStop(t.id, st.id, -1); }, catEmoji: emo(c), catColor: c.color, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [c.name, p.area].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
+            onYes: e => { e.stopPropagation(); this.voteStop(t.id, st.id, 1); }, onNo: e => { e.stopPropagation(); this.voteStop(t.id, st.id, -1); }, catEmoji: emo(c), catColor: c.color, num: numbered ? String(i + 1) : '', emoji: numbered ? '' : emo(c), name: p.name, sub: [p.area || c.name].filter(Boolean).join(' · '), note: p.note, hasNote: !!p.note,
             img: placeImg(p), badge: numbered ? (sec.flat ? c.color : dayCol(sec.day)) : c.color, badgeFg: numbered && !sec.flat ? '#fff' : fgFor(c.color),
-            by: st.by === me ? '' : 'Added By ' + (st.byName || 'A Friend'), hasBy: st.by !== me, ring: s.tripSel && s.tripSel.id === st.id ? C.navy : 'transparent',
+            by: st.by === me ? '' : 'By ' + (st.byName || 'A Friend').split(' ')[0], hasBy: st.by !== me, ring: s.tripSel && s.tripSel.id === st.id ? C.navy : 'transparent',
             canEdit: perm.edit, hasDays: !!(d.days), dayVal: String(sec.day), dayOpts, onDay: e => this.setStopDay(t.id, st.id, +e.target.value),
             up: e => { e.stopPropagation(); this.moveStop(t.id, st.id, -1); }, down: e => { e.stopPropagation(); this.moveStop(t.id, st.id, 1); },
             upOp: i === 0 ? .3 : 1, downOp: i === sec.stops.length - 1 ? .3 : 1,
@@ -499,7 +499,18 @@ Object.assign(Component.prototype, {
       const others = s.trips.filter(x => x.id !== t.id).slice(0, 3).map(x => { const ww = walletOf(s.trips.indexOf(x)); return { key: x.id, name: x.name, bg: ww.bg, fg: ww.fg, onClick: () => this.openTrip(x.id) }; });
       dayChips.forEach(c => { const sec = sections.find(x => x.key === c.key); c.date = c.key === 'all' ? 'ALL' : sec && sec.day ? (dayTag(d.start, sec.day) || 'DAY ' + sec.day) : 'UNSET';
         c.short = c.key === 'all' ? 'All' : sec && sec.day ? 'Day ' + sec.day : String(sec ? sec.rows.length : 0).padStart(2, '0'); c.pink = !!sec && !sec.day; });
-      detail = { name: t.name, isOwner: perm.own, canEdit: perm.edit, showList: view === 'list', showMap: view === 'map',
+      // The day timeline: each day in order with its own add slot, then the spots that aren't on a day ("Whenever").
+      const timeline = [...sections].sort((x, y) => (x.day || 99) - (y.day || 99)).map(sec => {
+        const tag = sec.day ? dayTag(d.start, sec.day) : '';
+        return { key: sec.key, day: sec.day, title: sec.day ? 'Day ' + sec.day : 'Whenever', tag: tag ? '· ' + tag.split(' ')[0][0] + tag.split(' ')[0].slice(1).toLowerCase() + ' ' + (tag.split(' ')[1] || '') : '',
+          col: sec.day ? sec.col : '#7A809C', hollow: !sec.day, rows: sec.rows, n: sec.rows.length,
+          count: sec.rows.length ? sec.rows.length + (sec.rows.length === 1 ? ' SPOT' : ' SPOTS') : 'EMPTY',
+          canAdd: perm.edit, addLabel: sec.day ? 'Add To Day ' + sec.day : d.days ? 'Add Spots For Whenever' : 'Add Spots',
+          onAdd: () => this.setState({ tripPickOpen: true, tripPickQ: '', tripPickDay: sec.day || 0 }),
+          hasDirs: sec.hasDirs, onDirs: sec.onDirs }; });
+      detail = { name: t.name, isOwner: perm.own, timeline, addDayLabel: d.days ? 'Add Day ' + (d.days + 1) : 'Sort Into Days',
+        nameA: t.name.split(/\s+/)[0], nameB: t.name.split(/\s+/).slice(1).join(' '),
+        rangeLine: [dateRange(d.start, d.days), perm.list ? nSp + (nSp === 1 ? ' SPOT' : ' SPOTS') : 'VIEW ONLY'].filter(Boolean).join(' · ').toUpperCase(), canEdit: perm.edit, showList: view === 'list', showMap: view === 'map',
         sub: perm.list ? `${d.stops.length} ${d.stops.length === 1 ? 'Spot' : 'Spots'}` + (d.days ? ` · ${d.days} ${d.days === 1 ? 'Day' : 'Days'}` : '') + (perm.own ? '' : ' · From ' + (t.owner_name || 'A Friend')) : 'A View-Only Look At ' + (t.owner_name || 'Their') + '’s Map',
         hasToggle: perm.list && perm.map, listTabBg: view === 'list' ? '#FFFFFF' : 'transparent', listTabFg: view === 'list' ? C.blue : '#fff', mapTabBg: view === 'map' ? '#FFFFFF' : 'transparent', mapTabFg: view === 'map' ? C.blue : '#fff',
         mapTabLabel: (t.owner_name ? t.owner_name.split(' ')[0] + '’s' : 'Their') + ' Map',
@@ -512,7 +523,7 @@ Object.assign(Component.prototype, {
         stopMap: !!s.tripStopMap && view === 'list', openStopMap: () => this.setTripStopMap(true), closeStopMap: () => this.setTripStopMap(false), routeLabel: routeSec ? (routeSec.day ? 'Route Day ' + routeSec.day : 'Route') : '',
         sections: shown, dayChips, metaMono, avatars, routeDirs: routeSec ? routeSec.onDirs : null, empty: perm.list && !d.stops.length, dateVal: d.start || '', onDate: e => NYCLists.edit(t.id, x => ({ ...x, start: e.target.value || '' })), hasDays: !!d.days,
         addDay: () => this.addDay(t.id), dayBtn: d.days ? '+ Add Day ' + (d.days + 1) : '+ Sort Into Days',
-        openPick: () => this.setState({ tripPickOpen: true, tripPickQ: '' }), openAddNew: () => this.setState({ addOpen: true, addMode: 'link', addTarget: t.id, placing: false, form: blank(), selId: null, routeFor: null, tripSel: null, lookQ: '', lookResults: [], lookMsg: '', aiMsg: '', aiPlaces: [], aiFor: '', sugg: [], suggBusy: false, suggPicked: '', suggNone: '', webBusy: false, webMsg: '', webFor: '' }),
+        openPick: day => this.setState({ tripPickOpen: true, tripPickQ: '', tripPickDay: typeof day === 'number' ? day : 0 }), openAddNew: day => this.setState({ addOpen: true, addMode: 'link', addTarget: t.id, addTargetDay: typeof day === 'number' ? day : 0, placing: false, form: blank(), selId: null, routeFor: null, tripSel: null, lookQ: '', lookResults: [], lookMsg: '', aiMsg: '', aiPlaces: [], aiFor: '', sugg: [], suggBusy: false, suggPicked: '', suggNone: '', webBusy: false, webMsg: '', webFor: '' }),
         openEdit: () => this.setState({ tripEditOpen: true, tripEditName: t.name, tripEditDays: d.days || 0, tripEditStart: d.start || '', tripSel: null }),
         people, openShare: () => this.setState({ tripShareOpen: true, tripSel: null }), back: () => this.setState({ tripId: null, tripSel: null, tripStopMap: false }),
         delLabel: perm.own ? (s.confirmTripDel ? 'Tap Again To Delete This List' : 'Delete List') : (s.confirmTripDel ? 'Tap Again To Leave' : 'Leave This List'),
@@ -540,6 +551,9 @@ Object.assign(Component.prototype, {
           onAdd: () => { if (onList) { this.removeStop(t.id, onList.id); this.toast('Taken off the list.'); return; } this.addStopsTo(t.id, [p], false);
             NYCLists.edit(t.id, x => { const c2 = cats[p.cat]; return c2 && !x.cats.some(y => y.id === c2.id) ? { ...x, cats: [...x.cats, { ...c2, emoji: emo(c2) }] } : null; }); this.toast('Added to “' + t.name + '”.'); },
           close: () => this.setState({ tripSel: null, confirmStopDel: false, stopNoteDraft: null }) };
+        if (st && perm.edit) { const nd = t.data.days || 0, cur = st.day >= 1 && st.day <= nd ? st.day : 0;
+          tsel.dayChips = nd ? [...Array.from({ length: nd }, (_, i) => i + 1), 0].map(k => ({ key: k, label: k ? 'Day ' + k : 'Whenever', on: k === cur, col: k ? dayCol(k) : '#7A809C', onClick: () => k !== cur && this.setStopDay(t.id, st.id, k) })) : [];
+          tsel.moveUp = () => this.moveStop(t.id, st.id, -1); tsel.moveDown = () => this.moveStop(t.id, st.id, 1); tsel.canMove = true; }
         if (st) { const ty = this.stopTally(t, st.id), mineN = ty.notes.find(x => x.u === me), draft = s.stopNoteDraft && s.stopNoteDraft.id === st.id ? s.stopNoteDraft.t : null;
           const names = new Map([[t.owner, t.owner_name || 'Owner'], ...t.members.map(m => [m.user_id, m.name || 'Someone'])]);
           const voters = (t.data.votes || []).filter(x => x.s === st.id).map(x => ({ key: x.u, up: x.v > 0, name: x.u === me ? 'You' : (names.get(x.u) || 'Someone') }));
@@ -598,9 +612,10 @@ Object.assign(Component.prototype, {
     if (t && s.tripPickOpen) {
       const q = (s.tripPickQ || '').trim().toLowerCase(), have = new Set(t.data.stops.filter(st => st.by === me && st.pid).map(st => st.pid)), catOf = id => s.cats.find(c => c.id === id) || { name: 'Spot', color: '#888' };
       const list = s.places.filter(p => !q || (p.name + ' ' + p.area + ' ' + catOf(p.cat).name).toLowerCase().includes(q));
-      pick = { title: 'Add To “' + t.name + '”', q: s.tripPickQ || '', onQ: e => this.setState({ tripPickQ: e.target.value }), close: () => this.setState({ tripPickOpen: false }),
-        count: t.data.stops.length, empty: !list.length, emptyMsg: s.places.length ? 'No Spots Match That' : 'Your map is empty, bestie. Use “+ New Spot” to add one straight to the list.',
-        rows: list.map(p => { const c = catOf(p.cat), on = have.has(p.id); return { key: p.id, name: p.name, catName: c.name, catBg: c.color, emoji: emo(c), area: p.area, chk: on ? '✓' : '', chkBg: on ? C.orange : '#fff', ring: on ? C.orange : 'transparent', onClick: () => this.toggleMapStop(t.id, p) }; }) };
+      const pd = s.tripPickDay || 0;
+      pick = { title: pd ? 'Add To Day ' + pd : 'Add To “' + t.name + '”', newSpot: () => { this.setState({ tripPickOpen: false }); detail && detail.openAddNew(pd); }, q: s.tripPickQ || '', onQ: e => this.setState({ tripPickQ: e.target.value }), close: () => this.setState({ tripPickOpen: false }),
+        count: t.data.stops.length, empty: !list.length, emptyMsg: s.places.length ? 'No Spots Match That' : 'Your map is empty, bestie.\nTap “Paste A Link Or Search” to add one straight to the list.',
+        rows: list.map(p => { const c = catOf(p.cat), on = have.has(p.id); return { key: p.id, name: p.name, catName: c.name, catBg: c.color, emoji: emo(c), area: p.area, chk: on ? '✓' : '', chkBg: on ? C.orange : '#fff', ring: on ? C.orange : 'transparent', onClick: () => this.toggleMapStop(t.id, p, pd) }; }) };
     }
 
     // "Add To A List" from a place card on your map.
