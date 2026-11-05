@@ -76,7 +76,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - **"!!" sparingly:** only for big moments (the save toast and the welcome toast). A single "!" now and then. Mostly plain periods.
 - **Capitalization:** Title Case for titles, headings, buttons, chips, labels and tags ("Where We Going Tonight?", "Something Cozy", "Add Their Link"). **Full sentences use normal sentence case.**
 - **One sentence per line:** messages, toasts, empty states, hints, tips and onboarding show each sentence on its own line (`Lines()` / `noteLines()` in `view.js`). Write separate sentences rather than joining them with dashes.
-- **TestFlight "What to Test":** always written from Kotis's point of view, inviting her friends to beta test.
+- **TestFlight "What to Test":** always an introduction to the whole app, written from Kotis's point of view, because she keeps inviting new people to beta test. Use the standing notes in §8 for every build (update them only when a feature is added or removed). Never write them as a changelog.
 
 ---
 
@@ -267,7 +267,38 @@ Endpoints check the caller's Supabase token, except `photo`, `geocode`, `bus` an
 ### App Store Connect / TestFlight
 - App **"Spotted in: Places To Go"** (Apple ID `6828702049`), version 1.0. Listing text, privacy answers and review notes: `native/APP_STORE.md`. Screenshots: `native/screenshots/`.
 - **TestFlight groups:** **Kotis' Inner Circle** (internal, builds arrive right away) and **Friends Beta** (external; Beta App Review for the first build, then a public invite link once "Ready to Test").
-- **What to Test** is set per build, written from Kotis's point of view inviting friends (see §3).
+- **What to Test** uses the same standing notes for every build (see §3):
+
+```
+Hiii! Thank you for testing my app ♡
+Spotted In is my map of all the places I keep saving from TikTok and Instagram and never actually going to.
+
+Save A Spot
+Tap Share → Spotted In on any TikTok, Instagram or Threads post, or paste a link with the orange +.
+It reads the caption, photos and video, then pins the place on your map.
+
+Your Map
+Every spot shows its hours, the nearest station and how long it takes to get there from home.
+Pick your city with the yellow button: NYC, Singapore, Hong Kong, Toronto, Boston or New York State.
+
+Explore
+Swipe up through your spots, one big photo at a time.
+Filter by Open Now or a category, or search a vibe like "somewhere cozy".
+Tap Plan to add one to your day.
+
+Plan Your Day
+The route tab puts your plan in order and tells you when you'll be done.
+
+Lists With Friends
+Make a list for a trip or a visit, invite your friends and plan the days together.
+
+Reviews
+Rate and review the spots you've been to, and see what others think.
+
+Please try saving a few spots from posts you've actually been meaning to try.
+Tell me anything that's confusing, broken or missing.
+Screenshots are the best!
+```
 - Apps with posts from other people (reviews) need report/block (built) and, for full App Store review, terms of use that forbid abusive content.
 
 ### Shipping a new build
