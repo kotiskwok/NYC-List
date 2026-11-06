@@ -1082,7 +1082,7 @@ class Component extends DCLogic {
       openTour:()=>this.setState({acctOpen:false,tourOpen:true,tourStep:0,tourFirst:false}),
       showPass:s.showPass,toggleShowPass:()=>this.setState({showPass:!s.showPass}),
       authOpen:s.auth==='signedOut',authUp:s.authMode==='up',authEmail:s.authEmail,authPass:s.authPass,authMsg:s.authMsg,hasAuthMsg:!!s.authMsg,
-      authBtn:s.authBusy?'One Sec…':s.authMode==='up'?'Create My Account':'Sign In',authTitle:s.authMode==='up'?'Make Your Account':'Welcome Back',
+      authBtn:s.authBusy?'One Sec…':s.authMode==='up'?'Create My Account':'Sign In',authTitle:s.authMode==='up'?'Make Your Account':'Welcome Back',authTitleA:s.authMode==='up'?'Make Your':'Welcome',authTitleB:s.authMode==='up'?'Account':'Back',
       authSwitch:s.authMode==='up'?'Already Have An Account? Sign In':'New Here? Create An Account',
       onAuthEmail:e=>this.setState({authEmail:e.target.value}),onAuthPass:e=>this.setState({authPass:e.target.value}),
       authSubmit:e=>{e&&e.preventDefault&&e.preventDefault();NYCSync.submit();},authToggle:()=>this.setState({authMode:s.authMode==='up'?'in':'up',authMsg:''}),

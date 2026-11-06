@@ -1673,42 +1673,64 @@ function Tour(v) {
   </div>`;
 }
 
-function AuthScreen(v) {
-  const inp = S('height:52px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:0 14px;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none');
+// Sign in (design SI1 · Frosted Over Your Map): a soft, blurred map with colored pins behind a frosted glass card.
+// The map is drawn here (no tiles needed before sign-in) and follows light and dark mode.
+const AUTH_PINS = [[16, 17, '#FF6B1A'], [77, 11, '#F45FA0'], [38, 7, '#1B3DB8'], [64, 83, '#FFC425'], [10, 90, '#1F9D6B'], [85, 62, '#E8242C'], [22, 52, '#FFC425'], [90, 30, '#1F9D6B']];
+function AuthBackdrop() {
+  const dk = THEME.dark, line = dk ? 'rgba(255,255,255,.06)' : 'rgba(16,24,63,.07)';
   return html`
-  <div data-screen-label="Sign In" class="noscroll" style=${S(`position:absolute;inset:0;z-index:1250;background:#1B3DB8;overflow-y:auto;padding:${T(60)} 22px ${B(30)};display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center`)}>
-    <div style=${S('margin-top:auto')}>${Logo(true)}</div>
-    <div style=${S('display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff')}>
-      <div style=${S('font-weight:900;font-stretch:100%;font-style:italic;font-size:40px;line-height:.95;letter-spacing:-.02em;color:#fff')}>${v.authTitle}</div>
-      <div style=${S('font-size:15px;font-weight:600;color:#C9D0F0')}>Sign in to keep your spots in sync on every device.</div>
-    </div>
-    ${v.hasJoin && html`
-    <div style=${S('align-self:stretch;width:100%;max-width:420px;margin:0 auto;background:#F45FA0;color:#fff;border:1.5px solid rgba(16,24,63,.14);border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;gap:3px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>
-      <span style=${S('font-weight:900;font-style:italic;font-size:20px;line-height:1.1')}>${v.joinTitle} 💌</span>
-      <span style=${S('font-size:13.5px;font-weight:700')}>${v.joinSub}</span>
-    </div>`}
-    <form onSubmit=${v.authSubmit} style=${S('align-self:stretch;width:100%;max-width:420px;margin:0 auto;text-align:left;background:#FFF3DF;border-radius:28px;padding:20px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>
-      ${v.authUp && v.hasJoin && html`
-      <div style=${S('display:flex;flex-direction:column;gap:8px')}>
-        <label for="auth-name" style=${S('font-weight:800;font-size:15px')}>Your Name</label>
-        <input id="auth-name" autocomplete="given-name" value=${v.authName} onChange=${v.onAuthName} placeholder="So Friends Know It’s You" style=${inp} />
+  <div aria-hidden="true" style=${S(`position:absolute;inset:0;overflow:hidden;pointer-events:none;background:${dk ? '#141A38' : '#EDEAE2'}`)}>
+    <div style=${S(`position:absolute;inset:-40%;background-image:linear-gradient(${line} 2px,transparent 2px),linear-gradient(90deg,${line} 2px,transparent 2px);background-size:46px 46px;transform:rotate(-29deg)`)}></div>
+    <div style=${S(`position:absolute;left:-22%;top:30%;width:60%;height:95%;background:${dk ? '#1C2B5C' : '#BFD9EE'};transform:rotate(-12deg)`)}></div>
+    <div style=${S(`position:absolute;left:60%;top:14%;width:32%;height:32%;border-radius:40px;background:${dk ? '#1C3A36' : '#C9E6CC'};transform:rotate(-29deg)`)}></div>
+    <div style=${S(`position:absolute;left:8%;top:68%;width:26%;height:14%;border-radius:30px;background:${dk ? '#1C3A36' : '#C9E6CC'};transform:rotate(-29deg)`)}></div>
+    ${AUTH_PINS.map(([x, y, c], i) => html`<span key=${i} style=${S(`position:absolute;left:${x}%;top:${y}%;width:28px;height:28px;border-radius:50%;background:${c};border:3px solid rgba(255,255,255,.9);box-shadow:0 6px 14px rgba(16,24,63,.25)`)}></span>`)}
+    <div style=${S(`position:absolute;inset:0;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);background:${dk ? 'rgba(14,20,51,.35)' : 'rgba(255,243,223,.25)'}`)}></div>
+  </div>`;
+}
+
+function AuthScreen(v) {
+  const field = 'height:52px;border-radius:18px;border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.55);box-shadow:inset 0 1px 2px rgba(16,24,63,.06);font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none';
+  const inp = S(field + ';padding:0 14px');
+  const lab = S('font-weight:800;font-size:14px;color:#10183F;margin:0 4px');
+  const glass = 'background:linear-gradient(150deg,rgba(255,255,255,.62),rgba(255,255,255,.28) 55%,rgba(255,255,255,.46));-webkit-backdrop-filter:blur(28px) saturate(200%);backdrop-filter:blur(28px) saturate(200%);border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 2px 1px rgba(255,255,255,.95),inset 0 -1px 1px rgba(255,255,255,.4),0 24px 50px rgba(16,24,63,.22)';
+  return html`
+  <div data-screen-label="Sign In" style=${S('position:absolute;inset:0;z-index:1250')}>
+    ${AuthBackdrop()}
+    <div class="noscroll" style=${S(`position:absolute;inset:0;overflow-y:auto;padding:${T(60)} 20px ${B(30)};display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center`)}>
+      <div style=${S('margin-top:auto')}>${Logo(true)}</div>
+      ${v.hasJoin && html`
+      <div style=${S('align-self:stretch;width:100%;max-width:420px;margin:0 auto;background:#F45FA0;color:#FFFFFF;border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;gap:3px;box-shadow:0 10px 24px rgba(244,95,160,.3),inset 0 1px 0 rgba(255,255,255,.4)')}>
+        <span style=${S('font-weight:900;font-style:italic;font-size:20px;line-height:1.1')}>${v.joinTitle} 💌</span>
+        <span style=${S('font-size:13.5px;font-weight:700')}>${v.joinSub}</span>
       </div>`}
-      <div style=${S('display:flex;flex-direction:column;gap:8px')}>
-        <label for="auth-email" style=${S('font-weight:800;font-size:15px')}>Email</label>
-        <input id="auth-email" name="email" type="email" autocomplete="username email" inputmode="email" value=${v.authEmail} onChange=${v.onAuthEmail} placeholder="you@example.com" style=${inp} />
-      </div>
-      <div style=${S('display:flex;flex-direction:column;gap:8px')}>
-        <label for="auth-pass" style=${S('font-weight:800;font-size:15px')}>Password</label>
-        <div style=${S('position:relative;display:flex')}>
-          <input id="auth-pass" name="password" type=${v.showPass ? 'text' : 'password'} autocomplete=${v.authUp ? 'new-password' : 'current-password'} autocapitalize="off" autocorrect="off" spellcheck="false" value=${v.authPass} onChange=${v.onAuthPass} placeholder=${v.authUp ? 'At Least 6 Characters' : 'Your Password'} style=${S('flex:1;min-width:0;height:52px;border-radius:16px;border:1.5px solid rgba(16,24,63,.14);background:#fff;padding:0 54px 0 14px;font-family:inherit;font-size:16px;font-weight:600;color:#10183F;outline:none')} />
-          <button type="button" onClick=${v.toggleShowPass} aria-label=${v.showPass ? 'Hide Password' : 'Show Password'} aria-pressed=${v.showPass} style=${S('position:absolute;right:6px;top:6px;width:40px;height:40px;border-radius:12px;border:0;background:rgba(16,24,63,.06);color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${v.showPass ? Ico('M3 3l18 18 M10.6 10.6a2 2 0 0 0 2.8 2.8 M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 5 10 7a13 13 0 0 1-3 3.8 M6.1 6.1A13 13 0 0 0 2 12c1 2 5 7 10 7a9.7 9.7 0 0 0 4-.9', 20, 'currentColor', 2) : Ico('M2 12c1-2 5-7 10-7s9 5 10 7c-1 2-5 7-10 7S3 14 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 20, 'currentColor', 2)}</button>
+      <form onSubmit=${v.authSubmit} class="lg" style=${S(`align-self:stretch;width:100%;max-width:420px;margin:0 auto;text-align:left;${glass};border-radius:34px;padding:22px 18px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px`)}>
+        <div style=${S('text-align:center;margin-bottom:2px')}>
+          <div style=${S('font-size:30px;line-height:1;letter-spacing:-.9px;color:#10183F')}><span style=${S('font-weight:900;font-style:italic')}>${v.authTitleA}</span> <span style=${S('font-weight:200')}>${v.authTitleB}</span></div>
+          <div style=${S('font-size:14px;font-weight:600;color:#4A5275;margin-top:6px;line-height:1.35')}>Sign in to keep your spots in sync on every device.</div>
         </div>
-        ${!v.authUp && html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>You stay signed in on this phone. Your iPhone can also save this password for next time.</span>`}
-      </div>
-      ${v.hasAuthMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C;line-height:1.35')}>${Lines(v.authMsg)}</div>`}
-      <button type="submit" style=${S('height:52px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:20px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)')}>${v.authBtn}</button>
-    </form>
-    <button onClick=${v.authToggle} style=${S('align-self:center;margin-bottom:auto;border:0;background:none;color:#FFC425;font-weight:800;font-size:14px;cursor:pointer;padding:8px')}>${v.authSwitch}</button>
+        ${v.authUp && v.hasJoin && html`
+        <div style=${S('display:flex;flex-direction:column;gap:6px')}>
+          <label for="auth-name" style=${lab}>Your Name</label>
+          <input id="auth-name" autocomplete="given-name" value=${v.authName} onChange=${v.onAuthName} placeholder="So Friends Know It’s You" style=${inp} />
+        </div>`}
+        <div style=${S('display:flex;flex-direction:column;gap:6px')}>
+          <label for="auth-email" style=${lab}>Email</label>
+          <input id="auth-email" name="email" type="email" autocomplete="username email" inputmode="email" value=${v.authEmail} onChange=${v.onAuthEmail} placeholder="you@example.com" style=${inp} />
+        </div>
+        <div style=${S('display:flex;flex-direction:column;gap:6px')}>
+          <label for="auth-pass" style=${lab}>Password</label>
+          <div style=${S('position:relative;display:flex')}>
+            <input id="auth-pass" name="password" type=${v.showPass ? 'text' : 'password'} autocomplete=${v.authUp ? 'new-password' : 'current-password'} autocapitalize="off" autocorrect="off" spellcheck="false" value=${v.authPass} onChange=${v.onAuthPass} placeholder=${v.authUp ? 'At Least 6 Characters' : 'Your Password'} style=${S(field + ';flex:1;min-width:0;padding:0 54px 0 14px')} />
+            <button type="button" onClick=${v.toggleShowPass} aria-label=${v.showPass ? 'Hide Password' : 'Show Password'} aria-pressed=${v.showPass} style=${S('position:absolute;right:7px;top:7px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(16,24,63,.06);color:#4A5275;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${v.showPass ? Ico('M3 3l18 18 M10.6 10.6a2 2 0 0 0 2.8 2.8 M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 5 10 7a13 13 0 0 1-3 3.8 M6.1 6.1A13 13 0 0 0 2 12c1 2 5 7 10 7a9.7 9.7 0 0 0 4-.9', 19, 'currentColor', 2) : Ico('M2 12c1-2 5-7 10-7s9 5 10 7c-1 2-5 7-10 7S3 14 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 19, 'currentColor', 2)}</button>
+          </div>
+          ${!v.authUp && html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275;margin:2px 4px 0;line-height:1.35')}>${Lines('You stay signed in on this phone.\nYour iPhone can also save this password for next time.')}</span>`}
+        </div>
+        ${v.hasAuthMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C;line-height:1.35;margin:0 4px')}>${Lines(v.authMsg)}</div>`}
+        <button type="submit" style=${S('height:54px;margin-top:4px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-weight:900;font-style:italic;font-size:19px;cursor:pointer;box-shadow:0 8px 18px rgba(255,107,26,.35)')}>${v.authBtn}</button>
+      </form>
+      <button onClick=${v.authToggle} class="lg" style=${S('align-self:center;margin-bottom:auto;height:44px;padding:0 20px;border-radius:999px;border:1px solid rgba(255,255,255,.85);background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);color:#1B3DB8;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap')}>${v.authSwitch}</button>
+    </div>
   </div>`;
 }
 
