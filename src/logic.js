@@ -819,7 +819,7 @@ class Component extends DCLogic {
         tag:[c.name,p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:''].filter(Boolean).join(' · ').toUpperCase(),
         hours:oi?oi.label:'',hoursCol:oi?(oi.open?(oi.soon?'#FFB27A':'#5BE0A6'):'#FF8A8F'):'',
         away:m!=null?Math.max(1,Math.round(m))+' min '+(s.here?'away':'from home'):'',why:vb&&vb.why[p.id]?'✨ '+vb.why[p.id]:'',
-        idx:(i+1)+' / '+deck.length,last:i===deck.length-1,
+        idx:(i+1)+' / '+deck.length,last:i===deck.length-1,seen:i<dpos,cur:i===dpos,onJump:e=>{e&&e.stopPropagation();this._dg=null;this.setState({deck:{key:this.deckKeyNow(),pos:i},deckDx:0,deckFly:''});},
         onOpen:()=>this.setState({selId:p.id,confirmDel:false,feedMenu:''}),
         onPlan:e=>{e.stopPropagation();this.togglePlan(p.id);try{window.NYCNative&&NYCNative.tap&&NYCNative.tap();}catch(_){}},
         onGo:e=>{e.stopPropagation();this.openRouteFor(p.id);},
@@ -832,6 +832,12 @@ class Component extends DCLogic {
     const feedWhen=[{key:'any',label:'Anytime',on:!s.openNow&&!s.hideVisited,onClick:()=>this.setState({openNow:false,hideVisited:false,feedMenu:''})},
       {key:'open',label:'Open Now',on:s.openNow,onClick:()=>{if(!s.openNow)this.toggleOpenNow();this.setState({feedMenu:''});}},
       {key:'new',label:'Haven’t Been',on:s.hideVisited,onClick:()=>this.setState({hideVisited:!s.hideVisited,feedMenu:''})}];
+    // Explore EX1b: the filter sheet's When and Category chips, the summary line under the search, and how many filters are on.
+    const feedWhenChips=[{key:'open',label:s.openNow&&s.hoursBusy?'Checking…':'Open Now',on:s.openNow,col:C.green,onClick:()=>this.toggleOpenNow()},
+      {key:'new',label:'Haven’t Been',on:s.hideVisited,col:'',n:s.places.filter(p=>!p.visited).length,onClick:()=>this.setState({hideVisited:!s.hideVisited})}];
+    const feedCatChips=s.cats.filter(c=>s.places.some(p=>p.cat===c.id)).map(c=>({key:c.id,label:c.name,on:s.exCats.includes(c.id),col:c.color,n:s.places.filter(p=>p.cat===c.id).length,onClick:()=>this.toggle('exCats',c.id)}));
+    const feedSumm=[s.openNow?'Open Now':'',s.hideVisited?'Haven’t Been':'',s.exCats.length>1?s.exCats.length+' Categories':s.exCats.length?catOf(s.exCats[0]).name:'',s.exAreas.length>1?s.exAreas.length+' Areas':s.exAreas[0]||'',s.exPrices.length?[...s.exPrices].sort().map(i=>PRICES[i-1]).join(' '):''].filter(Boolean);
+    const feedFilterN=(s.openNow?1:0)+(s.hideVisited?1:0)+s.exCats.length+s.exAreas.length+s.exPrices.length;
     const catCount={};l.ex.forEach(p=>{catCount[p.cat]=(catCount[p.cat]||0)+1;});
     const exBar=Object.entries(catCount).map(([id,k])=>({col:catOf(id).color,n:k}));
     const exFilterN=s.exAreas.length+s.exPrices.length+(s.hideVisited?1:0)+(s.openNow?1:0);
@@ -971,6 +977,9 @@ class Component extends DCLogic {
       feedWhenOn:s.openNow||s.hideVisited,feedCatOn:!!s.exCats.length,feedSearchN:s.exAreas.length+s.exPrices.length+(s.exQuery.trim()?1:0)+(vb?1:0),
       openFeedMenu:k=>this.setState({feedMenu:s.feedMenu===k?'':k,exFilters:false}),closeFeedMenu:()=>this.setState({feedMenu:''}),
       openFeedSearch:()=>this.setState({exFilters:true,feedMenu:''}),
+      feedWhenChips,feedCatChips,feedFilterN,deckPos:dpos,
+      feedCount:(vb?'✨ ':'')+n+(n===1?' MATCH':' MATCHES')+(feedSumm.length?' · '+feedSumm.join(' · ').toUpperCase():''),
+      deckGrab:{onDown:e=>this.deckDown(e),onMove:e=>this.deckMove(e),onCancel:()=>{this._dg=null;this.setState({deckDx:0});}},deckUp:id=>this.deckUp(id),
       deckCards,deckDx:s.deckDx,deckFly:s.deckFly,deckDone:!!n&&dpos>=n,deckEmpty:!n,deckTotal:String(n).padStart(2,'0'),
       deckSkip:()=>this.deckAct('skip'),deckPlan:()=>this.deckAct('plan'),deckOpen:()=>{const p=this.deckList()[this.deckPos()];if(p)this.setState({selId:p.id,confirmDel:false});},deckShuffle:()=>this.setState({deckSeed:s.deckSeed+1,deckDx:0,deckFly:''}),
       listTabBg:s.exView==='list'?'#FFFFFF':'transparent',listTabFg:s.exView==='list'?C.blue:'#fff',mapTabBg:s.exView==='map'?'#FFFFFF':'transparent',mapTabFg:s.exView==='map'?C.blue:'#fff',
