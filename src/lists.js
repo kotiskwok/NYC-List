@@ -360,7 +360,7 @@ Object.assign(Component.prototype, {
     const rend = L.svg({ pane: 'route' });
     lines.forEach(l => { L.polyline(l.pts, { renderer: rend, color: '#fff', weight: 7, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(m.tl);
       L.polyline(l.pts, { renderer: rend, color: l.col, weight: 3.5, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(m.tl); });
-    pins.forEach(p => { const z = p.sel ? 56 : 40;
+    pins.forEach(p => { const z = p.sel ? 52 : 34;
       L.marker(p.ll, { zIndexOffset: p.sel ? 1000 : p.label ? 500 : 0, icon: L.divIcon({ className: '', html: this.pinHtml(p.col, z, p.sel, p.faded && !p.sel, null, p.em, p.label), iconSize: [z, z], iconAnchor: [z / 2, z / 2] }) })
         .on('click', e => { L.DomEvent.stopPropagation(e); this.setState({ tripSel: { kind: p.kind, id: p.id }, confirmStopDel: false }); }).addTo(m.tl); });
     if (force || ids !== m.tids) { m.tids = ids; const pts = pins.map(p => p.ll);
