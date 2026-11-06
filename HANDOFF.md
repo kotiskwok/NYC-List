@@ -86,7 +86,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - **Apple Maps** base map (MapKit JS), dark scheme in dark mode. If it's unavailable, the app draws its own map in Apple Maps colours.
 - **Header card:** "Spotted In" with the yellow **city button** (NYC ▾) that opens **Pick A City**, a big count of **Spots To Try**, your profile photo with a sync dot (tap for **Your Account**), and Visited / In Plan counts.
 - **Chips:** All Spots, **Open Now** (only spots open right now, in that map's local time), then the categories.
-- **Pins:** a frosted ring with the category's line icon, or the spot's photo.
+- **Pins:** a frosted ring with the category's line icon (34 px, 54 px when selected; `pinHtml` / `syncOne` in `logic.js`).
 - **Nearest To You** card, once your location is known. **My Location** button (if location fails, tap where you are).
 - **Map Layers** (per map; bike docks show live counts). Everything starts **off**, transit lines and stations too, so the map stays clean and fast (`LAYERS.sub2` in `logic.js`):
 
@@ -116,11 +116,13 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - On the NYS map: **Drive**, and **Train** (subway to Grand Central or Penn, regional train, then a walk or short drive). The fastest is marked.
 - Each option opens Google Maps for live times. Drag the sheet down to shrink it to a small bar above the tab bar.
 
-### Explore tab ("Full-Photo Feed", design EX6)
-- Every match fills the screen with its photo (or its category colour and icon); **swipe up** for the next one (scroll snapping). The page shows category · area · price, the name in two weights, hours and minutes away, a ✨ reason in vibe search, and "Swipe Up For The Next One · 3 / 14".
-- Down the right side: **Plan** (orange; **In Plan** in blue once added), **Go** (Get There) and **Share** (share sheet, or copies the link). Tap the photo to open the place card.
-- On top: a **When** dropdown (**Anytime / Open Now / Haven't Been**), a **category** dropdown (**All Spots** or one category, with counts) and a **search** button. Search opens **Ask Spotted Anything…** (typing a phrase shows the purple **✨ Vibe Search** pill), price for restaurants, neighborhoods by region, **Clear All**, **See All As A List** (list or map, Add All To Plan) and **Show N Spots**.
-- The feed ends with "That's All" (**See All** / **Shuffle Again**). Code: `FeedScreen`, `FeedPage`, `FeedSearch` in `view.js`; `feedItems`, `feedCats`, `feedWhen` in `renderVals()`.
+### Explore tab ("Swipe + Peek Strip", design EX1b)
+- Dark screen (in light and dark mode) titled "Where We Going Tonight?" (or "Today?" before 5 PM).
+- **Search bar** (✨ icon) for a name or a vibe; typing a phrase shows the purple **✨ Vibe Search** pill. Its **filter button** (orange badge = filters on) opens **Filter Your Spots**: **When** (Open Now, Haven't Been), **Category** (multi-select, with counts), price for restaurants, neighborhoods by region, **Clear All**, **See All As A List** and **Show N Spots**.
+- **Count line:** "12 Matches · Open Now · Bakery" (2+ categories or areas collapse to "2 Categories"), with **See All** (list or map, Add All To Plan).
+- **Swipe deck:** a big card with the photo, "4 / 12", name in two weights, category · area · price · minutes, hours or the ✨ reason. Swipe right = **Plan**, left = **Skip**, tap = place card; Skip and Plan buttons sit on the card too.
+- **Peek strip** under the deck: a thumbnail of every match (first 60, then "+N" opens See All). The current one has an orange ring, passed ones fade, ones in your plan get a blue check; tap one to jump to it.
+- The deck ends with "That's All" (**See All** / **Shuffle Again**). Code: `FeedScreen`, `FeedCard`, `FeedStrip`, `FeedSearch` in `view.js`; `feedItems` (with `cur`, `seen`, `onJump`), `feedCount`, `feedWhenChips`, `feedCatChips`, `feedFilterN`, `deckGrab` in `renderVals()`; deck logic in `deckList`/`deckAct`/`deckDown`/`deckMove`/`deckUp`.
 
 ### Route tab (Plan A Day)
 - Full-screen map with the dotted route and numbered pins. A glass panel shows total travel, a ride-vs-walk bar, when you're done, and **Start From** (First Stop / Home / My Location).
@@ -151,7 +153,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - **Website:** `https://nyc-lovat.vercel.app/?add=<link>` opens Add A Spot with the link (Android share menu via the web manifest; works with an iPhone Shortcut).
 
 ### Account, welcome and tour
-- **Sign-in screen** with the logo, email/password and a show-password eye. Invite links show "Kotis Invited You".
+- **Sign-in screen** (design SI1 · Frosted Over Your Map): a blurred, drawn map with colored pins (`AuthBackdrop`, night map in dark mode) behind a frosted glass card with the logo, email/password and a show-password eye, plus a glass **New Here? Create An Account** pill. Invite links show "Kotis Invited You".
 - **Welcome steps:** name, home city (NYC, SG, HKG, TO or BOS) and optional home address, then **Show Me Around**.
 - **How-to tour:** five cards (**Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**), with icon tabs, swipe or Next/Back, and Skip. The welcome toast shows when it closes. Reopen from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
 - **Your Account:** profile photo, sync status, **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), Sync Now, Sign Out, **Delete My Account** (needs `SUPABASE_SERVICE_ROLE_KEY`, see §6).
@@ -188,7 +190,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 | **OpenStreetMap** | Address search (Nominatim; the iPhone app goes through `/api/geocode`), Photon fallback suggestions, station/neighborhood data and non-NYC transit lines (Overpass) | No key |
 | **Transit feeds** | NYC buses (data.ny.gov); live bike docks for Citi Bike, Bike Share Toronto, Bluebikes (GBFS) | No key |
 
-**Secret keys live only in Vercel** → project nyc → Settings → Environment Variables. Never in code or chat. After adding one, redeploy.
+**Secret keys live only in Vercel** → project nyc → Settings → Environment Variables. Never in code or chat. After adding one, redeploy. Keys are switched on for both **Production** and **Preview**, so branch previews get Google photos, AI and Apple Maps too.
 
 | Variable | Status | Turns on |
 |---|---|---|
@@ -302,11 +304,10 @@ Each one uses its own transit for travel times.
 New York State is for day trips and weekends, with driving and Metro-North, LIRR and Amtrak.
 
 EXPLORE
-Swipe up through your saved spots, one big photo at a time.
-Tap Plan to add one to your day, Go for directions, or Share to send it to a friend.
-Use the dropdowns for Open Now, Haven't Been, or one category.
-The search button finds spots by name or area.
-Type a vibe like "somewhere cozy for a rainy day" and Vibe Search picks the best matches from your own spots.
+Swipe through your saved spots like a deck of cards: right to add it to your plan, left to skip, tap to open it.
+The strip underneath shows every match, so you can see all your options and jump straight to one.
+The filter button narrows it down to Open Now, Haven't Been, categories, price or neighborhoods.
+Search by name, or type a vibe like "somewhere cozy for a rainy day" and Vibe Search picks the best matches from your own spots.
 
 PLAN YOUR DAY
 The route tab lines up your plan on the map with numbered stops.
