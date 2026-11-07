@@ -53,7 +53,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 |---|---|---|
 | **Claude Project "Spotted On:"** | Holds this handoff (`claude/HANDOFF.md`) so every new chat in the project can read it, plus project memory. | Start new chats inside the project. |
 | **GitHub** (private repo `kotiskwok/NYC-List`, branch `main`) | Reading and editing the code, pushing changes, running GitHub Actions. **Every push to `main` deploys the website** (Vercel). Pushing any other branch makes a private Vercel preview. | claude.ai → Settings → Connectors → GitHub (with access to `kotiskwok/NYC-List`). In the chat, ask Claude to attach the repo with **push** access. |
-| **Claude desktop app on the Mac, linked to the chat** | Updating the Xcode project on the Mac: `git pull`, copying the website into the app, `npx cap sync ios`. | Open the chat in the Claude desktop app and choose **Link to this computer**. Approve folder access to **Documents › Spotted In App** and the **delete permission** (git needs it to replace files). Keep the Mac awake with the app open while Claude works. |
+| **Claude desktop app on the Mac, linked to the chat** | Updating the Xcode project on the Mac: `git pull`, copying the website into the app, `npx cap sync ios`. | Keep the Claude desktop app open on the Mac. When asked, Claude requests access to **Documents › Spotted In App** and the **delete permission** itself (git needs it to replace files): approve both prompts. (You can also add the folder with **+ → Add folder** next to the message box.) Keep the Mac awake with the app open while Claude works. |
 | **Built-in browser** (the browser pane in the Claude desktop app) | Checking the live site, Vercel deploys and logs, running SQL in Supabase, App Store Connect / TestFlight, Google Cloud, and reading Instagram / TikTok posts. | Stay signed in to these sites in the browser pane and approve them when Claude asks: `nyc-lovat.vercel.app`, `vercel.com`, `github.com`, `supabase.com`, `appstoreconnect.apple.com`, `developer.apple.com`, `console.cloud.google.com`, `platform.openai.com`, `console.anthropic.com`, `instagram.com`, `tiktok.com`. |
 | **Computer use: Xcode** (optional) | Looking at Xcode. Xcode is click-only for Claude, so it can't use Xcode's menus or archive. | Approve Xcode when Claude asks. **You** do Product → Archive → Upload. |
 | **Google Play Console** (for the Android app, §8b) | Creating the Play listing, uploading Android builds, managing the closed test and testers. | Kotis makes the developer account at play.google.com/console ($25 one-time, ID verification). Then approve `play.google.com` in the built-in browser so Claude can fill in the listing. |
@@ -63,7 +63,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 
 ### Before each working session
 1. On the Mac, open the **Claude desktop app** and open the chat there (keep the Mac awake).
-2. If Claude needs the Mac's project, choose **+ → Add folder** next to the message box and pick **Documents › Spotted In App**, then approve the delete permission when asked.
+2. If Claude needs the Mac's project, approve its folder access and delete permission prompts for **Documents › Spotted In App** (or add the folder yourself with **+ → Add folder**).
 3. Stay signed in to Vercel, Supabase and App Store Connect in the built-in browser pane.
 From the iPhone Claude app you can still change the code and the website; only the Xcode steps need the Mac.
 
@@ -349,13 +349,13 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and, for full App Store review, terms of use that forbid abusive content.
 
-- **Current build number:** 17 (`CURRENT_PROJECT_VERSION`). If TestFlight doesn't show build 17 yet, it still needs Archive and Upload.
+- **Current build number:** 17 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 17 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
 2. **Update the Mac's project** (Claude through the linked Mac, or you). The project is **Documents › Spotted In App**, a clone of the repo.
    - Yourself, in Terminal: `cd ~/Documents/"Spotted In App" && git pull && cd native && npm run sync`.
-   - Claude through the linked Mac: the folder is mounted at `/sessions/<id>/mnt/Spotted In App` in a Linux sandbox, so it needs the folder's delete permission for `git pull`. It removes `native/www`, copies `index.html`, `config.js`, `manifest.webmanifest`, `privacy.html`, `support.html` and the `src`, `vendor`, `data`, `icons` folders in with `cp -R`, checks them with `diff -rq`, then runs `npx cap sync ios`.
+   - Claude through the Mac (`device_bash`): after folder access and delete permission are granted, the folder is mounted at `$HOME/mnt/Spotted In App` in a Linux sandbox on the Mac that has git, Node and npx and can reach GitHub. If git complains about a `.lock` file, remove the stale lock (e.g. `.git/objects/maintenance.lock`) first. Claude runs `git pull --ff-only`, then removes `native/www`, copies `index.html`, `config.js`, `manifest.webmanifest`, `privacy.html`, `support.html` and the `src`, `vendor`, `data`, `icons` folders in with `cp -R`, checks them with `diff -rq`, then runs `npx cap sync ios` in `native/` and checks the new files reached `native/ios/App/App/public`.
 3. **In Xcode** (you): open `native/ios/App/App.xcodeproj` (reopen it if it was open), choose **Any iOS Device (arm64)**, then **Product → Archive → Distribute App → App Store Connect → Upload**.
 4. **In App Store Connect** (Claude can do this in the built-in browser once the build has processed, about 5–30 minutes; it appears under TestFlight): add the What to Test notes, add the build to both groups, and submit to Beta App Review if asked.
 
