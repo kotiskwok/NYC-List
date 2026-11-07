@@ -825,7 +825,7 @@ class Component extends DCLogic {
     const feedItems=deck.map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=feedMin(p),oi=openInfo(p,dnow),ip=inPlan(p.id);
       return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:ip,
         tag:[c.name,p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:''].filter(Boolean).join(' · ').toUpperCase(),
-        hours:oi?oi.label:'',hoursCol:oi?(oi.open?(oi.soon?'#FFB27A':'#5BE0A6'):'#FF8A8F'):'',
+        hours:oi?oi.label:'',hoursCol:oi?((window.THEME_DARK&&THEME_DARK())?(oi.open?(oi.soon?'#FFB27A':'#5BE0A6'):'#FF8A8F'):(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C')):'',
         away:m!=null?Math.max(1,Math.round(m))+' min '+(s.here?'away':'from home'):'',why:vb&&vb.why[p.id]?'✨ '+vb.why[p.id]:'',
         idx:(i+1)+' / '+deck.length,last:i===deck.length-1,seen:i<dpos,cur:i===dpos,onJump:e=>{e&&e.stopPropagation();this._dg=null;this.setState({deck:{key:this.deckKeyNow(),pos:i},deckDx:0,deckFly:''});},
         onOpen:()=>this.setState({selId:p.id,confirmDel:false,feedMenu:''}),

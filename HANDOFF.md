@@ -128,7 +128,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - Each option opens Google Maps for live times. Drag the sheet down to shrink it to a small bar above the tab bar.
 
 ### Explore tab ("Swipe + Peek Strip", design EX1b)
-- Dark screen (in light and dark mode) titled "Where We Going Tonight?" (or "Today?" before 5 PM).
+- Follows light and dark mode like the rest of the app (cream backdrop with colour glows and white glass cards in light, navy in dark), titled "Where We Going Tonight?" (or "Today?" before 5 PM).
 - **Search bar** (✨ icon) for a name or a vibe; typing a phrase shows the purple **✨ Vibe Search** pill. Its **filter button** (orange badge = filters on) opens **Filter Your Spots**: **When** (Open Now, Haven't Been), **Category** (multi-select, with counts), price for restaurants, neighborhoods by region, **Clear All**, **See All As A List** and **Show N Spots**.
 - **Count line:** "12 Matches · Open Now · Bakery" (2+ categories or areas collapse to "2 Categories"), with **See All** (list or map, Add All To Plan).
 - **Swipe deck:** a big card with the photo, "4 / 12", name in two weights, category · area · price · minutes, hours or the ✨ reason. Swipe right = **Plan**, left = **Skip**, tap = place card; Skip and Plan buttons sit on the card too.

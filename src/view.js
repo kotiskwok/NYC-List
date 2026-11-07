@@ -270,7 +270,11 @@ function DeckCard(c, i, v) {
 // Explore: "Swipe + Peek Strip" (design EX1b). A big swipe deck (right = Plan, left = Skip, tap = open the spot),
 // with a strip of every match underneath so you can see all your options and jump straight to one.
 // The search bar takes a name or a vibe; its filter button opens When, Category, Price and Neighborhoods.
-const FEED_INK = '#FFFFFF', FEED_GL = 'background:rgba(255,255,255,.07);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.14)';
+// Drawn in light colors like every other screen, so S() flips it for dark mode. FD() picks the few accents
+// (purple, hours, skip) that need their own shade on a dark card.
+const FEED_INK = '#10183F', FEED_GL = 'background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,.9);box-shadow:0 8px 22px rgba(16,24,63,.08)';
+const FD = (light, dark) => THEME.dark ? dark : light;
+const FEED_BG = () => FD('#FFF3DF', '#0E1433');
 const SPARK = 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z';
 const SLIDERS = 'M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4';
 const FEED_STRIP_MAX = 60;
@@ -284,7 +288,7 @@ function FeedCard(f, i, v) {
   return html`
   <div key=${f.id} onPointerDown=${front ? g.onDown : null} onPointerMove=${front ? g.onMove : null} onPointerUp=${front ? () => v.deckUp(f.id) : null} onPointerCancel=${front ? g.onCancel : null}
     aria-hidden=${front ? null : 'true'}
-    style=${S(`position:absolute;left:0;right:0;top:0;bottom:12px;z-index:${3 - i};${FEED_GL};background:rgba(22,30,74,${front ? .92 : .6});border-radius:30px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:${front ? 'grab' : 'default'};transform:${tf};transform-origin:50% 110%;opacity:${i === 2 ? .5 : 1};transition:${still ? 'none' : 'transform .24s ease, opacity .24s'};color:${FEED_INK}`)}>
+    style=${S(`position:absolute;left:0;right:0;top:0;bottom:12px;z-index:${3 - i};${FEED_GL};background:rgba(255,255,255,${front ? .92 : .6});box-shadow:0 18px 40px rgba(16,24,63,${front ? .16 : .06});border-radius:30px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:${front ? 'grab' : 'default'};transform:${tf};transform-origin:50% 110%;opacity:${i === 2 ? .5 : 1};transition:${still ? 'none' : 'transform .24s ease, opacity .24s'};color:${FEED_INK}`)}>
     <div style=${S(`position:relative;flex:1;min-height:110px;border-radius:23px;overflow:hidden;background:linear-gradient(150deg,${f.col}99,${f.col});display:flex;align-items:center;justify-content:center`)}>
       <div aria-hidden="true" style=${S('position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.18) 1px,transparent 1px);background-size:24px 24px')}></div>
       <span style=${S('position:relative;opacity:.85')}>${CatIcon(f.emoji, 58, f.fg)}</span>
@@ -298,11 +302,11 @@ function FeedCard(f, i, v) {
     <div style=${S(`flex:none;display:flex;align-items:center;gap:8px;padding:11px 2px 3px 8px;visibility:${front ? 'visible' : 'hidden'}`)}>
       <div style=${S('flex:1;min-width:0')}>
         <div style=${S('font-size:22px;letter-spacing:-.7px;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900;font-style:italic')}>${f.bold}</span> <span style=${S('font-weight:200')}>${f.light}</span></div>
-        <div style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;color:#A6AECF;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${meta}</div>
-        ${(f.why || f.hours) && html`<div style=${S('font-size:12.5px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (f.why ? '#D9C8FF' : f.hoursCol))}>${f.why || f.hours}</div>`}
+        <div style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;color:#4A5275;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${meta}</div>
+        ${(f.why || f.hours) && html`<div style=${S('font-size:12.5px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (f.why ? FD('#7A4FD6', '#D9C8FF') : f.hoursCol))}>${f.why || f.hours}</div>`}
       </div>
       ${front && html`
-      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" style=${S('width:46px;height:46px;flex:none;border-radius:50%;border:0;background:rgba(232,36,44,.18);color:#FF8A8F;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
+      <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" style=${S(`width:46px;height:46px;flex:none;border-radius:50%;border:0;background:${FD('rgba(232,36,44,.12)', 'rgba(232,36,44,.18)')};color:${FD('#D21F27', '#FF8A8F')};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
       <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckPlan} aria-label=${f.inPlan ? 'In Plan' : 'Add To Plan'} style=${S(`width:50px;height:50px;flex:none;border-radius:50%;border:0;background:${f.inPlan ? '#1B3DB8' : '#FF6B1A'};color:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(255,107,26,.3)`)}>${Ico(f.inPlan ? 'M5 12l5 5 9-10' : 'M12 5v14M5 12h14', 20, 'currentColor', 2.8)}</button>`}
     </div>
   </div>`;
@@ -318,17 +322,17 @@ function FeedStrip(v) {
   return html`
   <div style=${S(`flex:none;display:flex;flex-direction:column;gap:8px;visibility:${v.hasSel ? 'hidden' : 'visible'}`)}>
     <div style=${S('display:flex;justify-content:space-between;gap:8px;padding:0 4px')}>
-      ${mono('ALL ' + v.feedItems.length + ' · TAP ONE TO JUMP', '#8C94B8')}
-      ${mono('← SKIP · PLAN →', '#8C94B8')}
+      ${mono('ALL ' + v.feedItems.length + ' · TAP ONE TO JUMP', '#6A7090')}
+      ${mono('← SKIP · PLAN →', '#6A7090')}
     </div>
     <div class="noscroll" style=${S('display:flex;gap:7px;overflow-x:auto;padding:5px;margin:-5px')}>
       ${items.map((f, i) => html`
       <button key=${f.id} ref=${f.cur ? stripRef : null} onClick=${f.onJump} aria-label=${f.bold + ' ' + f.light + (f.cur ? ', Showing' : f.seen ? ', Seen' : '')} aria-current=${f.cur ? 'true' : null}
-        style=${S(`position:relative;width:48px;height:48px;flex:none;border-radius:14px;border:0;padding:0;overflow:hidden;cursor:pointer;background:${f.col};display:flex;align-items:center;justify-content:center;opacity:${f.seen ? .38 : 1};box-shadow:${f.cur ? '0 0 0 2px #0A0F2E,0 0 0 4.5px #FF6B1A' : 'none'};transition:opacity .2s`)}>
+        style=${S(`position:relative;width:48px;height:48px;flex:none;border-radius:14px;border:0;padding:0;overflow:hidden;cursor:pointer;background:${f.col};display:flex;align-items:center;justify-content:center;opacity:${f.seen ? .38 : 1};box-shadow:${f.cur ? '0 0 0 2px ' + FEED_BG() + ',0 0 0 4.5px #FF6B1A' : 'none'};transition:opacity .2s`)}>
         ${CatIcon(f.emoji, 20, f.fg)}${Photo(f.img, '')}
-        ${f.inPlan && html`<span aria-hidden="true" style=${S('position:absolute;right:3px;bottom:3px;width:14px;height:14px;border-radius:50%;background:#1B3DB8;border:1.5px solid #0A0F2E;display:flex;align-items:center;justify-content:center')}>${Ico('M5 12l5 5 9-10', 8, '#FFFFFF', 4)}</span>`}
+        ${f.inPlan && html`<span aria-hidden="true" style=${S(`position:absolute;right:3px;bottom:3px;width:14px;height:14px;border-radius:50%;background:#1B3DB8;border:1.5px solid ${FEED_BG()};display:flex;align-items:center;justify-content:center`)}>${Ico('M5 12l5 5 9-10', 8, '#FFFFFF', 4)}</span>`}
       </button>`)}
-      ${more > 0 && html`<button onClick=${v.showResults} aria-label=${'See All, ' + more + ' More'} style=${S(`width:48px;height:48px;flex:none;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:${FEED_INK};font-family:inherit;font-size:13px;font-weight:900;cursor:pointer`)}>+${more}</button>`}
+      ${more > 0 && html`<button onClick=${v.showResults} aria-label=${'See All, ' + more + ' More'} style=${S(`width:48px;height:48px;flex:none;border-radius:14px;border:1px solid rgba(16,24,63,.1);background:rgba(16,24,63,.06);color:${FEED_INK};font-family:inherit;font-size:13px;font-weight:900;cursor:pointer`)}>+${more}</button>`}
     </div>
   </div>`;
 }
@@ -336,29 +340,29 @@ function FeedStrip(v) {
 function FeedScreen(v, endCard, pill) {
   const mono = (t, col) => html`<span style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:${col || '#4A5275'}`)}>${t}</span>`;
   const cards = v.deckEmpty || v.deckDone ? [] : v.feedItems.slice(v.deckPos, v.deckPos + 3);
-  const link = (t, on) => html`<button onClick=${on} style=${S(`flex:none;border:0;background:none;padding:6px 0;cursor:pointer;${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#8FA6FF`)}>${t}</button>`;
+  const link = (t, on) => html`<button onClick=${on} style=${S(`flex:none;border:0;background:none;padding:6px 0;cursor:pointer;${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#1B3DB8`)}>${t}</button>`;
   return html`
-  <div style=${S(`position:absolute;inset:0;display:${v.exPickDisplay};background:#0A0F2E;overflow:hidden`)}>
-    <div aria-hidden="true" style=${S('position:absolute;left:-110px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,26,.26),rgba(255,107,26,0) 68%)')}></div>
-    <div aria-hidden="true" style=${S('position:absolute;right:-120px;top:42%;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(27,61,184,.42),rgba(27,61,184,0) 68%)')}></div>
+  <div style=${S(`position:absolute;inset:0;display:${v.exPickDisplay};background:var(--bgfx);overflow:hidden`)}>
+    <div aria-hidden="true" style=${S(`position:absolute;left:-110px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,26,${FD(.18, .26)}),rgba(255,107,26,0) 68%)`)}></div>
+    <div aria-hidden="true" style=${S(`position:absolute;right:-120px;top:42%;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(27,61,184,${FD(.16, .42)}),rgba(27,61,184,0) 68%)`)}></div>
     <div style=${S(`position:absolute;left:16px;right:16px;top:${T(54)};bottom:${B(106)};display:flex;flex-direction:column;gap:12px;color:${FEED_INK}`)}>
       <h1 style=${S('flex:none;margin:0 4px;font-size:32px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-1.4px')}>${v.exTitleA} <span style=${S('font-weight:200;font-style:normal')}>${v.exTitleB}</span></h1>
       <label style=${S(`flex:none;height:50px;border-radius:999px;${FEED_GL};display:flex;align-items:center;gap:10px;padding:0 5px 0 16px;box-sizing:border-box`)}>
-        ${Ico(SPARK, 18, '#C9B6FF', 2)}
+        ${Ico(SPARK, 18, FD('#7A4FD6', '#C9B6FF'), 2)}
         <input value=${v.exQuery} onInput=${v.onExQuery} onKeyDown=${e => { if (e.key === 'Enter' && v.showVibe) v.runVibe(); }} placeholder="Ask Spotted Anything…" aria-label="Search Or Describe A Vibe" enterkeyhint="search" style=${S(`flex:1;min-width:0;border:0;background:transparent;font-family:inherit;font-size:16px;font-weight:600;color:${FEED_INK};outline:none`)}/>
-        ${v.exQuery && html`<button onClick=${v.clearExQuery} aria-label="Clear Search" style=${S('width:30px;height:30px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#FFFFFF;font-weight:800;cursor:pointer')}>✕</button>`}
-        <button onClick=${v.openFeedSearch} aria-label=${'Filters' + (v.feedFilterN ? ', ' + v.feedFilterN + ' On' : '')} style=${S('position:relative;width:40px;height:40px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#FFC425;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0')}>
+        ${v.exQuery && html`<button onClick=${v.clearExQuery} aria-label="Clear Search" style=${S('width:30px;height:30px;flex:none;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:800;cursor:pointer')}>✕</button>`}
+        <button onClick=${v.openFeedSearch} aria-label=${'Filters' + (v.feedFilterN ? ', ' + v.feedFilterN + ' On' : '')} style=${S(`position:relative;width:40px;height:40px;flex:none;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:${FD('#1B3DB8', '#FFC425')};display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0`)}>
           ${Ico(SLIDERS, 18, 'currentColor', 2.2)}
-          ${v.feedFilterN > 0 && html`<span style=${S('position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#FF6B1A;color:#FFFFFF;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #0A0F2E')}>${v.feedFilterN}</span>`}
+          ${v.feedFilterN > 0 && html`<span style=${S(`position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#FF6B1A;color:#FFFFFF;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid ${FEED_BG()}`)}>${v.feedFilterN}</span>`}
         </button>
       </label>
       ${(v.showVibe || v.vibeBusy) && html`
       <button onClick=${v.runVibe} disabled=${v.vibeBusy} class=${v.vibeBusy ? 'ai-busy' : ''} style=${S('flex:none;align-self:flex-start;max-width:100%;height:36px;padding:0 15px;border-radius:999px;border:0;background:linear-gradient(120deg,#1B3DB8,#7A4FD6);color:#FFFFFF;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:7px;margin-top:-4px')}>
         <span aria-hidden="true">✨</span><span style=${S('white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${v.vibeBusy ? 'Reading Your Spots…' : 'Vibe Search: “' + v.vibeQ + '”'}</span>
       </button>`}
-      ${v.vibeMsg && html`<div style=${S('flex:none;padding:0 4px;font-size:13px;font-weight:700;color:#FF8A8F')}>${Lines(v.vibeMsg)}</div>`}
+      ${v.vibeMsg && html`<div style=${S(`flex:none;padding:0 4px;font-size:13px;font-weight:700;color:${FD('#D21F27', '#FF8A8F')}`)}>${Lines(v.vibeMsg)}</div>`}
       <div style=${S('flex:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 4px;margin-top:-4px')}>
-        <span style=${S(`min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:${v.vibeOn ? '#C9B6FF' : '#A6AECF'}`)}>${v.feedCount}</span>
+        <span style=${S(`min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:${v.vibeOn ? FD('#7A4FD6', '#C9B6FF') : '#4A5275'}`)}>${v.feedCount}</span>
         ${v.vibeOn ? link('BACK TO KEYWORDS', v.clearVibe) : v.exCount > 0 && link('SEE ALL', v.showResults)}
       </div>
       <div style=${S('position:relative;flex:1;min-height:0')}>
