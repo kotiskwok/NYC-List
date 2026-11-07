@@ -57,7 +57,15 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 | **Built-in browser** (the browser pane in the Claude desktop app) | Checking the live site, Vercel deploys and logs, running SQL in Supabase, App Store Connect / TestFlight, Google Cloud, and reading Instagram / TikTok posts. | Stay signed in to these sites in the browser pane and approve them when Claude asks: `nyc-lovat.vercel.app`, `vercel.com`, `github.com`, `supabase.com`, `appstoreconnect.apple.com`, `developer.apple.com`, `console.cloud.google.com`, `platform.openai.com`, `console.anthropic.com`, `instagram.com`, `tiktok.com`. |
 | **Computer use: Xcode** (optional) | Looking at Xcode. Xcode is click-only for Claude, so it can't use Xcode's menus or archive. | Approve Xcode when Claude asks. **You** do Product → Archive → Upload. |
 | **Google Play Console** (for the Android app, §8b) | Creating the Play listing, uploading Android builds, managing the closed test and testers. | Kotis makes the developer account at play.google.com/console ($25 one-time, ID verification). Then approve `play.google.com` in the built-in browser so Claude can fill in the listing. |
+| **Claude settings: memory and past chats** | Remembering decisions and preferences between chats in the project, and finding earlier chats about the app. | claude.ai → Settings: turn on **Generate memory from chat history** and **Search and reference chats**. |
+| **Network access for Claude's workspace** (optional) | Opening the live site and Vercel previews straight from Claude's own workspace (otherwise it checks them through the built-in browser). | claude.ai → Settings → Capabilities: add `nyc-lovat.vercel.app` and `vercel.app` to the allowed domains. |
 | **Design canvas "Spotted In Icon Options"** (claude.ai artifact) | Laying out visual options to compare before building: icons, share card, wallet, buttons, reviews, personality. | https://claude.ai/artifact/7mWakGhfPe7dfWubzZyqbW. Ask Claude to add a new row of options to it. |
+
+### Before each working session
+1. On the Mac, open the **Claude desktop app** and open the chat there (keep the Mac awake).
+2. If Claude needs the Mac's project, choose **+ → Add folder** next to the message box and pick **Documents › Spotted In App**, then approve the delete permission when asked.
+3. Stay signed in to Vercel, Supabase and App Store Connect in the built-in browser pane.
+From the iPhone Claude app you can still change the code and the website; only the Xcode steps need the Mac.
 
 **What Claude won't do (you do these):** type or paste passwords or API keys, accept Apple agreements, and press Archive or Upload in Xcode. Claude opens the right page and tells you exactly what to click.
 
@@ -340,6 +348,8 @@ Tell me anything that's confusing, broken, slow or missing.
 Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and, for full App Store review, terms of use that forbid abusive content.
+
+- **Current build number:** 17 (`CURRENT_PROJECT_VERSION`). If TestFlight doesn't show build 17 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
