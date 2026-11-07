@@ -1536,12 +1536,14 @@ function CityPicker(v) {
         <div><div style=${S(`${MONO};font-size:10.5px;font-weight:700;letter-spacing:1.1px;color:#4A5275`)}>SPOTTED IN · BETA</div><div style=${S('font-size:26px;font-weight:900;font-style:italic;letter-spacing:-.8px;line-height:1.05')}>Pick <span style=${S('font-weight:200;font-style:normal')}>A City</span></div></div>
         <button onClick=${v.closeCity} aria-label="Close" style=${S('width:34px;height:34px;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;font-weight:800;cursor:pointer')}>✕</button>
       </div>
+      <div style=${S('display:flex;flex-direction:column;gap:10px;max-height:min(560px,calc(100vh - 230px));overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px')}>
       ${v.cityRows.map(c => html`
       <button key=${c.id} onClick=${c.onClick} aria-pressed=${c.on} style=${S(`display:flex;align-items:center;gap:12px;padding:10px 12px 10px 10px;border-radius:24px;cursor:pointer;text-align:left;color:#10183F;border:${c.on ? '0' : '1px solid rgba(255,255,255,.95)'};background:${c.on ? '#10183F' : 'rgba(255,255,255,.7)'};${c.on ? 'color:#fff;box-shadow:0 10px 24px rgba(16,24,63,.25)' : 'box-shadow:inset 0 2px 1px #fff'}`)}>
         <span class="emo" aria-hidden="true" style=${S(`width:46px;height:46px;flex:none;border-radius:16px;background:${c.on ? 'rgba(255,255,255,.14)' : '#FFF3DF'};display:flex;align-items:center;justify-content:center;font-size:24px`)}>${c.emoji}</span>
         <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:17px;font-weight:900;font-style:italic;letter-spacing:-.3px')}>${c.name}</span><span style=${S(`${MONO};font-size:10px;font-weight:700;color:${c.on ? '#FFC425' : '#4A5275'}`)}>${c.count} ${c.count === 1 ? 'SPOT' : 'SPOTS'} · ${c.transit.toUpperCase()}</span></span>
         ${c.on ? html`<span style=${S('width:28px;height:28px;border-radius:50%;background:#FFC425;color:#10183F;display:flex;align-items:center;justify-content:center;flex:none')}>${Ico('M5 12l5 5 9-10', 14, 'currentColor', 3)}</span>` : Ico('M9 6l6 6-6 6', 16, '#4A5275', 2.4)}
       </button>`)}
+      </div>
       <div style=${S('font-size:11.5px;font-weight:600;color:#5A6080;padding:0 6px;line-height:1.4')}>Each city keeps its own spots, home and day plan. Your lists stay the same everywhere.</div>
     </div>
   </div>`;
@@ -1589,7 +1591,7 @@ function Onboarding(v) {
       ${art('🏠', '#FCCC0A')}
       ${title('Where’s Home, ' + v.obFirst + '?', 'Pick your city, then your address if you like. We’ll use it to show how far each spot is from your couch. It stays private to your account.')}
       <div role="radiogroup" aria-label="Your City" style=${S('align-self:stretch;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px')}>
-        ${v.cityRows.filter(c => c.id !== 'nys').map(c => html`<button key=${c.id} type="button" role="radio" aria-checked=${c.on} onClick=${c.onClick} style=${S(`height:62px;border-radius:20px;border:${c.on ? '0' : '1px solid rgba(255,255,255,.95)'};background:${c.on ? '#10183F' : 'rgba(255,255,255,.75)'};color:${c.on ? '#fff' : '#10183F'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:${c.on ? '0 8px 18px rgba(16,24,63,.25)' : 'inset 0 2px 1px #fff'}`)}><span class="emo" aria-hidden="true" style=${S('font-size:20px')}>${c.emoji}</span><span style=${S('font-size:12px;font-weight:900;font-style:italic')}>${c.short}</span></button>`)}
+        ${v.cityRows.filter(c => c.id !== 'nys' && c.id !== 'nj').map(c => html`<button key=${c.id} type="button" role="radio" aria-checked=${c.on} onClick=${c.onClick} style=${S(`height:62px;border-radius:20px;border:${c.on ? '0' : '1px solid rgba(255,255,255,.95)'};background:${c.on ? '#10183F' : 'rgba(255,255,255,.75)'};color:${c.on ? '#fff' : '#10183F'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:${c.on ? '0 8px 18px rgba(16,24,63,.25)' : 'inset 0 2px 1px #fff'}`)}><span class="emo" aria-hidden="true" style=${S('font-size:20px')}>${c.emoji}</span><span style=${S('font-size:12px;font-weight:900;font-style:italic')}>${c.short}</span></button>`)}
       </div>
       <form onSubmit=${v.obFind} style=${S('align-self:stretch;display:flex;flex-direction:column;gap:10px;margin-top:auto;text-align:left')}>
         <label for="ob-addr" style=${S('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)')}>Home Address</label>

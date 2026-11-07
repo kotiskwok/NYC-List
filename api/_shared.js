@@ -56,12 +56,20 @@ const CITIES = {
   hk: { name: 'Hong Kong', short: 'Hong Kong', area: 'Hong Kong (Hong Kong Island, Kowloon, the New Territories and the outlying islands)', eg: '"Sheung Wan", "Mong Kok"', eg1: '"Sheung Wan"', addr: '"18 Hollywood Rd"', box: [22.15, 113.82, 22.57, 114.45] },
   bos: { name: 'Boston', short: 'Boston', area: 'Boston and its close neighbors (Cambridge, Somerville, Brookline and nearby towns)', eg: '"Back Bay", "North End"', eg1: '"South End"', addr: '"100 Hanover St"', box: [42.22, -71.2, 42.43, -70.95] },
   // New York State outside the city (outline matches data/nys-data.js in the app). NYC spots are matched to nyc first.
-  nys: { name: 'New York State', short: 'New York State', pin: 'NY', area: 'New York State outside the city of New York (Long Island, Westchester, the Hudson Valley, the Catskills, the Capital Region, the Adirondacks, the Finger Lakes and Western New York)',
+  nys: { name: 'New York State', short: 'New York State', pin: 'NY', state: true, area: 'New York State outside the city of New York (Long Island, Westchester, the Hudson Valley, the Catskills, the Capital Region, the Adirondacks, the Finger Lakes and Western New York)',
     eg: '"Hudson", "Beacon"', eg1: '"Woodstock"', addr: '"610 Warren St"', box: [40.45, -79.8, 45.05, -71.75],
     poly: [[40.49, -74.26], [40.70, -74.03], [41.0, -73.91], [41.36, -74.69], [42.0, -75.36], [42.0, -79.8], [42.55, -79.8], [42.86, -78.95],
       [43.1, -79.08], [43.32, -79.08], [43.38, -78.0], [43.33, -77.4], [43.48, -76.6], [43.62, -76.2], [44.1, -76.42], [44.5, -75.82],
       [45.02, -74.75], [45.02, -73.33], [43.6, -73.28], [42.75, -73.27], [42.05, -73.49], [41.21, -73.51], [41.13, -73.73], [41.0, -73.66],
       [41.18, -72.2], [41.08, -71.8], [40.45, -72.6], [40.5, -74.0]] },
+  // New Jersey (outline matches data/nj-data.js in the app). The NYC box also covers Jersey City and Hoboken; the map the
+  // person is on wins there.
+  nj: { name: 'New Jersey', short: 'New Jersey', pin: 'NJ', state: true, area: 'New Jersey (Jersey City, Hoboken, Bergen County, Newark, Montclair, Princeton, the Jersey Shore, South Jersey and the Skylands)',
+    eg: '"Hoboken", "Montclair"', eg1: '"Asbury Park"', addr: '"221 Washington St"', box: [38.9, -75.6, 41.37, -73.88],
+    poly: [[41.357, -74.694], [40.995, -73.902], [40.90, -73.925], [40.80, -73.972], [40.75, -74.012], [40.70, -74.035], [40.652, -74.07],
+      [40.642, -74.18], [40.56, -74.248], [40.49, -74.262], [40.47, -73.96], [40.20, -73.96], [39.90, -74.03], [39.5, -74.17], [39.30, -74.40], [38.92, -74.84],
+      [38.93, -74.97], [39.20, -75.12], [39.40, -75.45], [39.55, -75.58], [39.70, -75.53], [39.86, -75.33], [39.95, -75.15], [40.10, -74.87],
+      [40.21, -74.77], [40.42, -74.97], [40.57, -75.21], [40.85, -75.10], [40.98, -75.14], [41.20, -74.87]] },
   to: { name: 'Toronto', short: 'Toronto', area: 'the City of Toronto', eg: '"Kensington Market", "Leslieville"', eg1: '"Queen West"', addr: '"100 Queen St W"', box: [43.58, -79.64, 43.86, -79.11] }
 };
 const cityFor = id => CITIES[id] || CITIES.nyc;
@@ -69,7 +77,7 @@ const inRing = (lat, lng, r) => { let ins = false; for (let i = 0, j = r.length 
 const inCityBox = (lat, lng, c) => !!c && lat > c.box[0] && lat < c.box[2] && lng > c.box[1] && lng < c.box[3] && (!c.poly || inRing(lat, lng, c.poly));
 function localize(s, c) {
   if (!c || c === CITIES.nyc) return s;
-  if (c === CITIES.nys) s = String(s).replace(/NYC neighborhood/g, 'Town or neighborhood');
+  if (c.state) s = String(s).replace(/NYC neighborhood/g, 'Town or neighborhood');
   return String(s).replace(/the five boroughs of New York City/g, c.area).replace(/New York City/g, c.name).replace(/\bNYC\b/g, c.short)
     .replace(/"Williamsburg", "Nolita"/g, c.eg).replace(/"Midtown East"/g, c.eg1).replace(/"4 E 43rd St"/g, c.addr).replace(/"69 Grand St"/g, c.addr);
 }

@@ -8,7 +8,7 @@ Everything a new chat needs to keep working on **Spotted In**: what the app does
 
 **Spotted In** is Kotis's map of the places she's been meaning to try (restaurants, cafés, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station, travel time and opening hours. It also plans a day out, keeps shared trip lists with friends, and lets people rate and review the spots they've saved.
 
-It has six maps, each with its own spots, home and day plan:
+It has seven maps, each with its own spots, home and day plan:
 
 | Map | Button | Transit used for travel times |
 |---|---|---|
@@ -18,8 +18,9 @@ It has six maps, each with its own spots, home and day plan:
 | Toronto | TO 🍁 | TTC subway, LRT, streetcars |
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
 | New York State | NYS 🏞️ | Driving, and Metro-North / LIRR / Amtrak from NYC |
+| New Jersey | NJ 🍅 | Driving, and NJ Transit / PATH / Hudson-Bergen Light Rail from NYC |
 
-The app is built around major cities. New York State is the last map, for day trips and weekends outside the city.
+The app is built around major cities. New York State and New Jersey are the last two maps (state maps), for day trips and weekends outside the city.
 
 - **Website (also installs to the home screen):** https://nyc-lovat.vercel.app
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -98,7 +99,9 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 | Toronto | Subway/LRT, Streetcars, Buses, Bike Share Toronto |
 | Boston | The T stations, MBTA Buses & Silver Line, Ferries, Bluebikes |
 | New York State | Metro-North, LIRR & Amtrak stations |
+| New Jersey | NJ Transit, PATH & light rail stations (names from zoom 12) |
 
+- **New Jersey map:** works like the New York State map. Opens on the whole state; towns and Jersey City neighborhoods are grouped into Jersey City & Hoboken, Bergen & Passaic, Essex, Union & Morris, Central Jersey, Jersey Shore, South Jersey and Skylands. Train estimates go from your NYC home by subway to Penn Station (NJ Transit, with changes at Secaucus, Newark or Trenton noted in the line name), World Trade Center or 33rd St (PATH, and PATH + light rail). It uses your NYC home until you set one there. NYC subway stations never show as a New Jersey spot's nearest station.
 - **New York State map:** opens on the whole state. Spots get a town as their neighborhood, grouped into regions (Long Island, Westchester, Hudson Valley, Catskills, Capital Region, Adirondacks & North Country, Finger Lakes & Central NY, Western NY). It uses your NYC home until you set one there.
 - While a spot or directions are open, the header, chips and side buttons hide.
 
@@ -113,7 +116,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 ### Get There
 - Start from **My Location**, **Home** or **A Saved Spot**.
 - In the cities: an estimated route by subway/MRT/T/streetcar/tram/ferry with line badges, transfers and walking legs, compared with walking, drawn on the map in each line's colour.
-- On the NYS map: **Drive**, and **Train** (subway to Grand Central or Penn, regional train, then a walk or short drive). The fastest is marked.
+- On the NYS and NJ maps: **Drive**, and **Train** (subway to Grand Central, Penn or the PATH, regional train, then a walk or short drive; a station you can walk from wins over a slightly quicker one that needs a taxi). The fastest is marked.
 - Each option opens Google Maps for live times. Drag the sheet down to shrink it to a small bar above the tab bar.
 
 ### Explore tab ("Swipe + Peek Strip", design EX1b)
@@ -229,10 +232,10 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 - **Photos:** Storage bucket `avatars`: `<user>/avatar.jpg`, `<user>/spot-<id>.jpg`, `<user>/list-<id>.jpg`, `<user>/review-<place>.jpg`.
 
 ### Maps (cities)
-- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed; NYS also `z` and `minZ`. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, nys`. Each map's clock for Open Now is in `TZ`.
+- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. State maps (NYS, NJ) also have `state:1`, `data` (the window global holding their data: `NYS`, `NJS`; read with `SD()`), `z`, `minZ`, and optionally `hoodKm` and `labZ`. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, nys, nj`. Each map's clock for Open Now is in `TZ`.
 - `setCity()` switches map; `cityMoved()` re-centers and redraws. `state.places` = current map's spots, `state.otherPlaces` = the rest.
-- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn); New York State `data/nys-data.js` (`window.NYS` = regions, outline, towns, hubs, lines, rail stations).
-- **Travel estimates:** `estimate(a, b)` finds the best ride between stations near each end (one transfer), using each line's speed and wait, compared with walking; on NYS also `drive` and `rail`. `bestOf()` picks the quickest. Helpers: `inBox`, `inCore`, `reach`, `NYCISH()`, `homeFor()`, `hoodAt`.
+- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn); New York State `data/nys-data.js` (`window.NYS` = regions, outline, towns, hubs, lines, rail stations); New Jersey `data/nj-data.js` (`window.NJS`, same shape).
+- **Travel estimates:** `estimate(a, b)` finds the best ride between stations near each end (one transfer), using each line's speed and wait, compared with walking; on state maps also `drive` and `rail`. `inCore` (inside the five boroughs) cuts New Jersey out of the NYC box. `bestOf()` picks the quickest. Helpers: `inBox`, `inCore`, `reach`, `NYCISH()`, `homeFor()`, `hoodAt`.
 - **Bus, tram, streetcar and ferry lines:** other cities use `data/routes/<city>-<kind>.json`, built from OpenStreetMap by the GitHub Action **Build transit routes** (`.github/workflows/routes.yml` → `scripts/build-routes.js` → `api/_osmroutes.js`). It runs weekly; run it by hand from GitHub → Actions (tick **force** to rebuild all). NYC buses come from `/api/bus`. Route files load from the live site, so they don't need a new iPhone build.
 - **Server side:** `CITIES` in `api/_shared.js` mirrors the maps; `localize()` adapts the NYC-written AI prompts to each map. The AI also answers `post_city`, which drives the "Switch To…" question.
 
@@ -298,10 +301,10 @@ Restaurants get Reserve A Table, which finds their real booking page.
 Get There shows the subway or train route next to walking, and opens Google Maps for live times.
 Map Layers turns on subway lines, buses and bike docks if you want them.
 
-SIX CITIES
-Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston and New York State.
+SEVEN MAPS
+Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston, New York State and New Jersey.
 Each one uses its own transit for travel times.
-New York State is for day trips and weekends, with driving and Metro-North, LIRR and Amtrak.
+New York State and New Jersey are for day trips and weekends, with driving and Metro-North, LIRR, Amtrak, NJ Transit and PATH.
 
 EXPLORE
 Swipe through your saved spots like a deck of cards: right to add it to your plan, left to skip, tap to open it.
@@ -387,7 +390,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 | `src/video.js` | On-phone video audio and frame extraction |
 | `src/runtime.js` | Base class, `NATIVE`, `API()`, `SITE()` |
 | `api/*.js` | Server functions (above). `_shared.js` (CORS, auth, maps, prompt localizing), `_gmaps.js`, `_osmroutes.js` are helpers. |
-| `data/nyc-*.js`, `data/city-data.js`, `data/nys-data.js` | Neighborhoods, stations, lines, streets, NYS towns and rail |
+| `data/nyc-*.js`, `data/city-data.js`, `data/nys-data.js`, `data/nj-data.js` | Neighborhoods, stations, lines, streets, NYS and NJ towns and rail |
 | `data/routes/` | Transit route lines (generated by the Action; don't hand-edit) |
 | `scripts/build-routes.js`, `.github/workflows/routes.yml` | Weekly transit-line builder |
 | `supabase/*.sql` | `schema.sql`, `lists.sql`, `avatars.sql`, `reviews.sql` |
@@ -410,6 +413,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 - **`vercel.json` header sources** use `/path/:path*` patterns.
 - **Copy:** follow §3 for every new string.
 - **Styles:** use the palette and glass tokens in §5 so dark mode keeps working.
+- **Adding a state map:** copy `data/nj-data.js`, add it to `index.html` and `CORE` in `sw.js`, add a `CITIES` entry with `state:1` and `data`, add to `CITY_ORDER`, `TZ`, the welcome-step filter in `view.js`, `api/_shared.js` (with `poly` and `state: true`) and `post_city` in `api/extract.js`.
 - **Adding a map (city):** `CITIES`, `CITY_ORDER` and `TZ` in `logic.js`; neighborhoods/stations/lines in `data/city-data.js`; `box` and prompt names in `api/_shared.js`; its code in `post_city` in `api/extract.js`; bus/tram/ferry layers in `BOX`/`FILTER` in `api/_osmroutes.js`; bike GBFS feed. Claude's shell can't reach OpenStreetMap or most of the web, but GitHub Actions can: fetch data with a temporary workflow that commits a raw file, process it, then delete the workflow.
 - **Test locally:** `python3 -m http.server` from the repo root with `window.NYC_CONFIG={}` served for `config.js` (local mode). The app instance is `window.__nycApp` and the maps `window.__nycMaps`; stub `/api/*`, `NYCSync.getToken` and `NYCSync.client` to test AI, lists and reviews. Playwright and Chromium are available for screenshots (`color_scheme='dark'` for dark mode).
 - **Swift changes** can't compile in Claude's Linux workspace. Typecheck on a GitHub macOS runner through a temporary workflow, then remove it.

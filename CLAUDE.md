@@ -1,6 +1,6 @@
 # Spotted In
 
-Read `HANDOFF.md` first: it covers the app, its six maps (NYC, Singapore, Hong Kong, Toronto, Boston, New York State), the services (GitHub, Vercel, Supabase, Anthropic, Google, OpenAI, Apple), the data model, every file and how to ship an iPhone build.
+Read `HANDOFF.md` first: it covers the app, its seven maps (NYC, Singapore, Hong Kong, Toronto, Boston, New York State, New Jersey), the services (GitHub, Vercel, Supabase, Anthropic, Google, OpenAI, Apple), the data model, every file and how to ship an iPhone build.
 
 Rules of thumb:
 - No build step. Edit `src/*.js` and `api/*.js` directly; views use htm templates in `src/view.js`.
