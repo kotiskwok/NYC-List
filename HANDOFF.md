@@ -349,7 +349,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and, for full App Store review, terms of use that forbid abusive content.
 
-- **Current build number:** 17 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 17 yet, it still needs Archive and Upload.
+- **Current build number:** 18 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 18 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
