@@ -118,6 +118,9 @@ From the iPhone Claude app you can still change the code and the website; only t
 - A glass row: **From Home** (minutes, or hours) / **Price** / **Nearest station** with line badges and walk time (Metro-North, LIRR or Amtrak on the NYS map). Notes show one sentence per line.
 - Round buttons: open the source post, **Plan**, **Visited**, **To List**, **Photo**, **Edit**. Then **Get There**.
 - **Reserve A Table** (restaurants, or any spot with a booking link): only ever the restaurant's **one real booking page**. A saved link (from the post, or the Edit sheet's **Booking Link**) opens directly ("Book On Resy"). Otherwise **Find Their Booking Page** asks `/api/booking` (Google Places says whether it takes reservations; Claude web search must cite the page, on a booking site or the restaurant's own site) and saves the link on the spot. If there isn't one: "Walk-In Only" / "No Online Booking Found" (remembered 30 days), with **Check Again** and **Add Their Link**.
+- **What To Order:** yellow chips under the notes (the first gets a ⭐; shops say "What To Get"). The AI fills them from the post (`must_order`); edit them in the Edit sheet (comma-separated). Spots without any get **✨ Find What To Order** (Claude web search via `POST /api/booking` with `kind: 'order'`; "nothing found" is remembered 30 days in `orderChk`).
+- **Events:** a spot can carry a dated event (pop-up, market, supper club): an orange banner "📅 Holiday Market · Wed, Nov 25 – Nov 29 · 11 AM · In 5 Days". The AI fills it from the post; edit it in the Edit sheet (Event, Starts, Ends, Time). The map's **Events 📅** chip shows only upcoming ones. Once the last day has passed (map's time zone) the spot drops off the map, Explore, nudges and the public map, but stays saved.
+- **Friend Score:** "★ 4.5 · Friend Score · Sonia & Mei": the average stars from people you share lists with (their reviews, matched by `gid` or by name). Loaded in one query when your lists load (`loadFriendScores`).
 - **Reviews:** at the bottom of the card. Stars, a comment and a photo. Everyone who saved the same place (matched by Google place id, `gid` on the spot) reads them. Edit or delete your own; **Report** (hidden for you, hidden for everyone at 3 reports) or **Block** someone. Needs `supabase/reviews.sql` run once in Supabase.
 - **Swipe the card down to close it.** From Explore, that returns to the deck.
 
@@ -167,7 +170,20 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Sign-in screen** (design SI1 · Frosted Over Your Map): a blurred, drawn map with colored pins (`AuthBackdrop`, night map in dark mode) behind a frosted glass card with the logo, email/password and a show-password eye, plus a glass **New Here? Create An Account** pill. Invite links show "Kotis Invited You".
 - **Welcome steps:** name, home city (NYC, SG, HKG, TO or BOS) and optional home address, then **Show Me Around**.
 - **How-to tour:** five cards (**Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**), with icon tabs, swipe or Next/Back, and Skip. The welcome toast shows when it closes. Reopen from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
-- **Your Account:** profile photo, sync status, **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), Sync Now, Sign Out, **Delete My Account** (needs `SUPABASE_SERVICE_ROLE_KEY`, see §6).
+- **Your Account:** profile photo, sync status, **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), **Nearby Nudges** (on/off, per device), **My Public Map**, Sync Now, Sign Out, **Delete My Account** (needs `SUPABASE_SERVICE_ROLE_KEY`, see §6).
+
+### Nearby Nudges
+- While the app is open and location is already allowed (it never asks itself), a glass banner slides in from the top: "PSST · 3 MIN AWAY · Devoción · Get the Vodka Pizza." with **Show Me** / **Not Now**.
+- Only unvisited, open (or unknown hours) spots within ~600 m; at most one every 90 minutes; the same spot once a week (`localStorage['nycList.nudge']`). Code: `nudgeWatch`, `checkNudge`, `Nudge()` in `view.js`. Not yet when the app is closed (that needs "Always" location and a native iOS piece).
+
+### Public Profile Map (`/m/<slug>`)
+- Your Account → **My Public Map** → **Make My Map Public** gives a link like `nyc-lovat.vercel.app/m/kotis-ab12` that anyone can open in a browser. Pick **All Spots**, **Been There** or **Hand-Picked** (the Edit sheet's **On My Public Map** switch). **Share My Map**, **Turn Off**.
+- `map.html` (vercel.json rewrites `/m/:slug` to it): Apple Map with pins, a city switcher, category chips, a list, and a spot card (photo, What To Order, event, Open In Google Maps, See The Post). Reads `nyc_public_maps` with the public key.
+- Never home, notes, plans or lists. The app rewrites the row 4 s after spots change (`publishPub`). Needs `supabase/public.sql`.
+
+### Duplicates and photos
+- Duplicate spots (same `gid`, or the same name within ~150 m on the same map) fold into one automatically (`dedupeSpots` / `foldDupes`): the most complete copy stays and fills gaps from the other; plans are repointed.
+- Google photos: `/api/photo` looks at the first 6 Google photos and Claude picks the one showing the food, drinks, goods or inside (not storefronts, menus or selfies), returned at up to 1600 px; cached a month on Vercel's CDN. Your own spot photos save at 1600×1200, list photos at 1000×1000.
 
 ### Default categories
 ☕ Coffee Shop (orange) · 💻 Coffee Shop To Work At (blue) · 🍽️ Restaurant (red) · 🥐 Bakery (yellow) · 🧀 Gourmet Grocery (green) · 🛍️ Cute Shop (pink). New accounts start empty; example spots only show when no one is signed in.
@@ -213,7 +229,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
 - **Supabase setup:** Authentication → Site URL is the Vercel address; "Allow new users to sign up" stays on (friends join lists).
-- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks). If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
+- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps). If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
 - **Quick checks:** `GET /api/extract?probe=1` → `{"ffmpeg":true,"speech":true}`. `GET /api/photo?probe=1` → 204 when Google photos work.
 
 ---
@@ -257,8 +273,8 @@ Endpoints check the caller's Supabase token, except `photo`, `geocode`, `bus` an
 | `POST /api/places` | Google Places (New): `auto` (suggestions), `detail`, `find` (best match, returns `gid`), limited to the map's area. |
 | `POST /api/hours` | Opening hours for up to 25 spots (Google Places). Powers Open Now and the hours line. |
 | `POST /api/vibe` | Vibe search: Claude ranks the user's own saved spots against a plain-language request. |
-| `POST /api/booking` | A restaurant's one verified booking page (Google Places + Claude web search with citations). |
-| `GET /api/photo?q=&ll=` | A spot's first Google photo as a JPEG (only for the app's own pages). |
+| `POST /api/booking` | A restaurant's one verified booking page (Google Places + Claude web search with citations). With `kind: 'order'` it answers what to order instead (`api/_order.js`; folded in because Vercel's plan allows 12 functions, and there are 12). |
+| `GET /api/photo?q=&ll=` | A spot's best Google photo as a JPEG, picked by Claude, up to 1600 px (only for the app's own pages). |
 | `GET /api/geocode` | OpenStreetMap address search for the iPhone app. |
 | `POST /api/transcribe` | OpenAI speech-to-text for phone videos. |
 | `GET /api/bus` | NYC bus route lines. |
@@ -290,7 +306,7 @@ It turns those posts into a map you'll actually use, then helps you plan the day
 GETTING STARTED
 Make an account with your email and a password.
 Pick your home city and add your home address if you want travel times from home.
-The quick tour shows you around (you can reopen it anytime from Your Account).
+The quick tour shows you around (reopen it from Your Account).
 
 SAVE A SPOT
 On any TikTok, Instagram, Threads or Google Maps post, tap Share → Spotted In.
@@ -306,8 +322,10 @@ Filter by category, or tap Open Now to see only what's open right now.
 Tap a pin for the place card: photo, hours, price, the nearest station and how long it takes from home.
 From there you can mark it Visited, add it to your plan or a list, add your own photo, or edit it.
 Restaurants get Reserve A Table, which finds their real booking page.
+What To Order shows the dishes the post hyped, or tap Find What To Order.
 Get There shows the subway or train route next to walking, and opens Google Maps for live times.
 Map Layers turns on subway lines, buses and bike docks if you want them.
+Pop-ups and markets keep their dates, and drop off the map once they're over.
 
 SEVEN MAPS
 Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston, New York State and New Jersey.
@@ -333,10 +351,18 @@ Inside, the days run down a timeline, so you can add spots straight to Day 1 or 
 Invite friends with a link, and everyone can add spots, vote I'm In or Skip It, and leave notes for the group.
 You'll see when a friend is looking at the list, and changes show up for everyone within a second.
 
+NEARBY NUDGES
+Walk near a saved spot you haven't tried and get a little heads-up.
+Turn it off in Your Account.
+
 REVIEWS
 Rate the spots you've been to with stars, a comment and a photo.
 Everyone who saved the same place can read them.
 You can report or block anyone, anytime.
+Friend Score shows what the friends you share lists with rated a spot.
+
+YOUR PUBLIC MAP
+In Your Account, make a link to your map that anyone can open, no app needed.
 
 LIGHT AND DARK
 Spotted In follows your phone's light or dark mode, or pick one in Your Account → Appearance.
@@ -349,7 +375,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and, for full App Store review, terms of use that forbid abusive content.
 
-- **Current build number:** 18 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 18 yet, it still needs Archive and Upload.
+- **Current build number:** 19 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 19 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
@@ -409,6 +435,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 | `vercel.json` | Function limits, `includeFiles` for ffmpeg, cache headers (`/path/:path*` patterns) |
 | `config.js` | Supabase URL and publishable key, `siteUrl` for the iPhone app |
 | `privacy.html`, `support.html` | App Store privacy and support pages |
+| `map.html` | The public profile map page (`/m/<slug>`) |
 | `native/` | iPhone app (and, once built, `native/android/` for Android): Xcode project, Share extension, `scripts/copy-web.mjs`, `design/app-icon.html`, `APP_STORE.md`, `README.md` |
 | `CLAUDE.md` | Short rules for Claude in the repo |
 | `HANDOFF.md` | This document (also in the project as `claude/HANDOFF.md`) |
