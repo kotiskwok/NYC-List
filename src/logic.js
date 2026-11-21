@@ -798,13 +798,13 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
   // Light / dark switched (in Your Account, or the phone's setting under Automatic): redraw, and re-tint Apple's maps.
   themeChanged(){const dark=window.THEME_DARK&&THEME_DARK();this.allMaps().forEach(m=>{if(m.apple)try{m.apple.colorScheme=dark?mapkit.Map.ColorSchemes.Dark:mapkit.Map.ColorSchemes.Light;m.el.style.background=dark?'#1A1F3A':'#F2EFE9';}catch(e){}});
     this.setState(st=>({themeV:st.themeV+1}));}
-  // What to order at a spot saved without dishes: Claude searches reviews and guides (server: /api/order) and saves the list.
+  // What to order at a spot saved without dishes: Claude searches reviews and guides (server: /api/booking with kind 'order') and saves the list.
   async findOrder(id){const s=this.state,p=s.places.find(x=>x.id===id);if(!p||s.orderBusy)return;
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token){this.toast('Sign in to look this up.');return;}
     this.setState({orderBusy:id});let j=null,ok=false;
     try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),55000);
-      const r=await fetch(API('/api/order'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
-        body:JSON.stringify({name:p.name,address:p.address||'',area:p.area||'',city:cityOf(p),cat:(s.cats.find(c=>c.id===p.cat)||{}).name||'',note:p.note||''})});clearTimeout(t);j=await r.json().catch(()=>null);ok=r.ok;}catch(e){}
+      const r=await fetch(API('/api/booking'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+        body:JSON.stringify({kind:'order',name:p.name,address:p.address||'',area:p.area||'',city:cityOf(p),cat:(s.cats.find(c=>c.id===p.cat)||{}).name||'',note:p.note||''})});clearTimeout(t);j=await r.json().catch(()=>null);ok=r.ok;}catch(e){}
     if(!ok||!j){this.setState({orderBusy:null});this.toast((j&&j.error)||'Couldn’t look it up. Check your connection?');return;}
     const items=orderList(j.items||[]),t0=Date.now();
     this.setState(st=>({orderBusy:null,places:st.places.map(x=>x.id!==id?x:items.length?{...x,order:items,orderChk:null}:{...x,orderChk:{t:t0}})}));

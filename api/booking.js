@@ -5,6 +5,7 @@
 //   1. Google Places (if GOOGLE_MAPS_API_KEY is set): its website, and whether Google says it takes reservations.
 //   2. Claude with web search looks for the booking page and must cite it: the link is kept only if it appeared in
 //      the search results (or is on the restaurant's own website) and is on a booking site or that website.
+// { kind: 'order', … } instead asks what to order at a spot (see _order.js).
 // Only signed-in users of this app can call it. Costs a few cents, so the app calls it on a tap and saves the answer.
 
 const { cors, send, requireUser, readJson, cityFor } = require('./_shared');
@@ -49,6 +50,7 @@ module.exports = async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI isn’t set up yet. Add ANTHROPIC_API_KEY in Vercel.' });
   if (!(await requireUser(req, res))) return;
   let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
+  if (body && body.kind === 'order') return require('./_order')(res, body);
   const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
   body = { name: clip(body.name, 100), address: clip(body.address, 120), area: clip(body.area, 60), city: body.city,
     ll: Array.isArray(body.ll) && body.ll.length === 2 && body.ll.every(Number.isFinite) ? body.ll : null };

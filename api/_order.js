@@ -1,11 +1,11 @@
-// POST /api/order  { name, address?, area?, city, cat?, note? }
+// POST /api/booking  { kind: 'order', name, address?, area?, city, cat?, note? }   (shares booking.js: Vercel's plan allows 12 functions)
 //   → { items: ['Vodka Pizza', 'Calzone'] }   (empty when nothing reliable was found)
 // What to order at a spot: Claude searches the web (reviews, food guides, the place's own menu) for the dishes,
 // drinks or products people single out, and returns up to 4 short names. Used by the place card's
 // "Find What To Order" button for spots saved before the AI started noting dishes from posts.
 // Only signed-in users of this app can call it. Costs a few cents, so the app calls it on a tap and saves the answer.
 
-const { cors, send, requireUser, readJson, cityFor } = require('./_shared');
+const { send, cityFor } = require('./_shared');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 
 const TOOL = {
@@ -20,12 +20,8 @@ const TOOL = {
   }
 };
 
-module.exports = async (req, res) => {
-  if (cors(req, res)) return;
-  if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
-  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI isn’t set up yet. Add ANTHROPIC_API_KEY in Vercel.' });
-  if (!(await requireUser(req, res))) return;
-  let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
+// Called from booking.js after it has checked the sign-in and read the body.
+module.exports = async (res, body) => {
   const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
   body = { name: clip(body.name, 100), address: clip(body.address, 120), area: clip(body.area, 60), cat: clip(body.cat, 40), note: clip(body.note, 400), city: body.city };
   if (body.name.length < 2) return send(res, 400, { error: 'Missing the spot’s name.' });
