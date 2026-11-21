@@ -163,7 +163,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - Then location (address, dropped pin or neighborhood), Category (or **+ New Category**), Price, Neighborhood, Notes and, for restaurants, **Booking Link**.
 
 ### Sharing into the app
-- **iPhone app:** **Share → Spotted In** from any app shows a dark glass ticket ("Saved To Spotted In", FROM / TO, Undo / Done) that closes after about 3 seconds. The app fills the spot in the next time it opens.
+- **iPhone app:** **Share → Spotted In** from any app saves the link and, when notifications are allowed, closes straight away with a real iPhone banner ("Saved To Spotted In · From TikTok to My Map · NYC"). iOS draws its own sheet behind every share extension and apps can't remove it, so the banner avoids it. Without notifications it falls back to the dark glass ticket ("Saved To Spotted In", FROM / TO, Undo / Done) that closes after about 3 seconds. The app asks for notifications once, after the first shared link arrives (or on launch for people who already save from TikTok/Instagram/Threads): `NYCNative.askNotify()` → `AppGroupPlugin.notifications`. The app fills the spot in the next time it opens.
 - **Website:** `https://nyc-lovat.vercel.app/?add=<link>` opens Add A Spot with the link (Android share menu via the web manifest; works with an iPhone Shortcut).
 
 ### Account, welcome and tour
@@ -375,7 +375,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 20 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 20 yet, it still needs Archive and Upload.
+- **Current build number:** 21 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 21 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
