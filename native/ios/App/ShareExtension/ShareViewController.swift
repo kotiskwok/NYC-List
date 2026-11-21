@@ -10,6 +10,23 @@ class ShareViewController: UIViewController {
     private let key = "pendingLinks"
     private let cityKey = "currentCity"   // written by the app (AppGroupPlugin.setCity)
 
+    // Show the ticket straight over the app you shared from: no sheet or dimmed backdrop behind it.
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        modalPresentationStyle = .overFullScreen
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        modalPresentationStyle = .overFullScreen
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        view.superview?.backgroundColor = .clear
+        view.window?.backgroundColor = .clear
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
@@ -118,12 +135,14 @@ struct ShareCard: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color.black.opacity(shown || preview ? 0.12 : 0).ignoresSafeArea().onTapGesture { close(done) }
+            // Clear, but still catches a tap anywhere to close.
+            Color.white.opacity(0.001).ignoresSafeArea().onTapGesture { close(done) }
             VStack(spacing: 10) {
                 ticket
                 Text(saved ? "CLOSES BY ITSELF IN A FEW SECONDS" : "TAP ANYWHERE TO CLOSE")
-                    .font(mono9).tracking(1.2).foregroundColor(.white.opacity(0.85))
-                    .shadow(color: navy.opacity(0.5), radius: 4, x: 0, y: 1)
+                    .font(mono9).tracking(1.2).foregroundColor(.white.opacity(0.9))
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Capsule().fill(navy.opacity(0.72)))
             }
             .padding(.horizontal, 12)
             .padding(.top, 8)

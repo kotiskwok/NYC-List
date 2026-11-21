@@ -1,0 +1,11 @@
+name: Swift typecheck (temporary)
+on: { push: { branches: [better-photos-no-dupes] }, workflow_dispatch: {} }
+jobs:
+  check:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Typecheck share extension
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          xcrun swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios15.0 native/ios/App/ShareExtension/ShareViewController.swift
