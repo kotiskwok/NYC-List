@@ -230,7 +230,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 | `GOOGLE_MAPS_API_KEY` | ✅ set | Suggestions, pinning, photos, opening hours, place ids for reviews |
 | `OPENAI_API_KEY` | ✅ set | Hearing what's said in videos and reels |
 | `MAPKIT_TEAM_ID`, `MAPKIT_KEY_ID`, `MAPKIT_PRIVATE_KEY` | ✅ set | Apple Maps base map |
-| `APNS_KEY_ID`, `APNS_PRIVATE_KEY` | ❌ not set yet | List notifications. developer.apple.com → Keys → + → Apple Push Notifications service; Team ID comes from `MAPKIT_TEAM_ID`. |
+| `APNS_KEY_ID`, `APNS_PRIVATE_KEY` | ✅ set (key `3Q9S8GYR2F`) | List notifications. developer.apple.com → Keys → + → Apple Push Notifications service; Team ID comes from `MAPKIT_TEAM_ID`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | not needed | Delete My Account now works through `supabase/delete-account.sql` with the person's own sign-in. The key is only an optional fallback. |
 
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
