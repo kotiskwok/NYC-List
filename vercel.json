@@ -90,5 +90,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/m/:slug",
+      "destination": "/map.html"
+    }
   ]
 }

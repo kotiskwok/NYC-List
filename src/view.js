@@ -304,7 +304,7 @@ function FeedCard(f, i, v) {
         <div style=${S('font-size:22px;letter-spacing:-.7px;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900;font-style:italic')}>${f.bold}</span> <span style=${S('font-weight:200')}>${f.light}</span></div>
         <div style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;color:#4A5275;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${meta}</div>
         ${(f.why || f.hours) && html`<div style=${S('font-size:12.5px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (f.why ? FD('#7A4FD6', '#D9C8FF') : f.hoursCol))}>${f.why || f.hours}</div>`}
-        ${f.dish && html`<div style=${S('font-size:12.5px;font-weight:800;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#10183F')}>⭐ ${f.dish}</div>`}
+        ${(f.ev || f.friend || f.dish) && html`<div style=${S(`font-size:12.5px;font-weight:800;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${f.ev ? '#E5402B' : f.friend ? '#1B3DB8' : '#10183F'}`)}>${f.ev ? '📅 ' + f.ev.name + ' · ' + f.ev.rel : f.friend ? '★ ' + f.friend.score + ' From ' + f.friend.who : '⭐ ' + f.dish}</div>`}
       </div>
       ${front && html`
       <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" style=${S(`width:46px;height:46px;flex:none;border-radius:50%;border:0;background:${FD('rgba(232,36,44,.12)', 'rgba(232,36,44,.18)')};color:${FD('#D21F27', '#FF8A8F')};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
@@ -648,6 +648,17 @@ function PlaceCard(v) {
       </div>
       <h1 style=${S('margin:0;font-size:48px;line-height:.9;font-weight:900;font-style:italic;font-stretch:100%;letter-spacing:-2px;text-wrap:balance;overflow-wrap:anywhere')}>${split ? html`${words.slice(0, -1).join(' ')}<br/><span style=${S('font-weight:200;font-style:normal;letter-spacing:-1.6px')}>${words[words.length - 1]}</span>` : sel.name}</h1>
       ${sel.hours && html`<div style=${S(`display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800;color:${sel.hoursCol}`)}><span style=${S(`width:8px;height:8px;border-radius:50%;background:${sel.hoursCol};box-shadow:0 0 0 3px ${sel.hoursCol}33`)}></span>${sel.hours}</div>`}
+      ${sel.friend && html`<div style=${S('display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#4A5275')}>
+        <span style=${S('display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:#10183F;color:#FFC425;font-size:13px;font-weight:900')}>★ ${sel.friend.score}</span>
+        <span style=${S('min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><b style=${S('font-weight:800;color:#10183F')}>Friend Score</b> · ${sel.friend.who}</span>
+      </div>`}
+      ${sel.ev && html`<div style=${S(`align-self:flex-start;max-width:100%;display:flex;align-items:center;gap:9px;padding:7px 12px 7px 9px;border-radius:16px;background:${sel.ev.over ? 'rgba(16,24,63,.07)' : tintOf('#FF6B1A')};color:#10183F`)}>
+        <span aria-hidden="true" style=${S('font-size:20px;line-height:1')}>📅</span>
+        <span style=${S('min-width:0;display:flex;flex-direction:column;gap:1px')}>
+          <span style=${S('font-size:14px;font-weight:900;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${sel.ev.name}</span>
+          <span style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:.6px;color:${sel.ev.over ? '#4A5275' : inkOf('#FF6B1A')};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${(sel.ev.when + ' · ' + sel.ev.rel).toUpperCase()}</span>
+        </span>
+      </div>`}
     </div>
     <div class="lg" style=${S(`${GL};border-radius:26px;padding:14px 4px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))`)}>
       ${sel.homeMin ? html`<div style=${S(cell)}>${big(sel.homeMin > 99 ? Math.round(sel.homeMin / 6) / 10 : sel.homeMin, sel.homeMin > 99 ? 'hr' : 'min')}${lab('From Home')}</div>`
@@ -1468,6 +1479,17 @@ function AddSheet(v) {
       ${hint('Each sentence shows on its own line.')}
     </div>
     <div style=${col6}>
+      <label for="f-evn" style=${lab}>EVENT</label>
+      <input id="f-evn" value=${f.evN || ''} onChange=${v.onEvN} placeholder="Pop-Up, Market, Supper Club…" style=${S(`height:52px;${inp}`)} />
+      ${(f.evN || '').trim() && html`
+      <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
+        <label style=${S('display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:700;color:#4A5275')}>Starts<input type="date" value=${f.evD1 || ''} onChange=${v.onEvD1} style=${S(`height:46px;${inp}`)} /></label>
+        <label style=${S('display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:700;color:#4A5275')}>Ends<input type="date" value=${f.evD2 || ''} min=${f.evD1 || ''} onChange=${v.onEvD2} style=${S(`height:46px;${inp}`)} /></label>
+      </div>
+      <input aria-label="Event Time" value=${f.evTm || ''} onChange=${v.onEvTm} placeholder="Time, e.g. 7 PM" style=${S(`height:46px;${inp}`)} />`}
+      ${hint('Only for something with a date. It drops off your map once it’s over.')}
+    </div>
+    <div style=${col6}>
       <label for="f-order" style=${lab}>WHAT TO ORDER</label>
       <input id="f-order" value=${f.order || ''} onChange=${v.onOrderField} placeholder="Vodka Pizza, Tiramisu" style=${S(`height:52px;${inp}`)} />
       ${hint('Separate them with commas. The first one gets a star.')}
@@ -1478,6 +1500,11 @@ function AddSheet(v) {
       <input id="f-reserve" type="url" inputmode="url" value=${f.reserve || ""} onChange=${v.onReserveField} placeholder="Resy, OpenTable, Tock Or Their Website" style=${S(`height:52px;${inp}`)} />
       ${hint('Optional. The place card’s Reserve button opens it.')}
     </div>`}
+    ${v.showPubField && html`
+    <button type="button" role="switch" aria-checked=${!!f.pub} onClick=${v.togglePubField} style=${S('display:flex;align-items:center;gap:12px;border:0;background:none;padding:4px 2px;text-align:left;cursor:pointer;color:#10183F;font-family:inherit')}>
+      <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:800')}>On My Public Map</span><span style=${S('font-size:11.5px;font-weight:600;color:#6A7090')}>Anyone with your map link can see it.</span></span>
+      <span style=${S(`width:50px;height:30px;flex:none;border-radius:999px;padding:3px;background:${f.pub ? '#1F9D6B' : 'rgba(16,24,63,.16)'};display:flex;justify-content:${f.pub ? 'flex-end' : 'flex-start'}`)}><span style=${S('width:24px;height:24px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 5px rgba(16,24,63,.25)')}></span></span>
+    </button>`}
     ${f.id && html`<div style=${S('display:flex;justify-content:center')}><button onClick=${() => { const sure = v.delLabel !== 'Delete'; v.deleteSel(); if (sure) v.closeAdd(); }} style=${S('border:0;background:none;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer;padding:8px')}>${v.delLabel === 'Delete' ? 'Delete This Spot' : v.delLabel}</button></div>`}`;
 
   const seg = (m, label) => html`<button role="tab" aria-selected=${mode === m} onClick=${() => v.setAddMode(m)} style=${S(`height:38px;border:none;border-radius:12px;background:${mode === m ? '#FFFFFF' : 'transparent'};color:${mode === m ? '#10183F' : '#3A4470'};font-size:13px;font-weight:${mode === m ? 800 : 700};cursor:pointer;${mode === m ? 'box-shadow:0 2px 8px rgba(16,24,63,.12)' : ''}`)}>${label}</button>`;
@@ -1561,6 +1588,29 @@ function AccountSheet(v) {
         </span>
         <span style=${S(`width:50px;height:30px;flex:none;border-radius:999px;padding:3px;background:${v.nudgesOn ? '#1F9D6B' : 'rgba(16,24,63,.16)'};display:flex;justify-content:${v.nudgesOn ? 'flex-end' : 'flex-start'};transition:background .2s`)}><span style=${S('width:24px;height:24px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 5px rgba(16,24,63,.25)')}></span></span>
       </button>
+      ${v.pub.signedIn && html`
+      <div style=${S('display:flex;flex-direction:column;gap:9px;padding:12px;border-radius:20px;background:rgba(16,24,63,.05)')}>
+        <div style=${S('display:flex;align-items:center;gap:12px')}>
+          <span style=${S(`width:34px;height:34px;flex:none;border-radius:50%;background:${tintOf('#1B3DB8')};color:${inkOf('#1B3DB8')};display:flex;align-items:center;justify-content:center`)}>${Ico('M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18 M3 12h18 M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9s1.3-6.3 3.8-9', 18, 'currentColor', 2)}</span>
+          <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
+            <span style=${S('font-size:15px;font-weight:800')}>My Public Map</span>
+            <span style=${S('font-size:11.5px;font-weight:600;color:#6A7090')}>${v.pub.on ? 'Anyone with the link can see it. Never your home, notes or lists.' : 'A link anyone can open, no app needed.'}</span>
+          </span>
+        </div>
+        ${v.pub.missing ? html`<span style=${S('font-size:12.5px;font-weight:600;color:#4A5275')}>${Lines('This needs one setup step. Run supabase/public.sql once in Supabase.')}</span>
+          <button onClick=${v.pub.retry} style=${S('align-self:flex-start;height:36px;padding:0 14px;border-radius:999px;border:0;background:#10183F;color:#FFFFFF;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Check Again</button>`
+        : v.pub.on ? html`
+        <button onClick=${v.pub.open} style=${S(`height:40px;border-radius:14px;border:1.5px dashed rgba(27,61,184,.35);background:rgba(27,61,184,.06);color:#1B3DB8;${MONO};font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 12px`)}>${v.pub.link}</button>
+        <div role="radiogroup" aria-label="Which Spots" style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>
+          ${v.pub.modes.map(m => html`<button key=${m.key} role="radio" aria-checked=${m.on} onClick=${m.onClick} style=${S(`height:34px;border:0;border-radius:999px;font-family:inherit;font-size:12.5px;cursor:pointer;background:${m.on ? '#FFFFFF' : 'transparent'};box-shadow:${m.on ? '0 4px 10px rgba(16,24,63,.1)' : 'none'};font-weight:${m.on ? 800 : 700};color:${m.on ? '#10183F' : '#4A5275'}`)}>${m.label}</button>`)}
+        </div>
+        ${v.pub.modes[2].on && html`<span style=${S('font-size:11.5px;font-weight:600;color:#6A7090')}>${Lines(v.pub.picked + ' picked so far. Choose spots with Edit → On My Public Map.')}</span>`}
+        <div style=${S('display:grid;grid-template-columns:1fr auto;gap:8px')}>
+          <button onClick=${v.pub.share} style=${S('height:42px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>Share My Map</button>
+          <button onClick=${v.pub.turnOff} disabled=${v.pub.busy} style=${S('height:42px;padding:0 14px;border-radius:999px;border:0;background:rgba(16,24,63,.08);color:#4A5275;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Turn Off</button>
+        </div>` : html`
+        <button onClick=${v.pub.turnOn} disabled=${v.pub.busy} class=${v.pub.busy ? 'ai-busy' : ''} style=${S('height:42px;border-radius:999px;border:0;background:#10183F;color:#FFFFFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer')}>${v.pub.busy ? 'Making It…' : 'Make My Map Public'}</button>`}
+      </div>`}
       <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
         <button onClick=${v.syncNow} style=${S('height:46px;border-radius:14px;border:1.5px solid rgba(16,24,63,.14);background:#fff;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Sync Now</button>
         <button onClick=${v.signOut} style=${S('height:46px;border-radius:14px;border:0;background:#FFE2DF;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer')}>Sign Out</button>

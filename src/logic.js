@@ -83,6 +83,19 @@ const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&i
 const orderList=t=>(Array.isArray(t)?t:String(t||'').split(/[,\n;·•]+/)).map(x=>String(x).trim().replace(/\s+/g,' ')).filter(x=>x.length>1).slice(0,6);
 const ORDER_TTL=30*864e5;
 const getWord=c=>{const n=(c&&c.name)||'';return /coffee|caf[eé]|bak|restaurant|bar\b|food|eat|dessert|tea|pizza|bagel/i.test(n)?'Order':/shop|store|grocer|market|boutique|book|vintage|thrift/i.test(n)?'Get':'Order';};
+// Events (pop-ups, markets, supper clubs): a spot can carry ev = {n: name, d1: 'YYYY-MM-DD', d2?: last day, tm?: '7 PM'}.
+// Once the last day has passed (in that map's time zone) the spot drops off the map and Explore, but stays saved.
+const evToday=id=>{try{return new Intl.DateTimeFormat('en-CA',{timeZone:TZ[id]||TZ.nyc,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){return new Date().toISOString().slice(0,10);}};
+const okDay=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'');
+const evOf=p=>p&&p.ev&&p.ev.n&&okDay(p.ev.d1)?p.ev:null;
+const evOver=p=>{const e=evOf(p);return !!e&&(e.d2&&okDay(e.d2)?e.d2:e.d1)<evToday(cityOf(p));};
+const evDay=d=>{const x=new Date(d+'T12:00:00');return x.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});};
+const evDays=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
+// "Sat, Dec 6 · 7 PM" and "In 5 Days" / "Tomorrow" / "Today" / "On Now · Till Sun" / "Ended Dec 6".
+const evInfo=p=>{const e=evOf(p);if(!e)return null;const t=evToday(cityOf(p)),last=okDay(e.d2)&&e.d2>e.d1?e.d2:e.d1,n=evDays(t,e.d1);
+  const when=evDay(e.d1)+(last!==e.d1?' – '+evDay(last).replace(/^\w+, /,''):'')+(e.tm?' · '+e.tm:'');
+  const rel=last<t?'Ended '+evDay(last).replace(/^\w+, /,''):n>1?'In '+n+' Days':n===1?'Tomorrow':n===0?'Today':'On Now · Till '+evDay(last).split(',')[0];
+  return {name:e.n,when,rel,over:last<t,soon:!(last<t)&&n<=1};};
 // Nearby Nudges: when you're a short walk from a saved spot you haven't been to (and it's open), a little card pops up.
 // Only while the app is open, only if you've already let it use your location, at most one every 90 minutes,
 // and never the same spot twice in a week. Turned off in Your Account; the switch is kept on this device.
@@ -223,7 +236,7 @@ const SEED=[
 const LS='nycList.v1';
 const _x=0;const toTitle=s=>s.replace(/\S+/g,w=>w[0].toUpperCase()+w.slice(1));
 const PRICES=['$','$$','$$$','$$$$'],PRICE_HINT=['Under $20 A Person','$20–40 A Person','$40–80 A Person','$80+ A Person'];
-const blank=()=>({id:null,price:0,url:'',name:'',cat:null,area:'auto',address:'',note:'',order:'',reserve:'',lat:null,lng:null,newCatOpen:false,newCatName:'',newCatColor:C.purple,newCatEmoji:'⭐'});
+const blank=()=>({id:null,price:0,url:'',name:'',cat:null,area:'auto',address:'',note:'',order:'',pub:false,evN:'',evD1:'',evD2:'',evTm:'',reserve:'',lat:null,lng:null,newCatOpen:false,newCatName:'',newCatColor:C.purple,newCatEmoji:'⭐'});
 const gmaps=(a,b,mode)=>'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(a)+'&destination='+encodeURIComponent(b)+'&travelmode='+mode;
 // A link shared into the app: ?add=<link> (iPhone Shortcut) or ?url= / ?text= / ?title= (Android share menu).
 const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const raw=['add','url','text','title'].map(k=>q.get(k)||'').join(' ');
@@ -265,7 +278,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,feedMenu:'',deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',orderBusy:null,nudge:null,nudgesOn:nudgesOn(),bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,feedMenu:'',deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',orderBusy:null,nudge:null,nudgesOn:nudgesOn(),evOnly:false,friendRev:null,pubMap:null,pubState:'',bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub2===true,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -316,12 +329,13 @@ class Component extends DCLogic {
     Object.keys(s.cityMeta||{}).forEach(k=>{const m=s.cityMeta[k];cm[k]=m?{...m,plan:fix(m.plan)}:m;});
     this.setState({places:a?a.list:s.places,otherPlaces:b?b.list:s.otherPlaces,plan:fix(s.plan),cityMeta:cm,selId:map[s.selId]||s.selId,routeFor:map[s.routeFor]||s.routeFor});
     return Object.keys(map).length;}
-  componentDidUpdate(){const s=this.state;if(this._nh!==s.here){this._nh=s.here;if(s.here)setTimeout(()=>this._on&&this.checkNudge(),0);}if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
+  componentDidUpdate(){const s=this.state;if(this._pubAuth!==s.auth){this._pubAuth=s.auth;if(s.auth==='signedIn')setTimeout(()=>this.loadPubMap(),1200);else if(this.state.pubMap)this.setState({pubMap:null});}if(this._frT!==s.trips&&s.auth==='signedIn'){this._frT=s.trips;clearTimeout(this._frTo);this._frTo=setTimeout(()=>this.loadFriendScores(),1500);}if(this._nh!==s.here){this._nh=s.here;if(s.here)setTimeout(()=>this._on&&this.checkNudge(),0);}if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
 if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan||this._op!==s.otherPlaces||this._cm!==s.cityMeta||this._lo!==s.listOrder){this._lo=s.listOrder;this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;this._op=s.otherPlaces;this._cm=s.cityMeta;
       try{localStorage.setItem(LS,JSON.stringify(this.snapshot()))}catch(e){}
       window.NYCSync&&NYCSync.queue(this.snapshot());
-      clearTimeout(this._tpt);this._tpt=setTimeout(()=>window.NYCLists&&NYCLists.touchPlaces(this.state.places),1500);}
+      clearTimeout(this._tpt);this._tpt=setTimeout(()=>window.NYCLists&&NYCLists.touchPlaces(this.state.places),1500);
+      if(s.pubMap&&s.pubMap.live){clearTimeout(this._pubT);this._pubT=setTimeout(()=>this.publishPub(),4000);}}
     if(this.maps&&this._ms!==this.props.mapStyle){const first=this._ms===undefined;this._ms=this.props.mapStyle;if(!first)this.allMaps().forEach(m=>this.drawBase(m));}
     if(this.maps&&this._ss!==s.showSubway){const first=this._ss===undefined;this._ss=s.showSubway;STON=s.showSubway;this.allMaps().forEach(m=>{s.showSubway?m.subway.addTo(m.map):m.subway.remove();if(!first&&m.streets)m.streets.redraw();});}
     const lk=[s.showBus,s.showBike,s.showTram,s.showFerry,s.city].join();
@@ -456,9 +470,10 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
   priced(catId){const c=this.state.cats.find(x=>x.id===catId);return catId==='food'||!!(c&&/restaurant|bar\b|food|brunch|dinner|eats/i.test(c.name));}
   lists(){const s=this.state,now=s.openNow?cityNow(CUR.id):0,vb=this.vibeOn();
     const open=p=>{if(!s.openNow)return true;const o=openInfo(p,now);return !!(o&&o.open);};
-    let ex=s.places.filter(p=>(!s.exCats.length||s.exCats.includes(p.cat))&&(!s.exAreas.length||s.exAreas.includes(p.area))&&!(s.hideVisited&&p.visited)&&(!s.exPrices.length||!this.priced(p.cat)||s.exPrices.includes(p.price||0))&&open(p)&&(vb?vb.rank.has(p.id):this.exMatchQ(p)));
+    const live=p=>!evOver(p)&&(!s.evOnly||(evOf(p)&&!evOver(p)));
+    let ex=s.places.filter(p=>live(p)&&(!s.exCats.length||s.exCats.includes(p.cat))&&(!s.exAreas.length||s.exAreas.includes(p.area))&&!(s.hideVisited&&p.visited)&&(!s.exPrices.length||!this.priced(p.cat)||s.exPrices.includes(p.price||0))&&open(p)&&(vb?vb.rank.has(p.id):this.exMatchQ(p)));
     if(vb)ex=ex.sort((a,b)=>vb.rank.get(a.id)-vb.rank.get(b.id));
-    return {main:s.places.filter(p=>(!s.mapCats.length||s.mapCats.includes(p.cat))&&open(p)),ex};}
+    return {main:s.places.filter(p=>live(p)&&(!s.mapCats.length||s.mapCats.includes(p.cat))&&open(p)),ex};}
   // Vibe search results stay on while the search box still says what was asked.
   vibeOn(){const v=this.state.vibe;if(!v||v.q!==this.state.exQuery.trim())return null;if(!v.rank)v.rank=new Map(v.ids.map((id,i)=>[id,i]));return v;}
   async runVibe(){const s=this.state,q=s.exQuery.trim();if(s.vibeBusy||q.length<2)return;
@@ -575,7 +590,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     Promise.resolve(locAllowed()).then(ok=>{if(ok&&this._on&&this._wid==null&&this.state.nudgesOn)this.locate(null,true);}).catch(()=>{});}
   checkNudge(){const s=this.state;if(!s.nudgesOn||!s.here||s.hereManual||s.nudge||s.addOpen||s.placing||(s.hereAcc&&s.hereAcc>150))return;
     const log=nudgeLog(),now=Date.now();if(log.last&&now-log.last<NUDGE_GAP)return;const seen=log.ids||{},dnow=cityNow(CUR.id);
-    let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited||p.draft||!isFinite(p.lat)||(seen[p.id]&&now-seen[p.id]<NUDGE_AGAIN))return;
+    let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited||p.draft||evOver(p)||!isFinite(p.lat)||(seen[p.id]&&now-seen[p.id]<NUDGE_AGAIN))return;
       const d=km(s.here,[+p.lat,+p.lng]);if(d>NUDGE_KM||d>=bd)return;const oi=openInfo(p,dnow);if(oi&&!oi.open)return;best=p;bd=d;});
     if(!best)return;const ids={};Object.keys(seen).forEach(k=>{if(now-seen[k]<NUDGE_AGAIN)ids[k]=seen[k];});ids[best.id]=now;
     try{localStorage.setItem('nycList.nudge',JSON.stringify({last:now,ids}));}catch(e){}
@@ -621,7 +636,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       if(!ll&&ao)ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];
       this.setState({saving:false});if(!ll){this.toast('Couldn’t find it. Drop a pin or pick a neighborhood.');return;}}
     const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
-    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),order:orderList(f.order),orderChk:orderList(f.order).length?null:(orig&&orig.orderChk)||null,...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
+    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),pub:!!f.pub,...(()=>{const n=(f.evN||'').trim();return n&&okDay(f.evD1)?{ev:{n,d1:f.evD1,...(okDay(f.evD2)&&f.evD2>f.evD1?{d2:f.evD2}:{}),...((f.evTm||'').trim()?{tm:f.evTm.trim()}:{})}}:{ev:null};})(),order:orderList(f.order),orderChk:orderList(f.order).length?null:(orig&&orig.orderChk)||null,...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
     if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false,s.addTargetDay);this.setState({addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added to the list.');return;}
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
@@ -773,7 +788,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     if(res&&res[0]){const ll=[r5(+res[0].lat),r5(+res[0].lon)];if(!ao||km(ll,ao.c)<=3)return ll;}return null;}
   async aiApply(p,multi){const s=this.state,catOk=p.category_id&&s.cats.some(c=>c.id===p.category_id),area=this.aiArea(p.neighborhood);
     this.setForm({name:p.name||s.form.name,cat:catOk?p.category_id:s.form.cat,area:area||'auto',address:p.address||'',
-      note:s.form.note.trim()&&s.form.note.trim()!==(this._aiNote||'')?s.form.note:(p.note||''),reserve:p.booking_url||s.form.reserve||'',order:(s.form.order||'').trim()?s.form.order:orderList(p.must_order).join(', '),price:p.price&&p.price>=1&&p.price<=4?p.price:0,lat:null,lng:null});
+      note:s.form.note.trim()&&s.form.note.trim()!==(this._aiNote||'')?s.form.note:(p.note||''),reserve:p.booking_url||s.form.reserve||'',order:(s.form.order||'').trim()?s.form.order:orderList(p.must_order).join(', '),...(p.event&&p.event.name&&okDay(p.event.start_date)?{evN:p.event.name,evD1:p.event.start_date,evD2:okDay(p.event.end_date)?p.event.end_date:'',evTm:p.event.time||''}:{}),price:p.price&&p.price>=1&&p.price<=4?p.price:0,lat:null,lng:null});
     this._aiNote=p.note||'';
     const ll=await this.aiLocate(p,area);
     if(this.state.form.name!==p.name)return;
@@ -788,7 +803,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       if(!ll&&area){const ao=areas().find(a=>a.name===area);ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];}
       if(!ll){skipped++;continue;}
       const cat=p.category_id&&this.state.cats.some(c=>c.id===p.category_id)?p.category_id:(this.state.cats[0]||{}).id;
-      made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',order:orderList(p.must_order),reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
+      made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',order:orderList(p.must_order),...(p.event&&p.event.name&&okDay(p.event.start_date)?{ev:{n:p.event.name,d1:p.event.start_date,...(okDay(p.event.end_date)&&p.event.end_date>p.event.start_date?{d2:p.event.end_date}:{}),...(p.event.time?{tm:p.event.time}:{})}}:{}),reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
     if(s.addTarget&&made.length){const tid=s.addTarget;this.addStopsTo(tid,made,false,s.addTargetDay);this.setState({aiAdding:false,addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});
       this.toast(`Added ${made.length} ${made.length===1?'Spot':'Spots'} To The List`+(skipped?` · ${skipped} Couldn’t Be Found`:''));return;}
     this.setState(st=>({aiAdding:false,addOpen:!made.length,tab:made.length?'map':st.tab,mapCats:[],selId:null,places:[...made,...st.places]}),
@@ -798,6 +813,44 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
   // Light / dark switched (in Your Account, or the phone's setting under Automatic): redraw, and re-tint Apple's maps.
   themeChanged(){const dark=window.THEME_DARK&&THEME_DARK();this.allMaps().forEach(m=>{if(m.apple)try{m.apple.colorScheme=dark?mapkit.Map.ColorSchemes.Dark:mapkit.Map.ColorSchemes.Light;m.el.style.background=dark?'#1A1F3A':'#F2EFE9';}catch(e){}});
     this.setState(st=>({themeV:st.themeV+1}));}
+  // ---- Public Profile Map (supabase/public.sql): a read-only map anyone can open at /m/<slug>, of the spots you pick ----
+  pubLink(){const m=this.state.pubMap;return m?SITE()+'/m/'+m.slug:'';}
+  pubMissing(e){return /does not exist|could not find|schema cache|PGRST205|42P01/i.test(String((e&&(e.message||e.code))||''));}
+  async loadPubMap(){const c=NYCSync.client&&NYCSync.client(),u=NYCSync.currentUser&&NYCSync.currentUser();if(!c||!u)return;
+    const {data,error}=await c.from('nyc_public_maps').select('slug,live,mode').eq('owner',u.id).maybeSingle();
+    if(error){if(this.pubMissing(error))this.setState({pubState:'missing'});return;}this.setState({pubMap:data||null,pubState:''});}
+  // What goes public: never home, notes, plans or lists. Events that are over are left out.
+  pubData(mode){const s=this.state,all=[...s.places.map(p=>p.city?p:{...p,city:CUR.id}),...(s.otherPlaces||[])].filter(p=>!p.draft&&isFinite(p.lat)&&!evOver(p));
+    const pick=all.filter(p=>mode==='been'?p.visited:mode==='picked'?p.pub:true).slice(0,1500),used=new Set(pick.map(p=>p.cat));
+    return {spots:pick.map(p=>({name:p.name,cat:p.cat,area:p.area||'',lat:+p.lat,lng:+p.lng,city:p.city||'nyc',price:this.priced(p.cat)?(p.price||0):0,order:p.order||[],
+      ...(evOf(p)?{ev:p.ev}:{}),...(/^https:\/\//.test(p.photo||'')?{photo:p.photo}:{}),...(p.gid?{gid:p.gid}:{}),been:!!p.visited,...(/^https:\/\//.test(p.url||'')?{url:p.url}:{})})),
+      cats:s.cats.filter(c=>used.has(c.id)).map(c=>({id:c.id,name:c.name,color:c.color,emoji:c.emoji}))};}
+  async setPubMap(ch){const c=NYCSync.client&&NYCSync.client(),u=NYCSync.currentUser&&NYCSync.currentUser();if(!c||!u){this.toast('Sign in to share your map.');return;}
+    const cur=this.state.pubMap,name=(NYCSync.displayName&&NYCSync.displayName()||'').trim().split(/\s+/)[0]||'';
+    const slug=cur?cur.slug:((name.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g,'')||'spots').slice(0,20)+'-'+Math.random().toString(36).slice(2,6));
+    const next={live:true,mode:'all',...(cur||{}),...ch,slug};this.setState({pubState:'busy'});
+    const {error}=await c.from('nyc_public_maps').upsert({owner:u.id,slug,name,live:next.live,mode:next.mode,data:this.pubData(next.mode),updated_at:new Date().toISOString()},{onConflict:'owner'});
+    if(error){this.setState({pubState:this.pubMissing(error)?'missing':''});this.toast(this.pubMissing(error)?'Public maps need one setup step first.':'Couldn’t save that. Check your connection?');return;}
+    this._pubSig=null;this.setState({pubMap:next,pubState:''});
+    if(!cur&&next.live)this.toast('Your map is public. Copy the link and send it!');else if(ch.live===false)this.toast('Your public map is off. The link stops working.');}
+  // Keep the public copy current, a few seconds after your spots change.
+  async publishPub(){const m=this.state.pubMap,c=NYCSync.client&&NYCSync.client(),u=NYCSync.currentUser&&NYCSync.currentUser();if(!m||!m.live||!c||!u)return;
+    const data=this.pubData(m.mode),sig=JSON.stringify(data);if(sig===this._pubSig)return;this._pubSig=sig;
+    await c.from('nyc_public_maps').update({data,updated_at:new Date().toISOString()}).eq('owner',u.id);}
+  async sharePub(){const url=this.pubLink();if(!url)return;const text='My Spotted In map 🗽';
+    if(navigator.share){try{await navigator.share({title:'My Spotted In Map',text,url});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+    (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>this.toast('Link copied. Go send it!')).catch(()=>this.toast('Press and hold the link to copy it.'));}
+  // Friend Score: the stars that people you share lists with gave a place (their reviews, matched by Google place id or name).
+  async loadFriendScores(force){const s=this.state,c=NYCSync.client&&NYCSync.client(),me=window.NYCLists&&NYCLists.uid();if(!c||s.auth!=='signedIn'||!me)return;
+    const ids=[...new Set((s.trips||[]).flatMap(t=>[t.owner,...(t.members||[]).map(m=>m.user_id)]).filter(x=>x&&x!==me))].sort();
+    const key=ids.join();if(!force&&key===this._frKey&&Date.now()-(this._frAt||0)<10*6e4)return;this._frKey=key;this._frAt=Date.now();
+    if(!ids.length){this.setState({friendRev:null});return;}
+    try{const {data,error}=await c.from('nyc_reviews').select('place_key,place_name,user_id,name,stars').in('user_id',ids.slice(0,200)).limit(3000);if(error||!data)return;
+      const byKey={},byName={};data.forEach(r=>{(byKey[r.place_key]=byKey[r.place_key]||[]).push(r);const n=dupName(r.place_name);if(n)(byName[n]=byName[n]||[]).push(r);});
+      this.setState({friendRev:{byKey,byName}});}catch(e){}}
+  friendScore(p){const f=this.state.friendRev;if(!f||!p)return null;const rows=(p.gid&&f.byKey['g:'+p.gid])||f.byName[dupName(p.name)];if(!rows||!rows.length)return null;
+    const avg=rows.reduce((a,r)=>a+r.stars,0)/rows.length,names=[...new Set(rows.map(r=>(r.name||'A Friend').split(' ')[0]))];
+    return {score:(Math.round(avg*10)/10).toFixed(1),n:rows.length,who:names.length>2?names.slice(0,2).join(', ')+' +'+(names.length-2):names.join(' & ')};}
   // What to order at a spot saved without dishes: Claude searches reviews and guides (server: /api/booking with kind 'order') and saves the list.
   async findOrder(id){const s=this.state,p=s.places.find(x=>x.id===id);if(!p||s.orderBusy)return;
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token){this.toast('Sign in to look this up.');return;}
@@ -841,7 +894,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     const me=NYCSync.currentUser&&NYCSync.currentUser(),row={place_key:r.key,place_name:r.name.slice(0,120),name:((NYCSync.displayName&&NYCSync.displayName())||'Someone').slice(0,60),stars:r.stars,body:r.body.trim().slice(0,1000),photo,updated_at:new Date().toISOString()};
     const {error}=await c.from('nyc_reviews').upsert({...row,user_id:me&&me.id},{onConflict:'place_key,user_id'});
     if(error){this.setState({reviewSheet:{...this.state.reviewSheet,busy:false,msg:'Couldn’t post it. '+(error.message||'Try Again')}});return;}
-    this.setState({reviewSheet:null});this.toast(r.mine?'Review updated.':'Review posted. Thanks for spotting.');const p=this.state.places.find(x=>x.id===r.pid);if(p)this.loadReviews(p,true);}
+    this.setState({reviewSheet:null});this.toast(r.mine?'Review updated.':'Review posted. Thanks for spotting.');this.loadFriendScores(true);const p=this.state.places.find(x=>x.id===r.pid);if(p)this.loadReviews(p,true);}
   async deleteReview(){const r=this.state.reviewSheet,c=NYCSync.client&&NYCSync.client();if(!r||!r.id||!c)return;
     await c.from('nyc_reviews').delete().eq('id',r.id);this.setState({reviewSheet:null});this.toast('Review deleted.');const p=this.state.places.find(x=>x.id===r.pid);if(p)this.loadReviews(p,true);}
   async reportReview(rv,p){const c=NYCSync.client&&NYCSync.client();if(!c)return;await c.from('nyc_review_reports').insert({review_id:rv.id,reason:'user report'});
@@ -853,6 +906,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     const chip=(on,label,onClick,col)=>({label,onClick,bg:on?(col||C.navy):'#fff',fg:on?'#fff':C.navy,border:on?(col||C.navy):'rgba(16,24,63,.14)'});
     const mapChips=[{label:'All',emoji:'🗽',count:s.places.length,dot:s.mapCats.length?C.navy:C.yellow,bg:s.mapCats.length?'#fff':C.navy,fg:s.mapCats.length?C.navy:'#fff',border:s.mapCats.length?'#fff':C.navy,onClick:()=>this.setState({mapCats:[]})},
       {label:s.openNow&&s.hoursBusy?'Checking Hours…':'Open Now',emoji:'',dot:s.openNow?'#fff':C.green,bg:s.openNow?C.green:'#fff',fg:s.openNow?'#fff':C.navy,border:s.openNow?C.green:'#fff',onClick:()=>this.toggleOpenNow()},
+      ...(s.places.some(p=>evOf(p)&&!evOver(p))||s.evOnly?[{label:'Events',emoji:'📅',dot:s.evOnly?'#fff':C.orange,bg:s.evOnly?C.orange:'#fff',fg:s.evOnly?'#fff':C.navy,border:s.evOnly?C.orange:'#fff',onClick:()=>this.setState({evOnly:!s.evOnly})}]:[]),
       ...s.cats.map(c=>{const on=s.mapCats.includes(c.id);return {label:c.name,emoji:emo(c),count:s.places.filter(p=>p.cat===c.id).length,dot:on?fgFor(c.color):c.color,bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'#fff',onClick:()=>this.toggle('mapCats',c.id)};})];
     const exTiles=s.cats.map(c=>{const on=s.exCats.includes(c.id),n=s.places.filter(p=>p.cat===c.id).length;
       return {on,n,col:c.color,name:c.name,emoji:emo(c),countLabel:n+(n===1?' Spot Saved':' Spots Saved'),check:on?'✓':'',bg:on?c.color:'#fff',fg:on?fgFor(c.color):C.navy,border:on?c.color:'rgba(16,24,63,.1)',dot:on?fgFor(c.color):c.color,onClick:()=>this.toggle('exCats',c.id)};});
@@ -881,7 +935,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     const fRef=dref?dref.map(x=>x.toFixed(4)).join(','):'',fc=this._feedMin||(this._feedMin=new Map());if(fc.size>800)fc.clear();
     const feedMin=p=>{const k=p.id+'|'+fRef+'|'+p.lat+','+p.lng;if(!fc.has(k))fc.set(k,tripMin(p));return fc.get(k);};
     const feedItems=deck.map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=feedMin(p),oi=openInfo(p,dnow),ip=inPlan(p.id);
-      return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:ip,dish:(p.order||[]).slice(0,2).join(' · '),
+      return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:ip,dish:(p.order||[]).slice(0,2).join(' · '),ev:evInfo(p),friend:this.friendScore(p),
         tag:[c.name,p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:''].filter(Boolean).join(' · ').toUpperCase(),
         hours:oi?oi.label:'',hoursCol:oi?((window.THEME_DARK&&THEME_DARK())?(oi.open?(oi.soon?'#FFB27A':'#5BE0A6'):'#FF8A8F'):(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C')):'',
         away:m!=null?Math.max(1,Math.round(m))+' min '+(s.here?'away':'from home'):'',why:vb&&vb.why[p.id]?'✨ '+vb.why[p.id]:'',
@@ -911,7 +965,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     if(sp){const c=catOf(sp.cat),src=SRC[sp.source]||SRC.manual,hasUrl=!!sp.url,ip=inPlan(sp.id);let ns=window.NJS&&inRing([sp.lat,sp.lng],NJS.area)?null:nearSt([sp.lat,sp.lng],1,2,true)[0];
       // Outside the subway's reach: the nearest regional rail, PATH or light rail station, with the walk or a short drive to it.
       if(!ns&&CUR.state){const r=nearRail([sp.lat,sp.lng],15)[0];if(r){const lm=lastMile(r.s.c,[sp.lat,sp.lng]);ns={s:{n:r.s.n+(lm.k==='car'?' · Drive':''),r:[],c:r.s.c},rb:[railBul(r.s.l)],min:lm.min};}}
-      sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,order:sp.order||[],hasOrder:!!(sp.order&&sp.order.length),orderWord:getWord(c),orderBusy:s.orderBusy===sp.id,orderNone:!(sp.order&&sp.order.length)&&!!(sp.orderChk&&Date.now()-sp.orderChk.t<ORDER_TTL),hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
+      sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,ev:evInfo(sp),friend:this.friendScore(sp),order:sp.order||[],hasOrder:!!(sp.order&&sp.order.length),orderWord:getWord(c),orderBusy:s.orderBusy===sp.id,orderNone:!(sp.order&&sp.order.length)&&!!(sp.orderChk&&Date.now()-sp.orderChk.t<ORDER_TTL),hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
         hasStation:!!ns,stName:ns?ns.s.n:'',stRoutes:ns?(ns.rb||ns.s.r.slice(0,6).map(bullet)):[],stWalk:ns?fmtMin(ns.min!=null?ns.min:walkMin([sp.lat,sp.lng],ns.s.c))+' Walk':'',
         cols:hasUrl?'1fr 1fr 1fr':'1fr 1fr',visBg:sp.visited?C.green:'#fff',visFg:sp.visited?'#fff':C.green,visLabel:sp.visited?'Been Here ✓':'Mark Visited',
         planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1],
@@ -1057,6 +1111,10 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
           line:p.order&&p.order.length?'Get the '+p.order[0]+'.':oi?oi.label+'.':'You’ve been meaning to go.',
           onShow:()=>{clearTimeout(this._nt);this.setState({nudge:null,tab:'map',selId:p.id,routeFor:null,acctOpen:false});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([p.lat,p.lng],15.5,{duration:.6}),80);},
           onLater:()=>{clearTimeout(this._nt);this.setState({nudge:null});}};})(),
+      pub:{on:!!(s.pubMap&&s.pubMap.live),link:this.pubLink().replace(/^https?:\/\//,''),busy:s.pubState==='busy',missing:s.pubState==='missing',signedIn:s.auth==='signedIn',
+        modes:[['all','All Spots'],['been','Been There'],['picked','Hand-Picked']].map(([k,l])=>({key:k,label:l,on:!!(s.pubMap&&s.pubMap.mode===k),onClick:()=>this.setPubMap({mode:k})})),
+        picked:(s.pubMap&&s.pubMap.mode==='picked')?[...s.places,...(s.otherPlaces||[])].filter(p=>p.pub).length:0,
+        turnOn:()=>this.setPubMap({live:true}),turnOff:()=>this.setPubMap({live:false}),share:()=>this.sharePub(),open:()=>window.open(this.pubLink(),'_blank'),retry:()=>this.loadPubMap()},
       nudgesOn:s.nudgesOn,toggleNudges:()=>this.setNudges(!s.nudgesOn),
       nearest:(()=>{if(!s.here||s.tab!=='map'||s.placing||s.routeFor||s.selId)return null;let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited)return;const d=km(s.here,[p.lat,p.lng]);if(d<bd){bd=d;best=p;}});if(!best||bd>8)return null;
         const c=catOf(best.cat),walk=Math.max(1,Math.round(bd*1.25/4.8*60));return {name:best.name,img:placeImg(best),catName:c.name,col:c.color,fg:fgFor(c.color),em:emo(c),big:walk>99?Math.round(walk/60):walk,unit:walk>99?'hr':'min',
@@ -1065,7 +1123,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       onReserve:()=>{if(!sp)return;if(sp.reserve){window.open(sp.reserve,'_blank');return;}const chk=sp.reserveChk&&Date.now()-sp.reserveChk.t<BOOK_TTL;if(!chk)this.findBooking(sp.id);},
       retryReserve:()=>sp&&this.findBooking(sp.id),findOrderSel:()=>sp&&this.findOrder(sp.id),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
       toggleVisited:()=>{if(!sp)return;this.setState(st=>({places:st.places.map(p=>p.id===sp.id?{...p,visited:!p.visited}:p)}));if(!sp.visited)this.toast('Been there, ate that.');},
-      editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',order:(sp.order||[]).join(', '),reserve:sp.reserve||'',lat:sp.lat,lng:sp.lng}}),
+      editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',order:(sp.order||[]).join(', '),pub:!!sp.pub,evN:(sp.ev&&sp.ev.n)||'',evD1:(sp.ev&&sp.ev.d1)||'',evD2:(sp.ev&&sp.ev.d2)||'',evTm:(sp.ev&&sp.ev.tm)||'',reserve:sp.reserve||'',lat:sp.lat,lng:sp.lng}}),
       deleteSel:()=>{if(!sp)return;if(!s.confirmDel)return this.setState({confirmDel:true});this.setState(st=>({places:st.places.filter(p=>p.id!==sp.id),plan:{...st.plan,ids:st.plan.ids.filter(x=>x!==sp.id)},selId:null,confirmDel:false}));this.toast('Gone. Spot deleted.');},
       routeOpen:!!rd&&!s.placing,routeMini:!!s.routeMini,routeCollapse:()=>this.setState({routeMini:true}),routeExpand:()=>this.setState({routeMini:false}),routeDest:rd?rd.d.name:'',closeRoute:()=>{const id=s.routeFor;this.setState({routeFor:null,selId:id});},
       originChips,originIsSpot:s.routeMode==='spot',routeSpotVal:s.routeSpot||'',onRouteSpot:e=>this.setState({routeSpot:e.target.value,routePick:0}),
@@ -1108,7 +1166,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':s.addTarget?'Add To The List':'Add A Spot',formFor:s.addTarget?((s.trips.find(t=>t.id===s.addTarget)||{}).name||''):'',form:f,
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
       onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
-      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),onOrderField:e=>this.setForm({order:e.target.value}),
+      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),onOrderField:e=>this.setForm({order:e.target.value}),showPubField:!!(s.pubMap&&s.pubMap.live&&s.pubMap.mode==='picked'),togglePubField:()=>this.setForm({pub:!s.form.pub}),onEvN:e=>this.setForm({evN:e.target.value}),onEvD1:e=>this.setForm({evD1:e.target.value}),onEvD2:e=>this.setForm({evD2:e.target.value}),onEvTm:e=>this.setForm({evTm:e.target.value}),
       reviewSheet:s.reviewSheet&&{...s.reviewSheet,close:()=>this.setState({reviewSheet:null}),setStars:n=>this.setState(st=>({reviewSheet:{...st.reviewSheet,stars:n,msg:''}})),
         onBody:e=>this.setState({reviewSheet:{...this.state.reviewSheet,body:e.target.value}}),
         onPhoto:e=>{const f0=e.target.files&&e.target.files[0];e.target.value='';if(!f0)return;const r=this.state.reviewSheet;if(r.preview)try{URL.revokeObjectURL(r.preview);}catch(x){}

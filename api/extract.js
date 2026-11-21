@@ -237,10 +237,18 @@ const TOOL = {
             price: { type: ['integer', 'null'], description: 'For restaurants/bars only: 1=$ (under $20), 2=$$ ($20-40), 3=$$$ ($40-80), 4=$$$$ ($80+) per person. Null if unknown.' },
             note: { type: 'string', description: 'One short line on why to go, taken from the post (the dishes go in must_order). Title Case Each Word, like the app’s style. Empty string if nothing useful.' },
             must_order: { type: 'array', items: { type: 'string' }, description: 'The specific dishes, drinks or products the post says to get at THIS place, as named in the post (shown, said or written), most hyped first. Short names in Title Case, e.g. "Vodka Pizza", "Pistachio Croissant". Max 5. Empty if the post doesn’t single any out.' },
+            event: { type: ['object', 'null'], description: 'Only when the post is about a dated, one-off or limited-time happening at this place (a pop-up, market, supper club, festival, sample sale, opening party, holiday market, limited menu). Null for an ordinary place.',
+              properties: {
+                name: { type: 'string', description: 'Short event name in Title Case, e.g. "Holiday Market", "Croissant Pop-Up". Not the place name.' },
+                start_date: { type: ['string', 'null'], description: 'First day, YYYY-MM-DD. Work out relative dates ("this Saturday") from today\'s date given above. Null if unknown.' },
+                end_date: { type: ['string', 'null'], description: 'Last day, YYYY-MM-DD, if it runs several days; otherwise null.' },
+                time: { type: ['string', 'null'], description: 'Start time or hours as said, e.g. "7 PM" or "11 AM–5 PM". Null if not said.' }
+              },
+              required: ['name', 'start_date', 'end_date', 'time'] },
             confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
             booking_url: { type: ['string', 'null'], description: 'This place’s reservation link (Resy, OpenTable, Tock, SevenRooms, Chope), copied exactly from the "Booking links in the post" list. Null if none there is for this place. Never make one up.' }
           },
-          required: ['name', 'category_id', 'neighborhood', 'address', 'price', 'note', 'must_order', 'confidence', 'booking_url']
+          required: ['name', 'category_id', 'neighborhood', 'address', 'price', 'note', 'must_order', 'event', 'confidence', 'booking_url']
         }
       },
       summary: { type: 'string', description: 'A few words on what the post is about.' }
@@ -363,6 +371,7 @@ Rules:
 - Only include real, specific places a person could walk into. Skip general areas, dishes, brands without a storefront, and the creator's own name.
 - Use text visible in the images too (every photo of the post, the cover image and video frames): creators often put the place name on screen. When the post has several photos, look at each one: list posts usually show one place per photo, named in the photo's text, a sign or a location tag.
 - Spoken words are often the main source; listen for "this is", "go to", "called", and street names.
+- Events count too: a pop-up, market, supper club or festival is saved at the place where it happens, with event filled in. Today is ${new Date().toISOString().slice(0, 10)}.
 - If the post names a place but not where it is, fill neighborhood and address from your own knowledge only when you are confident; otherwise null.
 - If nothing identifiable is mentioned, return an empty places list.
 Call save_places with the result.`, city) + OTHER_CITY(city) });
