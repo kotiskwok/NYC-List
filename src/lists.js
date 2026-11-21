@@ -282,6 +282,9 @@ Object.assign(Component.prototype, {
       add.forEach(st => { const c = cats.find(x => x.id === st.p.cat); if (c && !catIds.has(c.id)) { catIds.add(c.id); newCats.push({ ...c, emoji: emo(c) }); } });
       return { ...d, stops: [...d.stops, ...add], cats: [...d.cats, ...newCats] };
     });
+    const t = this.state.trips.find(x => x.id === tripId);
+    if (t) { const had = new Set(t.data.stops.filter(st => st.by === me && st.pid).map(st => st.pid));
+      this.queueListPush(tripId, places.filter(p => !(fromMap && had.has(p.id))).map(p => p.name), day); }
   },
   removeStop(tripId, stopId) { NYCLists.edit(tripId, d => ({ ...d, stops: d.stops.filter(st => st.id !== stopId) })); },
   toggleMapStop(tripId, p, day) { const t = this.state.trips.find(x => x.id === tripId); if (!t) return; const me = NYCLists.uid();

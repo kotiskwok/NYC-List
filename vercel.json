@@ -93,6 +93,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/delete-account",
+      "destination": "/api/account?do=delete"
+    },
+    {
       "source": "/m/:slug",
       "destination": "/map.html"
     }

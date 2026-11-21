@@ -316,7 +316,7 @@ class Component extends DCLogic {
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link added. Tap ✨ Fill From Link to read it.'});else this.aiAuto(u,true);}},400);}
   componentDidMount(){this._on=true;window.__nycApp=this;this._themeOff=window.onThemeChange&&onThemeChange(()=>this.themeChanged());window.NYCNative&&NYCNative.setCity(CUR.short);fetch(API('/api/photo?probe=1'),{cache:'no-store'}).then(r=>{if(r.status===204&&this._on){GPHOTO.on=true;this.setState({gphoto:true});}}).catch(()=>{});APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
-    setTimeout(()=>this.nudgeWatch(),2500);if(NATIVE)setTimeout(()=>{const st=this.state;if(this._on&&st.auth==='signedIn'&&!st.tourOpen&&!st.obOpen&&[...st.places,...(st.otherPlaces||[])].some(p=>/tiktok|insta|threads/.test(p.source||'')))window.NYCNative&&NYCNative.askNotify&&NYCNative.askNotify();},6000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>this.nudgeWatch(),800);});window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
+    setTimeout(()=>this.nudgeWatch(),2500);if(NATIVE)setTimeout(()=>{const st=this.state;if(this._on&&st.auth==='signedIn'&&!st.tourOpen&&!st.obOpen&&[...st.places,...(st.otherPlaces||[])].some(p=>/tiktok|insta|threads/.test(p.source||'')))window.NYCNative&&NYCNative.askNotify&&NYCNative.askNotify();},6000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>this.nudgeWatch(),800);});window.addEventListener('nyc-push-token',()=>this.savePushToken());window.addEventListener('nyc-open-trip',e=>{const id=e.detail;const go=()=>{if(this.state.trips.some(t=>t.id===id)){this.setState({tab:'lists',acctOpen:false,selId:null});this.openTrip(id);}else if(this._on)setTimeout(go,700);};go();});window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
       const names=new Set(areas().map(a=>a.name));
@@ -329,7 +329,7 @@ class Component extends DCLogic {
     Object.keys(s.cityMeta||{}).forEach(k=>{const m=s.cityMeta[k];cm[k]=m?{...m,plan:fix(m.plan)}:m;});
     this.setState({places:a?a.list:s.places,otherPlaces:b?b.list:s.otherPlaces,plan:fix(s.plan),cityMeta:cm,selId:map[s.selId]||s.selId,routeFor:map[s.routeFor]||s.routeFor});
     return Object.keys(map).length;}
-  componentDidUpdate(){const s=this.state;if(this._pubAuth!==s.auth){this._pubAuth=s.auth;if(s.auth==='signedIn')setTimeout(()=>this.loadPubMap(),1200);else if(this.state.pubMap)this.setState({pubMap:null});}if(this._frT!==s.trips&&s.auth==='signedIn'){this._frT=s.trips;clearTimeout(this._frTo);this._frTo=setTimeout(()=>this.loadFriendScores(),1500);}if(this._nh!==s.here){this._nh=s.here;if(s.here)setTimeout(()=>this._on&&this.checkNudge(),0);}if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
+  componentDidUpdate(){const s=this.state;if(this._ptAuth!==s.auth){this._ptAuth=s.auth;if(s.auth==='signedIn')setTimeout(()=>this.savePushToken(),1500);}if(this._pubAuth!==s.auth){this._pubAuth=s.auth;if(s.auth==='signedIn')setTimeout(()=>this.loadPubMap(),1200);else if(this.state.pubMap)this.setState({pubMap:null});}if(this._frT!==s.trips&&s.auth==='signedIn'){this._frT=s.trips;clearTimeout(this._frTo);this._frTo=setTimeout(()=>this.loadFriendScores(),1500);}if(this._nh!==s.here){this._nh=s.here;if(s.here)setTimeout(()=>this._on&&this.checkNudge(),0);}if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
 if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan||this._op!==s.otherPlaces||this._cm!==s.cityMeta||this._lo!==s.listOrder){this._lo=s.listOrder;this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;this._op=s.otherPlaces;this._cm=s.cityMeta;
       try{localStorage.setItem(LS,JSON.stringify(this.snapshot()))}catch(e){}
@@ -641,10 +641,10 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
     this.toast(orig?'Saved. Looking good!':'Stuck it on the map!!');}
-  // Apple requires in-app account deletion. Server: /api/delete-account (photos, then nyc_delete_me() from supabase/delete-account.sql).
+  // Apple requires in-app account deletion. Server: /api/account?do=delete (photos, then nyc_delete_me() from supabase/delete-account.sql).
   async deleteAccount(){const s=this.state;if(s.acctDel===2)return;if(s.acctDel!==1){this.setState({acctDel:1});clearTimeout(this._adt);this._adt=setTimeout(()=>this.setState({acctDel:0}),6000);return;}
     this.setState({acctDel:2});const token=await NYCSync.getToken();
-    try{const r=await fetch(API('/api/delete-account'),{method:'POST',headers:{authorization:'Bearer '+token}});const j=await r.json().catch(()=>null);
+    try{const r=await fetch(API('/api/account?do=delete'),{method:'POST',headers:{authorization:'Bearer '+token}});const j=await r.json().catch(()=>null);
       if(!r.ok){this.setState({acctDel:0});this.toast((j&&j.error)||'Couldn’t delete the account right now. Try again?');return;}}
     catch(e){this.setState({acctDel:0});this.toast('Couldn’t reach the server. Check your connection?');return;}
     try{Object.keys(localStorage).filter(k=>k.startsWith('nycList.')).forEach(k=>localStorage.removeItem(k));}catch(e){}
@@ -840,6 +840,15 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
   async sharePub(){const url=this.pubLink();if(!url)return;const text='My Spotted In map 🗽';
     if(navigator.share){try{await navigator.share({title:'My Spotted In Map',text,url});return;}catch(e){if(e&&e.name==='AbortError')return;}}
     (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>this.toast('Link copied. Go send it!')).catch(()=>this.toast('Press and hold the link to copy it.'));}
+  // List notifications: keep this phone's Apple token on the signed-in account (supabase/push.sql).
+  async savePushToken(){const t=window.__pushToken,c=NYCSync.client&&NYCSync.client();if(!t||!c||this.state.auth!=='signedIn'||this._ptSaved===t)return;
+    const {error}=await c.rpc('nyc_save_push_token',{t,plat:'ios'});if(!error)this._ptSaved=t;}
+  // Tell the others on a shared list what you added, a few seconds after the last add, in one notification.
+  queueListPush(tripId,names,day){const t=(this.state.trips||[]).find(x=>x.id===tripId),me=window.NYCLists&&NYCLists.uid();
+    if(!t||!names.length||!(t.owner!==me||(t.members||[]).length))return;const q=(this._lpq=this._lpq||{})[tripId]=this._lpq[tripId]||{names:[],day:day||0};
+    names.forEach(n=>{if(n&&!q.names.includes(n))q.names.push(n);});if(q.day!==(day||0))q.day=0;
+    clearTimeout(q.timer);q.timer=setTimeout(async()=>{delete this._lpq[tripId];const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token)return;
+      fetch(API('/api/account'),{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify({action:'notify',trip:tripId,names:q.names.slice(0,20),day:q.day})}).catch(()=>{});},8000);}
   // Friend Score: the stars that people you share lists with gave a place (their reviews, matched by Google place id or name).
   async loadFriendScores(force){const s=this.state,c=NYCSync.client&&NYCSync.client(),me=window.NYCLists&&NYCLists.uid();if(!c||s.auth!=='signedIn'||!me)return;
     const ids=[...new Set((s.trips||[]).flatMap(t=>[t.owner,...(t.members||[]).map(m=>m.user_id)]).filter(x=>x&&x!==me))].sort();
@@ -1219,7 +1228,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       syncOn:s.auth==='signedIn',syncDot:({saved:C.green,saving:C.yellow,syncing:C.yellow,offline:'#A9ADC2'})[s.syncState]||'#A9ADC2',
       syncLabel:({saved:'All Changes Saved',saving:'Saving…',syncing:'Syncing…',offline:'Offline. Saves when you’re back online.'})[s.syncState]||'Connecting…',
       openAcct:()=>s.auth==='signedIn'&&this.setState({acctOpen:true}),closeAcct:()=>this.setState({acctOpen:false}),acctOpen:s.acctOpen&&s.auth==='signedIn',
-      syncEmail:s.syncEmail,signOut:()=>NYCSync.signOut(),
+      syncEmail:s.syncEmail,signOut:()=>{const t=window.__pushToken,c=NYCSync.client&&NYCSync.client();this._ptSaved=null;Promise.resolve(t&&c?c.from('nyc_push_tokens').delete().eq('token',t):null).catch(()=>{}).then(()=>NYCSync.signOut());},
       delAcctLabel:s.acctDel===2?'Deleting…':s.acctDel===1?'Tap again to delete everything. This can’t be undone.':'Delete My Account',deleteAccount:()=>this.deleteAccount(),privacyUrl:SITE()+'/privacy.html',termsUrl:SITE()+'/terms.html',syncNow:()=>{NYCSync.syncNow();this.toast('Syncing…');},
       showPrice:!!f.cat&&this.priced(f.cat),priceHint:f.price?PRICE_HINT[f.price-1]+' · Tap Again To Clear':'How pricey is it? Optional.',
       priceChips:PRICES.map((lb,i)=>{const on=f.price===i+1;return {label:lb,bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.14)',onClick:()=>this.setForm({price:on?0:i+1})};}),

@@ -5,7 +5,7 @@ const NYCNative = (() => {
   if (!NATIVE) return { tap() {}, setCity() {} };
   const C = window.Capacitor;
   const plug = name => (C.Plugins && C.Plugins[name]) || (C.registerPlugin && C.registerPlugin(name));
-  const Geo = plug('Geolocation'), Share = plug('Share'), App = plug('App'), Haptics = plug('Haptics'), StatusBar = plug('StatusBar'), Inbox = plug('AppGroup');
+  const Geo = plug('Geolocation'), Share = plug('Share'), App = plug('App'), Haptics = plug('Haptics'), StatusBar = plug('StatusBar'), Inbox = plug('AppGroup'), Push = plug('PushNotifications');
 
   // Location through iOS's own permission prompt ("Allow Spotted In to use your location?").
   if (Geo) {
@@ -56,6 +56,16 @@ const NYCNative = (() => {
   }
   window.addEventListener('load', () => setTimeout(takeInbox, 600));
 
+  // List notifications: once notifications are allowed, register with Apple and hand the token to the app, which
+  // saves it to Supabase (nyc_push_tokens). Tapping "Sonia added Lucali…" opens that list.
+  const pushRegister = () => { try { Push && Push.register().catch(() => {}); } catch (e) {} };
+  if (Push) {
+    try {
+      Push.addListener('registration', t => { if (t && t.value) { window.__pushToken = t.value; window.dispatchEvent(new CustomEvent('nyc-push-token', { detail: t.value })); } });
+      Push.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; if (d.trip) window.dispatchEvent(new CustomEvent('nyc-open-trip', { detail: d.trip })); });
+      Push.checkPermissions().then(p => { if (p && p.receive === 'granted') pushRegister(); }).catch(() => {});
+    } catch (e) {}
+  }
   const NYCNativeAsk = () => { try { window.NYCNative && NYCNative.askNotify && NYCNative.askNotify(); } catch (e) {} };
   // Has location already been allowed? (Nearby Nudges never trigger the permission prompt themselves.)
   const locAllowed = () => Geo && Geo.checkPermissions ? Geo.checkPermissions().then(r => r && (r.location === 'granted' || r.coarseLocation === 'granted')).catch(() => false) : Promise.resolve(false);
@@ -66,7 +76,7 @@ const NYCNative = (() => {
     statusBar(dark) { try { StatusBar && StatusBar.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); } catch (e) {} },
     // Tells the share card which city's map new spots go to.
     // Ask once (iOS's own prompt) so saves from the share sheet can show a real banner. Never asks twice.
-    askNotify() { try { if (localStorage.getItem('nycList.notifyAsked')) return; localStorage.setItem('nycList.notifyAsked', '1'); Inbox && Inbox.notifications && Inbox.notifications({ ask: true }).catch(() => {}); } catch (e) {} },
+    askNotify() { try { if (localStorage.getItem('nycList.notifyAsked')) return; localStorage.setItem('nycList.notifyAsked', '1'); (Push ? Push.requestPermissions().then(p => { if (p && p.receive === 'granted') pushRegister(); }) : Inbox && Inbox.notifications && Inbox.notifications({ ask: true })).catch(() => {}); } catch (e) {} },
     setCity(short) { try { Inbox && Inbox.setCity && Inbox.setCity({ city: short }); } catch (e) {} }
   };
 })();

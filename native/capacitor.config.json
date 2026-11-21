@@ -16,6 +16,12 @@
     "StatusBar": {
       "style": "LIGHT",
       "overlaysWebView": true
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "alert",
+        "sound"
+      ]
     }
   }
 }

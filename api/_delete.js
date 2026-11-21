@@ -1,4 +1,4 @@
-// POST /api/delete-account — permanently deletes the signed-in person's account.
+// POST /api/delete-account (rewritten to /api/account?do=delete) — permanently deletes the signed-in person's account.
 // Apple requires apps with sign-up to offer this inside the app.
 //
 // Works with the person's own sign-in, no secret key needed:
@@ -7,16 +7,13 @@
 //   2. Calls nyc_delete_me() (supabase/delete-account.sql), which deletes their auth user. Every app table
 //      cascades from it: their map, the lists they own, their list memberships, reviews, blocks and public map.
 // If SUPABASE_SERVICE_ROLE_KEY happens to be set in Vercel and the function is missing, it falls back to the admin API.
-const { cors, send, requireUser } = require('./_shared');
+const { send } = require('./_shared');
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://octgaltlmqwcqewbxocb.supabase.co';
 const ANON = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg';
 const FAIL = 'Couldn’t delete the account right now. Try again in a minute?';
 
-module.exports = async (req, res) => {
-  if (cors(req, res)) return;
-  if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
-  const user = await requireUser(req, res);
-  if (!user) return;
+// Called from account.js after it has checked the sign-in.
+module.exports = async (req, res, user) => {
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const as = (extra) => ({ apikey: ANON, authorization: 'Bearer ' + token, ...(extra || {}) });
   try {
