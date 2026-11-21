@@ -76,9 +76,25 @@ const shrinkImage=(file,w,h)=>new Promise((res,rej)=>{if(!file)return rej(new Er
     c.getContext('2d').drawImage(img,(W-sw)/2,(H-sh)/2,sw,sh,0,0,w,h);URL.revokeObjectURL(url);c.toBlob(b=>b?res(b):rej(new Error('That Photo Couldn\u2019t Be Read.')),'image/jpeg',.86);};
   img.src=url;});
 const photoErr=e=>e==='setup'?'Photos need one setup step. Run supabase/avatars.sql in Supabase.':(e||'Couldn\u2019t Save The Photo.');
-// A spot's picture: the photo you added, else (once GOOGLE_MAPS_API_KEY is set) its first Google Maps photo via /api/photo.
+// A spot's picture: the photo you added, else (once GOOGLE_MAPS_API_KEY is set) its best Google Maps photo via /api/photo (AI picks the food or the inside, up to 1600 px).
 const GPHOTO={on:false};
-const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&isFinite(p.lng)?API('/api/photo?q='+encodeURIComponent([p.name,p.address||p.area,CITIES[cityOf(p)].q].filter(Boolean).join(', '))+'&ll='+(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)+(NATIVE?'&app=ios':'')):null);
+const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&isFinite(p.lng)?API('/api/photo?q='+encodeURIComponent([p.name,p.address||p.area,CITIES[cityOf(p)].q].filter(Boolean).join(', '))+'&ll='+(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)+'&v=2'+(NATIVE?'&app=ios':'')):null);
+// Duplicate spots (same Google place, or the same name within about 150 m on the same map) are folded into one.
+// The spot with the most on it (visited, your photo, notes, booking link) stays, and fills its gaps from the others.
+const dupName=n=>String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/&/g,'and').replace(/^the\s+/,'').replace(/[^a-z0-9]/g,'');
+const spotScore=p=>(p.visited?8:0)+(p.photo?4:0)+(p.note?2+Math.min(2,p.note.length/100):0)+(p.reserve?1:0)+(p.gid?1:0)+(p.address?.5:0)+(p.url?.5:0);
+const sameSpot=(a,b)=>{if(cityOf(a)!==cityOf(b))return false;if(a.gid&&b.gid)return a.gid===b.gid;
+  const x=dupName(a.name),y=dupName(b.name);if(!x||!y||!isFinite(a.lat)||!isFinite(b.lat))return false;const d=km([+a.lat,+a.lng],[+b.lat,+b.lng]);
+  return (x===y&&d<.15)||(Math.min(x.length,y.length)>=5&&(x.startsWith(y)||y.startsWith(x))&&d<.06);};
+const mergeSpot=(keep,o)=>{const m={...keep};Object.keys(o).forEach(k=>{if(m[k]==null||m[k]===''||m[k]===0)m[k]=o[k];});
+  m.visited=!!(keep.visited||o.visited);if(keep.note&&o.note&&keep.note!==o.note&&!keep.note.includes(o.note))m.note=keep.note+'\n'+o.note;return m;};
+// Returns {list, map: {removedId: keptId}} or null when there's nothing to fold.
+const dedupeSpots=list=>{const out=[],map={};let hit=false;
+  // Older spots sit later in the list, so walk it backwards: the first one seen of each pair is the original.
+  for(let i=list.length-1;i>=0;i--){const p=list[i],j=out.findIndex(q=>sameSpot(q,p));
+    if(j<0){out.push(p);continue;}hit=true;const q=out[j],win=spotScore(p)>spotScore(q)?p:q,lose=win===p?q:p;
+    out[j]=mergeSpot(win,lose);map[lose.id]=win.id;Object.keys(map).forEach(k=>{if(map[k]===lose.id)map[k]=win.id;});}
+  return hit?{list:out.reverse(),map}:null;};
 // Map layers you turned on (subway, bus routes, Citi Bike) are remembered on this device. Transit lines start off (sub2) so the map stays clean and fast.
 const LAYERS=(()=>{try{return JSON.parse(localStorage.getItem('nycList.layers'))||{};}catch(e){return {};}})();
 const saveLayers=o=>{try{localStorage.setItem('nycList.layers',JSON.stringify(o));}catch(e){}};
@@ -283,7 +299,14 @@ class Component extends DCLogic {
       this.setState(st=>({places:st.places.map(p=>names.has(p.area)?p:{...p,area:hoodAt([p.lat,p.lng])||p.area})}));
       this.syncMaps();setTimeout(()=>this.refreshVisible(),80);}
     else setTimeout(go,100);};go();}
-  componentDidUpdate(){const s=this.state;if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
+  // Fold duplicate spots on every map and point plans and the open card at the one that stays.
+  foldDupes(){const s=this.state,a=dedupeSpots(s.places||[]),b=dedupeSpots(s.otherPlaces||[]);if(!a&&!b)return false;
+    const map={...(a?a.map:{}),...(b?b.map:{})},fix=pl=>pl&&pl.ids?{...pl,ids:[...new Set(pl.ids.map(i=>map[i]||i))]}:pl,cm={};
+    Object.keys(s.cityMeta||{}).forEach(k=>{const m=s.cityMeta[k];cm[k]=m?{...m,plan:fix(m.plan)}:m;});
+    this.setState({places:a?a.list:s.places,otherPlaces:b?b.list:s.otherPlaces,plan:fix(s.plan),cityMeta:cm,selId:map[s.selId]||s.selId,routeFor:map[s.routeFor]||s.routeFor});
+    return Object.keys(map).length;}
+  componentDidUpdate(){const s=this.state;if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
+if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan||this._op!==s.otherPlaces||this._cm!==s.cityMeta||this._lo!==s.listOrder){this._lo=s.listOrder;this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;this._op=s.otherPlaces;this._cm=s.cityMeta;
       try{localStorage.setItem(LS,JSON.stringify(this.snapshot()))}catch(e){}
       window.NYCSync&&NYCSync.queue(this.snapshot());
@@ -405,7 +428,7 @@ class Component extends DCLogic {
   // A saved spot's own photo (overrides the Google one).
   pickSpotPhoto(id,file){if(!file||!id)return;if(!window.NYCSync||this.state.auth!=='signedIn'){this.toast('Sign in to add photos.');return;}
     this.setState({spotPhotoBusy:true});
-    shrinkImage(file,800,600).then(b=>NYCSync.uploadImage('spot-'+id,b)).then(r=>{this.setState({spotPhotoBusy:false});if(r.error){this.toast(photoErr(r.error));return;}
+    shrinkImage(file,1600,1200).then(b=>NYCSync.uploadImage('spot-'+id,b)).then(r=>{this.setState({spotPhotoBusy:false});if(r.error){this.toast(photoErr(r.error));return;}
       this.setState(st=>({places:st.places.map(p=>p.id===id?{...p,photo:r.url}:p)}));this.toast('Photo added. Cute.');})
       .catch(e=>{this.setState({spotPhotoBusy:false});this.toast((e&&e.message)||'Couldn’t upload it.');});}
   removeSpotPhoto(id){this.setState(st=>({places:st.places.map(p=>p.id===id?{...p,photo:''}:p)}));window.NYCSync&&NYCSync.removeImage('spot-'+id);}

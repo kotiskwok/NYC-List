@@ -239,7 +239,7 @@ Object.assign(Component.prototype, {
   // A list's own picture (instead of its initial), saved in the uploader's photo folder and shared through the list's data.
   pickTripPhoto(id, file) { if (!file) return; if (!window.NYCSync || this.state.auth !== 'signedIn') { this.toast('Sign in to add photos.'); return; }
     this.setState({ tripPhotoBusy: true });
-    shrinkImage(file, 480, 480).then(b => NYCSync.uploadImage('list-' + id, b)).then(r => { this.setState({ tripPhotoBusy: false });
+    shrinkImage(file, 1000, 1000).then(b => NYCSync.uploadImage('list-' + id, b)).then(r => { this.setState({ tripPhotoBusy: false });
       if (r.error) { this.toast(photoErr(r.error)); return; } NYCLists.edit(id, d => ({ ...d, photo: r.url })); this.toast('List photo saved. Cute.'); })
       .catch(e => { this.setState({ tripPhotoBusy: false }); this.toast((e && e.message) || 'Couldn’t upload it.'); }); },
   tripPerm(t) { const me = NYCLists.uid(), own = !!t && t.owner === me;

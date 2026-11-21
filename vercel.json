@@ -12,6 +12,9 @@
     },
     "api/booking.js": {
       "maxDuration": 60
+    },
+    "api/photo.js": {
+      "maxDuration": 30
     }
   },
   "headers": [
