@@ -200,7 +200,7 @@ const NYCLists = (() => {
       if (stale) edit(t.id, d => ({ ...d, stops: d.stops.map(st => st.by === uid && st.pid && byId.has(st.pid) ? { ...st, p: snap(byId.get(st.pid)) } : st) }));
     });
   }
-  const snap = p => ({ name: p.name, cat: p.cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0, photo: p.photo || '', city: p.city || CUR.id });
+  const snap = p => ({ name: p.name, cat: p.cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', order: p.order || [], price: p.price || 0, photo: p.photo || '', city: p.city || CUR.id });
 
   return { attach, onUser, refresh, create, edit, meta, newCode, removeMember, leave, remove, loadSharedMap, touchPlaces, pendingCode, myName, snap,
     uid: () => uid, setName: n => NYCSync.setName(n) };
@@ -216,7 +216,7 @@ const dayDate = (start, d) => { if (!start || !d) return ''; const t = new Date(
 const dayName = (start, d) => d ? 'Day ' + d + (dayDate(start, d) ? ' · ' + dayDate(start, d) : '') : 'Not On A Day Yet';
 // Wallet cards: each list gets a palette color (in list order), a date range and a countdown.
 const WALLET = [['#F98DBE', '#F45FA0', '#D93F86', '#fff'], ['#FFE38F', '#FFC425', '#F5AE10', '#10183F'], ['#5C78E6', '#1B3DB8', '#142E92', '#fff'], ['#52C496', '#1F9D6B', '#16805A', '#fff'], ['#FFA26A', '#FF6B1A', '#E8561A', '#fff']];
-const WSTEP = 56; // how much of each stacked card shows (76px tab, -20px overlap)
+const WSTEP = 44; // how much of each stacked card shows (62px tab, -18px overlap)
 // Boarding-pass wallet: a three-letter code per list (SON for "Sonia's Visit") and a barcode drawn from its id.
 const listCode = name => { const w = String(name || '').replace(/['’]s\b/gi, '').split(/[^A-Za-z0-9]+/).filter(x => x && !/^(the|a|an|my|our)$/i.test(x));
   const c = (w[0] || 'LST').slice(0, 3); return (c + (w[1] || '').slice(0, 3 - c.length) + 'XX').slice(0, 3).toUpperCase(); };

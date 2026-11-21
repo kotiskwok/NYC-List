@@ -304,6 +304,7 @@ function FeedCard(f, i, v) {
         <div style=${S('font-size:22px;letter-spacing:-.7px;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}><span style=${S('font-weight:900;font-style:italic')}>${f.bold}</span> <span style=${S('font-weight:200')}>${f.light}</span></div>
         <div style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;color:#4A5275;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>${meta}</div>
         ${(f.why || f.hours) && html`<div style=${S('font-size:12.5px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (f.why ? FD('#7A4FD6', '#D9C8FF') : f.hoursCol))}>${f.why || f.hours}</div>`}
+        ${f.dish && html`<div style=${S('font-size:12.5px;font-weight:800;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#10183F')}>⭐ ${f.dish}</div>`}
       </div>
       ${front && html`
       <button onPointerDown=${e => e.stopPropagation()} onClick=${v.deckSkip} aria-label="Skip" style=${S(`width:46px;height:46px;flex:none;border-radius:50%;border:0;background:${FD('rgba(232,36,44,.12)', 'rgba(232,36,44,.18)')};color:${FD('#D21F27', '#FF8A8F')};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico('M6 6l12 12M18 6L6 18', 18, 'currentColor', 2.8)}</button>
@@ -572,7 +573,7 @@ function PlanScreen(v) {
     <div aria-hidden="true" style=${S(`position:absolute;left:0;right:0;bottom:0;height:${B(v.planHas ? 170 : 110)};z-index:660;pointer-events:none;background:linear-gradient(rgba(255,245,228,0),rgba(255,245,228,.95) 40%)`)}></div>
     ${v.planHas && html`
     <div style=${S(`position:absolute;left:16px;right:16px;bottom:${B(104)};z-index:700;display:flex`)}>
-      <button onClick=${v.startRoute} disabled=${v.planStopsN < 2 && v.planFromFirst} style=${S(`flex:1;height:56px;border-radius:999px;border:0;background:#10183F;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 22px;font-size:16px;font-weight:900;font-style:italic;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25);opacity:${v.planStopsN < 2 && v.planFromFirst ? .5 : 1}`)}>Start Route In Google Maps
+      <button onClick=${v.startRoute} disabled=${v.planStopsN < 2 && v.planFromFirst} style=${S(`flex:1;height:56px;border-radius:999px;border:0;background:#10183F;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 20px;font-size:13.5px;font-weight:900;font-style:italic;cursor:pointer;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25),0 12px 26px rgba(16,24,63,.25);opacity:${v.planStopsN < 2 && v.planFromFirst ? .5 : 1}`)}>Start Route In Google Maps
         <span style=${S('width:44px;height:44px;border-radius:50%;background:#FF6B1A;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${Ico('M5 12h14M13 6l6 6-6 6', 18, '#fff', 2.6)}</span></button>
     </div>`}
   </div>`;
@@ -657,6 +658,16 @@ function PlaceCard(v) {
       </div>
     </div>
     ${sel.hasNote && Note(sel.note, 'padding:2px 2px 0;font-size:14px;line-height:1.45;font-weight:500;color:#3C4466')}
+    ${sel.hasOrder ? html`
+    <div style=${S('display:flex;flex-direction:column;gap:8px;padding:0 2px')}>
+      <span style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:1.2px;color:#4A5275`)}>WHAT TO ${sel.orderWord.toUpperCase()}</span>
+      <div style=${S('display:flex;flex-wrap:wrap;gap:6px')}>
+        ${sel.order.map((d, i) => html`<span key=${i} style=${S('display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 13px;border-radius:999px;background:rgba(255,196,37,.3);border:1px solid rgba(229,64,43,.18);color:#10183F;font-size:13.5px;font-weight:800;line-height:1.2')}>${i === 0 ? html`<span aria-hidden="true">⭐</span>` : ''}${d}</span>`)}
+      </div>
+    </div>` : !sel.orderNone && html`
+    <button onClick=${v.findOrderSel} disabled=${sel.orderBusy} class=${sel.orderBusy ? 'lg ai-busy' : 'lg'} style=${S(`${GL};align-self:flex-start;height:38px;padding:0 15px 0 12px;border-radius:999px;display:inline-flex;align-items:center;gap:7px;color:#7A4FD6;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer`)}>
+      <span aria-hidden="true">✨</span>${sel.orderBusy ? 'Looking…' : 'Find What To ' + sel.orderWord}
+    </button>`}
     <div style=${S('display:flex;gap:4px')}>
       ${sel.hasUrl && bubble(v.openSource, String(sel.openLabel || 'Open').replace(/^Open\s+/, ''), ARROW_NE, sel.srcBg && sel.srcBg !== '#fff' ? sel.srcBg : '#10183F')}
       ${bubble(v.togglePlanSel, inPlan ? 'In Plan' : 'Plan', 'M12 5v14M5 12h14', '#FF6B1A', inPlan && { bg: sel.planBg, fg: sel.planFg })}
@@ -674,7 +685,7 @@ function PlaceCard(v) {
     <div style=${S('display:flex;flex-direction:column;gap:6px')}>
       <button onClick=${v.onReserve} disabled=${sel.reserveBusy} class=${sel.reserveBusy ? 'ai-busy' : ''} style=${S(`height:50px;border-radius:999px;border:0;padding:0 8px 0 18px;display:flex;align-items:center;gap:10px;font-family:inherit;cursor:${sel.reserveMuted ? 'default' : 'pointer'};background:${sel.reserveMuted ? 'rgba(16,24,63,.06)' : tintOf('#E8242C')};color:#10183F`)}>
         ${Ico('M4 7h16v13H4z M4 11h16 M8 4v5M16 4v5', 19, sel.reserveMuted ? '#4A5275' : inkOf('#E8242C'), 2.2)}
-        <span style=${S('flex:1;min-width:0;text-align:left;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${sel.reserveLabel}</span>
+        <span style=${S('flex:1;min-width:0;text-align:left;font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${sel.reserveLabel}</span>
         ${!sel.reserveMuted && html`<span style=${S('width:34px;height:34px;flex:none;border-radius:50%;background:#E8242C;color:#FFFFFF;display:flex;align-items:center;justify-content:center')}>${Ico(sel.reserveSaved ? ARROW_NE : 'M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14 M20 20l-3.5-3.5', 15, 'currentColor', 2.6)}</span>`}
       </button>
       ${(sel.reserveSub || sel.reserveRetry) && html`
@@ -692,6 +703,27 @@ function PlaceCard(v) {
   </section>`;
 }
 
+// Nearby Nudge: a small banner when you're a short walk from a saved spot you haven't been to.
+function Nudge(n) {
+  return html`
+    <div role="alert" style=${S(`position:absolute;top:${T(56)};left:12px;right:12px;z-index:1250;display:flex;justify-content:center;animation:nudgeIn .35s cubic-bezier(.2,.9,.3,1.2)`)}>
+      <div class="lg" style=${S(`width:100%;max-width:440px;${GL};border-radius:26px;padding:10px;display:flex;align-items:center;gap:11px;box-shadow:0 14px 34px rgba(16,24,63,.22)`)}>
+        <button onClick=${n.onShow} aria-label=${'Show ' + n.name} style=${S(`width:58px;height:58px;flex:none;border-radius:19px;border:0;padding:0;overflow:hidden;cursor:pointer;background:${n.col};display:flex;align-items:center;justify-content:center;font-size:26px`)}>
+          ${n.img ? html`<img src=${n.img} alt="" style=${S('width:100%;height:100%;object-fit:cover')} onError=${e => { e.target.style.display = 'none'; }}/>` : n.em}
+        </button>
+        <button onClick=${n.onShow} style=${S('flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:#10183F;font-family:inherit;display:flex;flex-direction:column;gap:2px')}>
+          <span style=${S(`${MONO};font-size:9.5px;font-weight:700;letter-spacing:1.1px;color:#FF6B1A`)}>PSST · ${n.min} MIN AWAY</span>
+          <span style=${S('font-size:17px;font-weight:900;font-style:italic;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${n.name}</span>
+          <span style=${S('font-size:12.5px;font-weight:700;color:#4A5275;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${n.line}</span>
+        </button>
+        <div style=${S('display:flex;flex-direction:column;gap:6px;flex:none')}>
+          <button onClick=${n.onShow} style=${S('height:32px;padding:0 13px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 8px rgba(255,107,26,.3)')}>Show Me</button>
+          <button onClick=${n.onLater} style=${S('height:28px;padding:0 10px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#4A5275;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer')}>Not Now</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 // Reviews on the place card: everyone who saved this place can read them (supabase/reviews.sql).
 const STAR = 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z';
 const Stars = (n, px, gap) => html`<span aria-label=${n + ' Out Of 5 Stars'} role="img" style=${S(`display:inline-flex;gap:${gap || 1}px`)}>${[1, 2, 3, 4, 5].map(k => html`<svg key=${k} width=${px} height=${px} viewBox="0 0 24 24" aria-hidden="true"><path d=${STAR} fill=${k <= n ? '#FFC425' : 'none'} stroke=${k <= n ? '#F5AE10' : icoCol('#A3A9C6')} stroke-width="1.8" stroke-linejoin="round"></path></svg>`)}</span>`;
@@ -703,7 +735,7 @@ function Reviews(sel) {
           <span style=${S('font-size:22px;letter-spacing:-.6px;font-weight:900;font-style:italic')}>Reviews</span>
           ${sel.revLoading ? html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>Loading…</span>` : sel.revN ? html`<span style=${S('display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#4A5275')}>${Stars(sel.revStars, 14)}<b style=${S('color:#10183F')}>${sel.revAvg}</b> · ${sel.revN} ${sel.revN === 1 ? 'Review' : 'Reviews'}</span>` : html`<span style=${S('font-size:12.5px;font-weight:600;color:#4A5275')}>No reviews yet — be the first.</span>`}
         </span>
-        ${!sel.revLoading && html`<button onClick=${sel.onWriteReview} style=${S(`flex:none;height:40px;padding:0 14px;border-radius:999px;border:0;background:${sel.revMine ? tintOf('#1B3DB8') : '#10183F'};color:${sel.revMine ? inkOf('#1B3DB8') : '#FFFFFF'};font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px`)}>${Ico(sel.revMine ? 'M4 20h4L19 9l-4-4L4 16z' : 'M12 5v14M5 12h14', 15, 'currentColor', 2.6)}${sel.revLabel}</button>`}
+        ${!sel.revLoading && html`<button onClick=${sel.onWriteReview} style=${S(`flex:none;height:36px;padding:0 13px;border-radius:999px;border:0;background:${sel.revMine ? tintOf('#1B3DB8') : '#10183F'};color:${sel.revMine ? inkOf('#1B3DB8') : '#FFFFFF'};font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px`)}>${Ico(sel.revMine ? 'M4 20h4L19 9l-4-4L4 16z' : 'M12 5v14M5 12h14', 15, 'currentColor', 2.6)}${sel.revLabel}</button>`}
       </div>
       ${(sel.revList || []).map(r => html`
       <article key=${r.key} style=${S('display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:20px;background:rgba(16,24,63,.05)')}>
@@ -918,19 +950,19 @@ function ListsScreen(v) {
         ${[...v.listCards].reverse().map((c, i, arr) => { const front = i === arr.length - 1, lift = c.lifted ? ';box-shadow:0 30px 60px rgba(16,24,63,.38),0 8px 18px rgba(16,24,63,.2)' : '';
           const motion = `z-index:${c.lifted ? 50 : i + 1};transform:${c.wTf || 'none'};transition:${c.lifted ? 'box-shadow .2s' : 'transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .2s'};-webkit-touch-callout:none;user-select:none;-webkit-user-select:none`;
           if (!front) return html`
-        <button key=${c.id} class=${c.dragging ? '' : 'press'} onClick=${c.onClick} onPointerDown=${c.onDown} onContextMenu=${e => e.preventDefault()} aria-label=${'Open ' + c.name + '. Hold To Reorder.'} style=${S(`position:relative;height:76px;margin-bottom:-20px;border:0;border-radius:22px 22px 0 0;padding:0 16px 20px;overflow:hidden;background:${c.wbg};color:${c.wfg};display:flex;align-items:center;gap:12px;text-align:left;font-family:inherit;cursor:${c.lifted ? 'grabbing' : 'pointer'};width:100%;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45),0 -6px 16px rgba(16,24,63,.12)${lift};${motion}`)}>
+        <button key=${c.id} class=${c.dragging ? '' : 'press'} onClick=${c.onClick} onPointerDown=${c.onDown} onContextMenu=${e => e.preventDefault()} aria-label=${'Open ' + c.name + '. Hold To Reorder.'} style=${S(`position:relative;height:62px;margin-bottom:-18px;border:0;border-radius:20px 20px 0 0;padding:0 14px 18px;overflow:hidden;background:${c.wbg};color:${c.wfg};display:flex;align-items:center;gap:12px;text-align:left;font-family:inherit;cursor:${c.lifted ? 'grabbing' : 'pointer'};width:100%;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45),0 -6px 16px rgba(16,24,63,.12)${lift};${motion}`)}>
           ${c.img && html`<span aria-hidden="true" style=${S('position:absolute;inset:0;opacity:.35')}>${Photo(c.img)}</span>`}
-          <span style=${S('position:relative;font-size:15px;font-weight:800;letter-spacing:2px')}>${c.code}</span>
-          ${html`<span style=${S('position:relative;flex:1;min-width:0;display:flex')}>${wName(c.name, 16)}</span>`}
+          <span style=${S('position:relative;font-size:13px;font-weight:800;letter-spacing:2px')}>${c.code}</span>
+          ${html`<span style=${S('position:relative;flex:1;min-width:0;display:flex')}>${wName(c.name, 14)}</span>`}
           <span style=${S(`position:relative;${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;opacity:.9;white-space:nowrap`)}>${[c.d1 ? (c.d1.split(', ')[1] || c.d1).toUpperCase() : '', c.cd && c.cd.top === 'IN' ? c.cd.big.toUpperCase() : c.cd ? c.cd.big.toUpperCase() : c.spots != null ? c.spots + (c.spots === 1 ? ' SPOT' : ' SPOTS') : 'MAP ONLY'].filter(Boolean).join(' · ')}</span>
         </button>`;
-          const big = t => html`<span style=${S('font-size:30px;font-weight:200;letter-spacing:-1.2px;line-height:1;white-space:nowrap')}>${t}</span>`;
+          const big = t => html`<span style=${S('font-size:22px;font-weight:200;letter-spacing:-.8px;line-height:1;white-space:nowrap')}>${t}</span>`;
           const lab = t => html`<span style=${S(`${MONO};font-size:9.5px;font-weight:700;letter-spacing:1px;color:#4A5275;white-space:nowrap`)}>${t}</span>`;
           const md = x => x ? (x.split(', ')[1] || x) : '', wd = x => x ? x.split(', ')[0].toUpperCase() : '';
-          const stat = (l, val, first) => html`<span style=${S(`display:flex;flex-direction:column;gap:1px;padding:0 12px;min-width:0;${first ? '' : 'border-left:1px solid rgba(16,24,63,.12)'}`)}>${lab(l)}<span style=${S('font-size:19px;font-weight:200;white-space:nowrap')}>${val}</span></span>`;
+          const stat = (l, val, first) => html`<span style=${S(`display:flex;flex-direction:column;gap:1px;padding:0 12px;min-width:0;${first ? '' : 'border-left:1px solid rgba(16,24,63,.12)'}`)}>${lab(l)}<span style=${S('font-size:16px;font-weight:200;white-space:nowrap')}>${val}</span></span>`;
           return html`
         <div key=${c.id} role="button" tabindex="0" onClick=${c.onClick} onPointerDown=${c.onDown} onContextMenu=${e => e.preventDefault()} onKeyDown=${e => { if (e.key === 'Enter') c.onClick(); }} aria-label=${'Open ' + c.name + '. Hold To Reorder.'} class=${c.dragging ? '' : 'press'} style=${S(`position:relative;border-radius:24px;overflow:hidden;background:#FFFFFF;color:#10183F;cursor:${c.lifted ? 'grabbing' : 'pointer'};box-shadow:0 -6px 18px rgba(16,24,63,.14),0 20px 40px rgba(16,24,63,.2)${lift};${motion}`)}>
-          <div style=${S(`position:relative;height:150px;overflow:hidden;color:#FFFFFF;background:${c.wbg}`)}>
+          <div style=${S(`position:relative;height:108px;overflow:hidden;color:#FFFFFF;background:${c.wbg}`)}>
             <span aria-hidden="true" style=${S(`position:absolute;inset:0;${SHEEN}`)}></span>
             ${c.img && Photo(c.img, c.name)}
             <span aria-hidden="true" style=${S('position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,24,63,.12),rgba(16,24,63,0) 35%,rgba(16,24,63,.58))')}></span>
@@ -938,12 +970,12 @@ function ListsScreen(v) {
               <span style=${S('height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.45);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font-size:14px;font-weight:800;letter-spacing:2.4px;display:flex;align-items:center')}>${c.code}</span>
               ${c.canPhoto && html`<label onClick=${e => e.stopPropagation()} onPointerDown=${e => e.stopPropagation()} class=${v.tripPhotoBusy ? 'ai-busy' : ''} style=${S('position:relative;height:30px;padding:0 12px 0 9px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.2);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#FFFFFF;font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px;cursor:pointer')}>${Ico('M4 8h3l2-3h6l2 3h3v11H4z M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 15, 'currentColor', 2.4)}${v.tripPhotoBusy ? 'Saving…' : 'Photo'}<input type="file" accept="image/*" aria-label="Change List Photo" onChange=${c.onPhoto} disabled=${v.tripPhotoBusy} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')}/></label>`}
             </div>
-            <div style=${S('position:absolute;left:16px;right:16px;bottom:12px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px')}>
-              <span style=${S('min-width:0;display:flex;font-size:30px;letter-spacing:-1.1px;line-height:1.05')}>${wName(c.name, 30)}</span>
+            <div style=${S('position:absolute;left:16px;right:16px;bottom:10px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px')}>
+              <span style=${S('min-width:0;display:flex;font-size:23px;letter-spacing:-.8px;line-height:1.05')}>${wName(c.name, 23)}</span>
               ${c.cd && html`<span style=${S(`flex:none;height:26px;padding:0 10px;border-radius:999px;background:#FFC425;color:#10183F;${MONO};font-size:10px;font-weight:700;display:flex;align-items:center;white-space:nowrap`)}>${(c.cd.top === 'IN' ? 'IN ' + c.cd.big : c.cd.big).toUpperCase()}</span>`}
             </div>
           </div>
-          <div style=${S('padding:14px 18px 12px;display:flex;flex-direction:column;gap:14px')}>
+          <div style=${S('padding:10px 16px 9px;display:flex;flex-direction:column;gap:9px')}>
             ${c.d1 ? html`
             <div style=${S('display:flex;align-items:center;gap:10px')}>
               <span style=${S('display:flex;flex-direction:column;gap:2px')}>${lab((c.dN ? 'ARRIVE · ' : 'ON · ') + wd(c.d1))}${big(md(c.d1))}</span>
@@ -952,7 +984,7 @@ function ListsScreen(v) {
               <span style=${S('display:flex;flex-direction:column;gap:2px;align-items:flex-end')}>${lab('DEPART · ' + wd(c.dN))}${big(md(c.dN))}</span>`}
             </div>` : html`
             <div style=${S('display:flex;flex-direction:column;gap:2px')}>${lab('WHEN')}${big('Anytime')}</div>`}
-            <div style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:16px;background:rgba(16,24,63,.05);padding:9px 0')}>
+            <div style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:14px;background:rgba(16,24,63,.05);padding:6px 0')}>
               ${stat('SPOTS', c.spots != null ? c.spots : '—', true)}${stat('DAYS', c.days || '—')}${stat('TRAVEL', c.travel ? (c.travel >= 60 ? Math.floor(c.travel / 60) + 'h ' + (c.travel % 60) + 'm' : c.travel + 'm') : '—')}
             </div>
           </div>
@@ -960,7 +992,7 @@ function ListsScreen(v) {
             <span style=${S('position:absolute;left:-32px;top:-12px;width:24px;height:24px;border-radius:50%;background:#FFF3DF')}></span>
             <span style=${S('position:absolute;right:-32px;top:-12px;width:24px;height:24px;border-radius:50%;background:#FFF3DF')}></span>
           </div>
-          <div style=${S('padding:12px 18px 14px;display:flex;align-items:center;gap:10px')}>
+          <div style=${S('padding:9px 16px 10px;display:flex;align-items:center;gap:10px')}>
             ${wPeople(c.ppl, '#10183F')}
             <span style=${S(`flex:1;min-width:0;${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${c.hereLabel ? '#1F9D6B' : '#4A5275'}`)}>${c.hereLabel || c.tagMono || (c.who || '').toUpperCase()}</span>
             <svg width="70" height="28" viewBox="0 0 74 30" role="img" aria-label=${'List Code ' + c.code} style=${S('flex:none;color:#10183F')}><g fill="currentColor">${c.bars.map((b, k) => html`<rect key=${k} x=${b.x} y="0" width=${b.w} height="30"></rect>`)}</g></svg>
@@ -1435,6 +1467,11 @@ function AddSheet(v) {
       <textarea id="f-note" value=${f.note} onChange=${v.onNote} placeholder="What To Order, When To Go…" rows="3" style=${S(`${inp};padding:12px 14px;resize:none;line-height:1.45`)}></textarea>
       ${hint('Each sentence shows on its own line.')}
     </div>
+    <div style=${col6}>
+      <label for="f-order" style=${lab}>WHAT TO ORDER</label>
+      <input id="f-order" value=${f.order || ''} onChange=${v.onOrderField} placeholder="Vodka Pizza, Tiramisu" style=${S(`height:52px;${inp}`)} />
+      ${hint('Separate them with commas. The first one gets a star.')}
+    </div>
     ${v.showReserveField && html`
     <div style=${col6}>
       <label for="f-reserve" style=${lab}>BOOKING LINK</label>
@@ -1516,6 +1553,14 @@ function AccountSheet(v) {
         </div>
         <span style=${S('font-size:11.5px;color:#6A7090')}>Automatic follows your phone’s light or dark setting.</span>
       </div>
+      <button role="switch" aria-checked=${v.nudgesOn} onClick=${v.toggleNudges} style=${S('display:flex;align-items:center;gap:12px;border:0;background:none;padding:2px 0;text-align:left;cursor:pointer;color:#10183F;font-family:inherit')}>
+        <span style=${S(`width:34px;height:34px;flex:none;border-radius:50%;background:${tintOf('#FF6B1A')};color:${inkOf('#FF6B1A')};display:flex;align-items:center;justify-content:center`)}>${Ico('M12 21s-7-6.2-7-11.5a7 7 0 1 1 14 0C19 14.8 12 21 12 21z M12 12.5a3 3 0 1 0 0-6a3 3 0 0 0 0 6', 18, 'currentColor', 2.2)}</span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
+          <span style=${S('font-size:15px;font-weight:800')}>Nearby Nudges</span>
+          <span style=${S('font-size:11.5px;font-weight:600;color:#6A7090')}>A heads-up when you’re a few minutes from a spot you haven’t tried.</span>
+        </span>
+        <span style=${S(`width:50px;height:30px;flex:none;border-radius:999px;padding:3px;background:${v.nudgesOn ? '#1F9D6B' : 'rgba(16,24,63,.16)'};display:flex;justify-content:${v.nudgesOn ? 'flex-end' : 'flex-start'};transition:background .2s`)}><span style=${S('width:24px;height:24px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 5px rgba(16,24,63,.25)')}></span></span>
+      </button>
       <div style=${S('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
         <button onClick=${v.syncNow} style=${S('height:46px;border-radius:14px;border:1.5px solid rgba(16,24,63,.14);background:#fff;color:#10183F;font-weight:800;font-size:14px;cursor:pointer')}>Sync Now</button>
         <button onClick=${v.signOut} style=${S('height:46px;border-radius:14px;border:0;background:#FFE2DF;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer')}>Sign Out</button>
@@ -1771,6 +1816,7 @@ function App(v) {
         ${v.obOpen && Onboarding(v)}
         ${v.reviewSheet && ReviewSheet(v)}
         ${v.tourOpen && !v.obOpen && Tour(v)}
+        ${v.nudgeCard && !v.obOpen && !v.tourOpen && Nudge(v.nudgeCard)}
         ${v.hasToast && html`
         <div role="status" style=${S(`position:absolute;top:${T(54)};left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none`)}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:24px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${Lines(v.toast)}</div></div>`}
       </div>

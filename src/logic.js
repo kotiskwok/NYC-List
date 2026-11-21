@@ -79,6 +79,17 @@ const photoErr=e=>e==='setup'?'Photos need one setup step. Run supabase/avatars.
 // A spot's picture: the photo you added, else (once GOOGLE_MAPS_API_KEY is set) its best Google Maps photo via /api/photo (AI picks the food or the inside, up to 1600 px).
 const GPHOTO={on:false};
 const placeImg=p=>!p?null:p.photo?p.photo:(GPHOTO.on&&p.name&&isFinite(p.lat)&&isFinite(p.lng)?API('/api/photo?q='+encodeURIComponent([p.name,p.address||p.area,CITIES[cityOf(p)].q].filter(Boolean).join(', '))+'&ll='+(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)+'&v=2'+(NATIVE?'&app=ios':'')):null);
+// What to order: a short list of dishes, drinks or products, typed as "Vodka Pizza, Tiramisu" in the Edit sheet.
+const orderList=t=>(Array.isArray(t)?t:String(t||'').split(/[,\n;·•]+/)).map(x=>String(x).trim().replace(/\s+/g,' ')).filter(x=>x.length>1).slice(0,6);
+const ORDER_TTL=30*864e5;
+const getWord=c=>{const n=(c&&c.name)||'';return /coffee|caf[eé]|bak|restaurant|bar\b|food|eat|dessert|tea|pizza|bagel/i.test(n)?'Order':/shop|store|grocer|market|boutique|book|vintage|thrift/i.test(n)?'Get':'Order';};
+// Nearby Nudges: when you're a short walk from a saved spot you haven't been to (and it's open), a little card pops up.
+// Only while the app is open, only if you've already let it use your location, at most one every 90 minutes,
+// and never the same spot twice in a week. Turned off in Your Account; the switch is kept on this device.
+const NUDGE_KM=.6,NUDGE_GAP=90*6e4,NUDGE_AGAIN=7*864e5;
+const nudgeLog=()=>{try{return JSON.parse(localStorage.getItem('nycList.nudge')||'{}')||{};}catch(e){return {};}};
+const nudgesOn=()=>{try{return localStorage.getItem('nycList.nudges')!=='off';}catch(e){return true;}};
+const locAllowed=()=>window.NYCNative&&NYCNative.locAllowed?NYCNative.locAllowed():(navigator.permissions&&navigator.permissions.query?navigator.permissions.query({name:'geolocation'}).then(r=>r.state==='granted').catch(()=>false):Promise.resolve(false));
 // Duplicate spots (same Google place, or the same name within about 150 m on the same map) are folded into one.
 // The spot with the most on it (visited, your photo, notes, booking link) stays, and fills its gaps from the others.
 const dupName=n=>String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/&/g,'and').replace(/^the\s+/,'').replace(/[^a-z0-9]/g,'');
@@ -212,7 +223,7 @@ const SEED=[
 const LS='nycList.v1';
 const _x=0;const toTitle=s=>s.replace(/\S+/g,w=>w[0].toUpperCase()+w.slice(1));
 const PRICES=['$','$$','$$$','$$$$'],PRICE_HINT=['Under $20 A Person','$20–40 A Person','$40–80 A Person','$80+ A Person'];
-const blank=()=>({id:null,price:0,url:'',name:'',cat:null,area:'auto',address:'',note:'',reserve:'',lat:null,lng:null,newCatOpen:false,newCatName:'',newCatColor:C.purple,newCatEmoji:'⭐'});
+const blank=()=>({id:null,price:0,url:'',name:'',cat:null,area:'auto',address:'',note:'',order:'',reserve:'',lat:null,lng:null,newCatOpen:false,newCatName:'',newCatColor:C.purple,newCatEmoji:'⭐'});
 const gmaps=(a,b,mode)=>'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(a)+'&destination='+encodeURIComponent(b)+'&travelmode='+mode;
 // A link shared into the app: ?add=<link> (iPhone Shortcut) or ?url= / ?text= / ?title= (Android share menu).
 const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const raw=['add','url','text','title'].map(k=>q.get(k)||'').join(' ');
@@ -254,7 +265,7 @@ class Component extends DCLogic {
     const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,
-      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,feedMenu:'',deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
+      exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,feedMenu:'',deckDx:0,deckFly:'',planSheet:'half',exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',orderBusy:null,nudge:null,nudgesOn:nudgesOn(),bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub2===true,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
@@ -292,7 +303,7 @@ class Component extends DCLogic {
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link added. Tap ✨ Fill From Link to read it.'});else this.aiAuto(u,true);}},400);}
   componentDidMount(){this._on=true;window.__nycApp=this;this._themeOff=window.onThemeChange&&onThemeChange(()=>this.themeChanged());window.NYCNative&&NYCNative.setCity(CUR.short);fetch(API('/api/photo?probe=1'),{cache:'no-store'}).then(r=>{if(r.status===204&&this._on){GPHOTO.on=true;this.setState({gphoto:true});}}).catch(()=>{});APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
-    window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
+    setTimeout(()=>this.nudgeWatch(),2500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>this.nudgeWatch(),800);});window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
       const names=new Set(areas().map(a=>a.name));
@@ -305,7 +316,7 @@ class Component extends DCLogic {
     Object.keys(s.cityMeta||{}).forEach(k=>{const m=s.cityMeta[k];cm[k]=m?{...m,plan:fix(m.plan)}:m;});
     this.setState({places:a?a.list:s.places,otherPlaces:b?b.list:s.otherPlaces,plan:fix(s.plan),cityMeta:cm,selId:map[s.selId]||s.selId,routeFor:map[s.routeFor]||s.routeFor});
     return Object.keys(map).length;}
-  componentDidUpdate(){const s=this.state;if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
+  componentDidUpdate(){const s=this.state;if(this._nh!==s.here){this._nh=s.here;if(s.here)setTimeout(()=>this._on&&this.checkNudge(),0);}if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
 if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan||this._op!==s.otherPlaces||this._cm!==s.cityMeta||this._lo!==s.listOrder){this._lo=s.listOrder;this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;this._op=s.otherPlaces;this._cm=s.cityMeta;
       try{localStorage.setItem(LS,JSON.stringify(this.snapshot()))}catch(e){}
@@ -550,15 +561,28 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     const H=window.innerHeight||800,full=s.planSheet==='full';
     if(pts.length)setTimeout(()=>this.fit(m,pts,full?{paddingTopLeft:[40,90],paddingBottomRight:[40,Math.round(H*.72)],maxZoom:15}:{paddingTopLeft:[40,250],paddingBottomRight:[40,Math.round(H*.5)],maxZoom:15.5}),30);}
   setPlanSheet(v){if(v===this.state.planSheet)return;this.setState({planSheet:v},()=>{if(this.maps&&this.maps.plan){this.maps.plan.psig=null;this.syncPlan(true);}});}
-  locate(after){if(!navigator.geolocation){this.setState({hereFailed:true,locFail:'This Browser Doesn\u2019t Share Location. Tap The Map Where You Are Instead.'});return;}
-    this.setState({locating:true,locFail:null});let first=true;if(this._wid!=null)navigator.geolocation.clearWatch(this._wid);
+  locate(after,quiet){if(!navigator.geolocation){if(quiet)return;this.setState({hereFailed:true,locFail:'This Browser Doesn\u2019t Share Location. Tap The Map Where You Are Instead.'});return;}
+    if(!quiet)this.setState({locating:true,locFail:null});let first=true;if(this._wid!=null)navigator.geolocation.clearWatch(this._wid);
     const ok=pos=>{const ll=[r5(pos.coords.latitude),r5(pos.coords.longitude)];this.setState({here:ll,hereAcc:Math.round(pos.coords.accuracy||0),hereManual:false,locating:false,hereFailed:false,locFail:null});
-      if(first){first=false;clearTimeout(this._lt);if(km(ll,CUR.center)>60)this.toast('You seem to be outside '+CUR.short+' Right Now');after&&after(ll);}};
+      if(first){first=false;clearTimeout(this._lt);if(!quiet&&km(ll,CUR.center)>60)this.toast('You seem to be outside '+CUR.short+' Right Now');after&&after(ll);}};
     const bad=err=>{if(!first)return;first=false;clearTimeout(this._lt);if(this._wid!=null){navigator.geolocation.clearWatch(this._wid);this._wid=null;}
       const msg=err&&err.code===1?'Location is turned off for this page. Allow it in your settings, or tap the map where you are.':'Your Location Didn\u2019t Come Through. Try Again, Or Tap The Map Where You Are.';
-      this.setState({locating:false,hereFailed:true,locFail:msg});};
+      if(quiet){this.setState({locating:false});return;}this.setState({locating:false,hereFailed:true,locFail:msg});};
     try{this._wid=navigator.geolocation.watchPosition(ok,bad,{enableHighAccuracy:true,timeout:12000,maximumAge:30000});}catch(e){bad();}
     this._lt=setTimeout(()=>bad({code:3}),14000);}
+  // Start watching location for nudges, but only when you've already allowed it (never a surprise permission prompt).
+  nudgeWatch(){if(!this.state.nudgesOn||this._wid!=null||document.visibilityState==='hidden')return;
+    Promise.resolve(locAllowed()).then(ok=>{if(ok&&this._on&&this._wid==null&&this.state.nudgesOn)this.locate(null,true);}).catch(()=>{});}
+  checkNudge(){const s=this.state;if(!s.nudgesOn||!s.here||s.hereManual||s.nudge||s.addOpen||s.placing||(s.hereAcc&&s.hereAcc>150))return;
+    const log=nudgeLog(),now=Date.now();if(log.last&&now-log.last<NUDGE_GAP)return;const seen=log.ids||{},dnow=cityNow(CUR.id);
+    let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited||p.draft||!isFinite(p.lat)||(seen[p.id]&&now-seen[p.id]<NUDGE_AGAIN))return;
+      const d=km(s.here,[+p.lat,+p.lng]);if(d>NUDGE_KM||d>=bd)return;const oi=openInfo(p,dnow);if(oi&&!oi.open)return;best=p;bd=d;});
+    if(!best)return;const ids={};Object.keys(seen).forEach(k=>{if(now-seen[k]<NUDGE_AGAIN)ids[k]=seen[k];});ids[best.id]=now;
+    try{localStorage.setItem('nycList.nudge',JSON.stringify({last:now,ids}));}catch(e){}
+    this.setState({nudge:{id:best.id,min:Math.max(1,Math.round(bd*1.25/4.8*60))}});window.NYCNative&&NYCNative.tap();
+    clearTimeout(this._nt);this._nt=setTimeout(()=>this.setState(st=>st.nudge&&st.nudge.id===best.id?{nudge:null}:null),20000);}
+  setNudges(on){try{localStorage.setItem('nycList.nudges',on?'on':'off');}catch(e){}this.setState({nudgesOn:on,nudge:null},()=>{if(on)this.nudgeWatch();});
+    this.toast(on?'Nudges on. I’ll tap you when you’re near a spot.':'Nudges off.');}
   componentWillUnmount(){this._on=false;if(this._wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(this._wid);}
 
   async lookup(q,limit){try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),7000);
@@ -597,7 +621,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       if(!ll&&ao)ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];
       this.setState({saving:false});if(!ll){this.toast('Couldn’t find it. Drop a pin or pick a neighborhood.');return;}}
     const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
-    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
+    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),order:orderList(f.order),orderChk:orderList(f.order).length?null:(orig&&orig.orderChk)||null,...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
     if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false,s.addTargetDay);this.setState({addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added to the list.');return;}
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
@@ -749,7 +773,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     if(res&&res[0]){const ll=[r5(+res[0].lat),r5(+res[0].lon)];if(!ao||km(ll,ao.c)<=3)return ll;}return null;}
   async aiApply(p,multi){const s=this.state,catOk=p.category_id&&s.cats.some(c=>c.id===p.category_id),area=this.aiArea(p.neighborhood);
     this.setForm({name:p.name||s.form.name,cat:catOk?p.category_id:s.form.cat,area:area||'auto',address:p.address||'',
-      note:s.form.note.trim()&&s.form.note.trim()!==(this._aiNote||'')?s.form.note:(p.note||''),reserve:p.booking_url||s.form.reserve||'',price:p.price&&p.price>=1&&p.price<=4?p.price:0,lat:null,lng:null});
+      note:s.form.note.trim()&&s.form.note.trim()!==(this._aiNote||'')?s.form.note:(p.note||''),reserve:p.booking_url||s.form.reserve||'',order:(s.form.order||'').trim()?s.form.order:orderList(p.must_order).join(', '),price:p.price&&p.price>=1&&p.price<=4?p.price:0,lat:null,lng:null});
     this._aiNote=p.note||'';
     const ll=await this.aiLocate(p,area);
     if(this.state.form.name!==p.name)return;
@@ -764,7 +788,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       if(!ll&&area){const ao=areas().find(a=>a.name===area);ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];}
       if(!ll){skipped++;continue;}
       const cat=p.category_id&&this.state.cats.some(c=>c.id===p.category_id)?p.category_id:(this.state.cats[0]||{}).id;
-      made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
+      made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',order:orderList(p.must_order),reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
     if(s.addTarget&&made.length){const tid=s.addTarget;this.addStopsTo(tid,made,false,s.addTargetDay);this.setState({aiAdding:false,addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});
       this.toast(`Added ${made.length} ${made.length===1?'Spot':'Spots'} To The List`+(skipped?` · ${skipped} Couldn’t Be Found`:''));return;}
     this.setState(st=>({aiAdding:false,addOpen:!made.length,tab:made.length?'map':st.tab,mapCats:[],selId:null,places:[...made,...st.places]}),
@@ -774,6 +798,17 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
   // Light / dark switched (in Your Account, or the phone's setting under Automatic): redraw, and re-tint Apple's maps.
   themeChanged(){const dark=window.THEME_DARK&&THEME_DARK();this.allMaps().forEach(m=>{if(m.apple)try{m.apple.colorScheme=dark?mapkit.Map.ColorSchemes.Dark:mapkit.Map.ColorSchemes.Light;m.el.style.background=dark?'#1A1F3A':'#F2EFE9';}catch(e){}});
     this.setState(st=>({themeV:st.themeV+1}));}
+  // What to order at a spot saved without dishes: Claude searches reviews and guides (server: /api/order) and saves the list.
+  async findOrder(id){const s=this.state,p=s.places.find(x=>x.id===id);if(!p||s.orderBusy)return;
+    const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token){this.toast('Sign in to look this up.');return;}
+    this.setState({orderBusy:id});let j=null,ok=false;
+    try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),55000);
+      const r=await fetch(API('/api/order'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+        body:JSON.stringify({name:p.name,address:p.address||'',area:p.area||'',city:cityOf(p),cat:(s.cats.find(c=>c.id===p.cat)||{}).name||'',note:p.note||''})});clearTimeout(t);j=await r.json().catch(()=>null);ok=r.ok;}catch(e){}
+    if(!ok||!j){this.setState({orderBusy:null});this.toast((j&&j.error)||'Couldn’t look it up. Check your connection?');return;}
+    const items=orderList(j.items||[]),t0=Date.now();
+    this.setState(st=>({orderBusy:null,places:st.places.map(x=>x.id!==id?x:items.length?{...x,order:items,orderChk:null}:{...x,orderChk:{t:t0}})}));
+    this.toast(items.length?'Found '+items.length+' to try.':'Nothing specific out there yet. Add your own with Edit.');}
   // Looks up a restaurant's one real booking page (server: /api/booking) and saves it on the spot.
   async findBooking(id){const s=this.state,p=s.places.find(x=>x.id===id);if(!p||s.bookBusy)return;
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;if(!token){this.toast('Sign in to find booking pages.');return;}
@@ -846,7 +881,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     const fRef=dref?dref.map(x=>x.toFixed(4)).join(','):'',fc=this._feedMin||(this._feedMin=new Map());if(fc.size>800)fc.clear();
     const feedMin=p=>{const k=p.id+'|'+fRef+'|'+p.lat+','+p.lng;if(!fc.has(k))fc.set(k,tripMin(p));return fc.get(k);};
     const feedItems=deck.map((p,i)=>{const c=catOf(p.cat),w=p.name.trim().split(/\s+/),m=feedMin(p),oi=openInfo(p,dnow),ip=inPlan(p.id);
-      return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:ip,
+      return {id:p.id,bold:w[0],light:w.slice(1).join(' '),img:placeImg(p),col:c.color,fg:fgFor(c.color),emoji:emo(c),visited:p.visited,inPlan:ip,dish:(p.order||[]).slice(0,2).join(' · '),
         tag:[c.name,p.area,p.price&&this.priced(p.cat)?PRICES[p.price-1]:''].filter(Boolean).join(' · ').toUpperCase(),
         hours:oi?oi.label:'',hoursCol:oi?((window.THEME_DARK&&THEME_DARK())?(oi.open?(oi.soon?'#FFB27A':'#5BE0A6'):'#FF8A8F'):(oi.open?(oi.soon?'#FF6B1A':C.green):'#E8242C')):'',
         away:m!=null?Math.max(1,Math.round(m))+' min '+(s.here?'away':'from home'):'',why:vb&&vb.why[p.id]?'✨ '+vb.why[p.id]:'',
@@ -876,7 +911,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     if(sp){const c=catOf(sp.cat),src=SRC[sp.source]||SRC.manual,hasUrl=!!sp.url,ip=inPlan(sp.id);let ns=window.NJS&&inRing([sp.lat,sp.lng],NJS.area)?null:nearSt([sp.lat,sp.lng],1,2,true)[0];
       // Outside the subway's reach: the nearest regional rail, PATH or light rail station, with the walk or a short drive to it.
       if(!ns&&CUR.state){const r=nearRail([sp.lat,sp.lng],15)[0];if(r){const lm=lastMile(r.s.c,[sp.lat,sp.lng]);ns={s:{n:r.s.n+(lm.k==='car'?' · Drive':''),r:[],c:r.s.c},rb:[railBul(r.s.l)],min:lm.min};}}
-      sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
+      sel={name:sp.name,catName:c.name,catBg:c.color,catFg:fgFor(c.color),area:sp.area,note:sp.note,hasNote:!!sp.note,order:sp.order||[],hasOrder:!!(sp.order&&sp.order.length),orderWord:getWord(c),orderBusy:s.orderBusy===sp.id,orderNone:!(sp.order&&sp.order.length)&&!!(sp.orderChk&&Date.now()-sp.orderChk.t<ORDER_TTL),hasUrl,srcBg:src.bg,openLabel:'Open '+src.label,
         hasStation:!!ns,stName:ns?ns.s.n:'',stRoutes:ns?(ns.rb||ns.s.r.slice(0,6).map(bullet)):[],stWalk:ns?fmtMin(ns.min!=null?ns.min:walkMin([sp.lat,sp.lng],ns.s.c))+' Walk':'',
         cols:hasUrl?'1fr 1fr 1fr':'1fr 1fr',visBg:sp.visited?C.green:'#fff',visFg:sp.visited?'#fff':C.green,visLabel:sp.visited?'Been Here ✓':'Mark Visited',
         planBg:ip?C.blue:'#fff',planFg:ip?'#fff':C.blue,planLabel:ip?'In Plan ✓':'+ Plan',hasPrice:!!sp.price,price:PRICES[(sp.price||1)-1],
@@ -1017,14 +1052,20 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       viewList:()=>this.setState({exView:'list'}),viewMap:()=>this.setState({exView:'map'}),resultCards,noResults:!n,
       hasSel:!!sp&&!s.placing&&!s.routeFor,mapChrome:!(sp&&!s.placing&&!s.routeFor)&&!(s.routeFor&&!s.placing),sel,spotCount:s.places.length,visitedCount:s.places.filter(p=>p.visited).length,
       // Nearest saved spot to where you are (only once your location is known), for the card at the bottom of the map.
+      nudgeCard:(()=>{const n=s.nudge,p=n&&s.places.find(x=>x.id===n.id);if(!p)return null;const oi=openInfo(p,cityNow(CUR.id)),c=catOf(p.cat);
+        return {name:p.name,min:n.min,img:placeImg(p),em:emo(c),col:c.color,
+          line:p.order&&p.order.length?'Get the '+p.order[0]+'.':oi?oi.label+'.':'You’ve been meaning to go.',
+          onShow:()=>{clearTimeout(this._nt);this.setState({nudge:null,tab:'map',selId:p.id,routeFor:null,acctOpen:false});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([p.lat,p.lng],15.5,{duration:.6}),80);},
+          onLater:()=>{clearTimeout(this._nt);this.setState({nudge:null});}};})(),
+      nudgesOn:s.nudgesOn,toggleNudges:()=>this.setNudges(!s.nudgesOn),
       nearest:(()=>{if(!s.here||s.tab!=='map'||s.placing||s.routeFor||s.selId)return null;let best=null,bd=1e9;s.places.forEach(p=>{if(p.visited)return;const d=km(s.here,[p.lat,p.lng]);if(d<bd){bd=d;best=p;}});if(!best||bd>8)return null;
         const c=catOf(best.cat),walk=Math.max(1,Math.round(bd*1.25/4.8*60));return {name:best.name,img:placeImg(best),catName:c.name,col:c.color,fg:fgFor(c.color),em:emo(c),big:walk>99?Math.round(walk/60):walk,unit:walk>99?'hr':'min',
           onClick:()=>{this.setState({selId:best.id});setTimeout(()=>this.maps&&this.maps.main.map.flyTo([best.lat,best.lng],15.5,{duration:.6}),60);}};})(),onMapTab:s.tab==='map',delLabel:s.confirmDel?'Tap Again To Delete':'Delete',closeSel:()=>this.setState({selId:null,confirmDel:false}),
       openSource:()=>sp&&window.open(sp.url,'_blank'),
       onReserve:()=>{if(!sp)return;if(sp.reserve){window.open(sp.reserve,'_blank');return;}const chk=sp.reserveChk&&Date.now()-sp.reserveChk.t<BOOK_TTL;if(!chk)this.findBooking(sp.id);},
-      retryReserve:()=>sp&&this.findBooking(sp.id),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
+      retryReserve:()=>sp&&this.findBooking(sp.id),findOrderSel:()=>sp&&this.findOrder(sp.id),openRoute:()=>sp&&this.openRouteFor(sp.id),togglePlanSel:()=>sp&&this.togglePlan(sp.id),
       toggleVisited:()=>{if(!sp)return;this.setState(st=>({places:st.places.map(p=>p.id===sp.id?{...p,visited:!p.visited}:p)}));if(!sp.visited)this.toast('Been there, ate that.');},
-      editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',reserve:sp.reserve||'',lat:sp.lat,lng:sp.lng}}),
+      editSel:()=>sp&&this.setState({addOpen:true,addMode:'name',form:{...blank(),id:sp.id,price:sp.price||0,url:sp.url||'',name:sp.name,cat:sp.cat,area:sp.area,address:sp.address||'',note:sp.note||'',order:(sp.order||[]).join(', '),reserve:sp.reserve||'',lat:sp.lat,lng:sp.lng}}),
       deleteSel:()=>{if(!sp)return;if(!s.confirmDel)return this.setState({confirmDel:true});this.setState(st=>({places:st.places.filter(p=>p.id!==sp.id),plan:{...st.plan,ids:st.plan.ids.filter(x=>x!==sp.id)},selId:null,confirmDel:false}));this.toast('Gone. Spot deleted.');},
       routeOpen:!!rd&&!s.placing,routeMini:!!s.routeMini,routeCollapse:()=>this.setState({routeMini:true}),routeExpand:()=>this.setState({routeMini:false}),routeDest:rd?rd.d.name:'',closeRoute:()=>{const id=s.routeFor;this.setState({routeFor:null,selId:id});},
       originChips,originIsSpot:s.routeMode==='spot',routeSpotVal:s.routeSpot||'',onRouteSpot:e=>this.setState({routeSpot:e.target.value,routePick:0}),
@@ -1067,7 +1108,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       addY:s.addOpen?'0%':'105%',formTitle:f.id?'Edit Spot':s.addTarget?'Add To The List':'Add A Spot',formFor:s.addTarget?((s.trips.find(t=>t.id===s.addTarget)||{}).name||''):'',form:f,
       hasPin,noPin:!hasPin,pinLine:hasPin?(f.area!=='auto'?f.area:(hoodAt([f.lat,f.lng])||'On The Map')):'',startPlacing:()=>this.startPlacing('spot'),
       onUrl:e=>{const v=e.target.value;this.setForm({url:v});this.aiAuto(v);},onName:e=>{const v=e.target.value;this.setForm({name:v});if(s.webMsg)this.setState({webMsg:''});this.suggest(v);},onArea:e=>this.setForm({area:e.target.value}),
-      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),
+      onAddress:e=>this.setForm({address:e.target.value}),onNote:e=>this.setForm({note:e.target.value}),onReserveField:e=>this.setForm({reserve:e.target.value}),onOrderField:e=>this.setForm({order:e.target.value}),
       reviewSheet:s.reviewSheet&&{...s.reviewSheet,close:()=>this.setState({reviewSheet:null}),setStars:n=>this.setState(st=>({reviewSheet:{...st.reviewSheet,stars:n,msg:''}})),
         onBody:e=>this.setState({reviewSheet:{...this.state.reviewSheet,body:e.target.value}}),
         onPhoto:e=>{const f0=e.target.files&&e.target.files[0];e.target.value='';if(!f0)return;const r=this.state.reviewSheet;if(r.preview)try{URL.revokeObjectURL(r.preview);}catch(x){}

@@ -56,7 +56,10 @@ const NYCNative = (() => {
   }
   window.addEventListener('load', () => setTimeout(takeInbox, 600));
 
+  // Has location already been allowed? (Nearby Nudges never trigger the permission prompt themselves.)
+  const locAllowed = () => Geo && Geo.checkPermissions ? Geo.checkPermissions().then(r => r && (r.location === 'granted' || r.coarseLocation === 'granted')).catch(() => false) : Promise.resolve(false);
   return {
+    locAllowed,
     tap(style) { try { Haptics && Haptics.impact({ style: style || 'LIGHT' }); } catch (e) {} },
     // Status-bar text: dark on the light theme, light on the dark one.
     statusBar(dark) { try { StatusBar && StatusBar.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); } catch (e) {} },

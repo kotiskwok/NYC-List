@@ -13,6 +13,9 @@
     "api/booking.js": {
       "maxDuration": 60
     },
+    "api/order.js": {
+      "maxDuration": 60
+    },
     "api/photo.js": {
       "maxDuration": 30
     }

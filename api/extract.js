@@ -235,11 +235,12 @@ const TOOL = {
             neighborhood: { type: ['string', 'null'], description: 'NYC neighborhood (e.g. "Williamsburg", "Nolita"), if stated or well known.' },
             address: { type: ['string', 'null'], description: 'Street address or cross streets if stated or well known; otherwise null.' },
             price: { type: ['integer', 'null'], description: 'For restaurants/bars only: 1=$ (under $20), 2=$$ ($20-40), 3=$$$ ($40-80), 4=$$$$ ($80+) per person. Null if unknown.' },
-            note: { type: 'string', description: 'One short line on what to order or why to go, taken from the post. Title Case Each Word, like the app’s style. Empty string if nothing useful.' },
+            note: { type: 'string', description: 'One short line on why to go, taken from the post (the dishes go in must_order). Title Case Each Word, like the app’s style. Empty string if nothing useful.' },
+            must_order: { type: 'array', items: { type: 'string' }, description: 'The specific dishes, drinks or products the post says to get at THIS place, as named in the post (shown, said or written), most hyped first. Short names in Title Case, e.g. "Vodka Pizza", "Pistachio Croissant". Max 5. Empty if the post doesn’t single any out.' },
             confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
             booking_url: { type: ['string', 'null'], description: 'This place’s reservation link (Resy, OpenTable, Tock, SevenRooms, Chope), copied exactly from the "Booking links in the post" list. Null if none there is for this place. Never make one up.' }
           },
-          required: ['name', 'category_id', 'neighborhood', 'address', 'price', 'note', 'confidence', 'booking_url']
+          required: ['name', 'category_id', 'neighborhood', 'address', 'price', 'note', 'must_order', 'confidence', 'booking_url']
         }
       },
       summary: { type: 'string', description: 'A few words on what the post is about.' }
