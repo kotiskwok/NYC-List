@@ -8,7 +8,7 @@ Everything a new chat needs to keep working on **Spotted In**: what the app does
 
 **Spotted In** is Kotis's map of the places she's been meaning to try (restaurants, cafés, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station, travel time and opening hours. It also plans a day out, keeps shared trip lists with friends, and lets people rate and review the spots they've saved.
 
-It has seven maps, each with its own spots, home and day plan:
+It has eight maps, each with its own spots, home and day plan:
 
 | Map | Button | Transit used for travel times |
 |---|---|---|
@@ -17,6 +17,7 @@ It has seven maps, each with its own spots, home and day plan:
 | Hong Kong | HKG 🌃 | MTR, trams, ferries |
 | Toronto | TO 🍁 | TTC subway, LRT, streetcars |
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
+| Washington, DC | DC 🏛️ | Metro (Red, Orange, Blue, Silver, Green, Yellow) |
 | New York State | NYS 🏞️ | Driving, and Metro-North / LIRR / Amtrak from NYC |
 | New Jersey | NJ 🍅 | Driving, and NJ Transit / PATH / Hudson-Bergen Light Rail from NYC |
 
@@ -106,9 +107,11 @@ From the iPhone Claude app you can still change the code and the website; only t
 | Hong Kong | MTR, Buses, Trams, Ferries |
 | Toronto | Subway/LRT, Streetcars, Buses, Bike Share Toronto |
 | Boston | The T stations, MBTA Buses & Silver Line, Ferries, Bluebikes |
+| Washington, DC | Metro stations, Metrobus, Capital Bikeshare |
 | New York State | Metro-North, LIRR & Amtrak stations |
 | New Jersey | NJ Transit, PATH & light rail stations (names from zoom 12) |
 
+- **DC map:** Metro stations from OpenStreetMap; neighborhoods grouped by DC quadrant (Northwest, Northeast, Southeast, Southwest, split at the Capitol) plus Arlington, Alexandria, Maryland and Northern Virginia. Metrobus lines come from the weekly route Action (`dc:bus`).
 - **New Jersey map:** works like the New York State map. Opens on the whole state; towns and Jersey City neighborhoods are grouped into Jersey City & Hoboken, Bergen & Passaic, Essex, Union & Morris, Central Jersey, Jersey Shore, South Jersey and Skylands. Train estimates go from your NYC home by subway to Penn Station (NJ Transit, with changes at Secaucus, Newark or Trenton noted in the line name), World Trade Center or 33rd St (PATH, and PATH + light rail). It uses your NYC home until you set one there. NYC subway stations never show as a New Jersey spot's nearest station.
 - **New York State map:** opens on the whole state. Spots get a town as their neighborhood, grouped into regions (Long Island, Westchester, Hudson Valley, Catskills, Capital Region, Adirondacks & North Country, Finger Lakes & Central NY, Western NY). It uses your NYC home until you set one there.
 - While a spot or directions are open, the header, chips and side buttons hide.
@@ -168,7 +171,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Account, welcome and tour
 - **Sign-in screen** (design SI1 · Frosted Over Your Map): a blurred, drawn map with colored pins (`AuthBackdrop`, night map in dark mode) behind a frosted glass card with the logo, email/password and a show-password eye, plus a glass **New Here? Create An Account** pill. Invite links show "Kotis Invited You".
-- **Welcome steps:** name, home city (NYC, SG, HKG, TO or BOS) and optional home address, then **Show Me Around**.
+- **Welcome steps:** name, home city (NYC, SG, HKG, TO, BOS or DC) and optional home address, then **Show Me Around**.
 - **How-to tour:** five cards (**Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**), with icon tabs, swipe or Next/Back, and Skip. The welcome toast shows when it closes. Reopen from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
 - **Your Account:** profile photo, sync status, **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), **Nearby Nudges** (on/off, per device), **My Public Map**, Sync Now, Sign Out, **Delete My Account** (tap twice), and links to the Privacy Policy and Terms of Use.
 
@@ -262,9 +265,9 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Photos:** Storage bucket `avatars`: `<user>/avatar.jpg`, `<user>/spot-<id>.jpg`, `<user>/list-<id>.jpg`, `<user>/review-<place>.jpg`.
 
 ### Maps (cities)
-- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. State maps (NYS, NJ) also have `state:1`, `data` (the window global holding their data: `NYS`, `NJS`; read with `SD()`), `z`, `minZ`, and optionally `hoodKm` and `labZ`. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, nys, nj`. Each map's clock for Open Now is in `TZ`.
+- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. State maps (NYS, NJ) also have `state:1`, `data` (the window global holding their data: `NYS`, `NJS`; read with `SD()`), `z`, `minZ`, and optionally `hoodKm` and `labZ`. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc, nys, nj`. Each map's clock for Open Now is in `TZ`.
 - `setCity()` switches map; `cityMoved()` re-centers and redraws. `state.places` = current map's spots, `state.otherPlaces` = the rest.
-- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn); New York State `data/nys-data.js` (`window.NYS` = regions, outline, towns, hubs, lines, rail stations); New Jersey `data/nj-data.js` (`window.NJS`, same shape).
+- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn); New York State `data/nys-data.js` (`window.NYS` = regions, outline, towns, hubs, lines, rail stations); New Jersey `data/nj-data.js` (`window.NJS`, same shape).
 - **Travel estimates:** `estimate(a, b)` finds the best ride between stations near each end (one transfer), using each line's speed and wait, compared with walking; on state maps also `drive` and `rail`. `inCore` (inside the five boroughs) cuts New Jersey out of the NYC box. `bestOf()` picks the quickest. Helpers: `inBox`, `inCore`, `reach`, `NYCISH()`, `homeFor()`, `hoodAt`.
 - **Bus, tram, streetcar and ferry lines:** other cities use `data/routes/<city>-<kind>.json`, built from OpenStreetMap by the GitHub Action **Build transit routes** (`.github/workflows/routes.yml` → `scripts/build-routes.js` → `api/_osmroutes.js`). It runs weekly; run it by hand from GitHub → Actions (tick **force** to rebuild all). NYC buses come from `/api/bus`. Route files load from the live site, so they don't need a new iPhone build.
 - **Server side:** `CITIES` in `api/_shared.js` mirrors the maps; `localize()` adapts the NYC-written AI prompts to each map. The AI also answers `post_city`, which drives the "Switch To…" question.
@@ -381,7 +384,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 22 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 22 yet, it still needs Archive and Upload.
+- **Current build number:** 23 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 23 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.

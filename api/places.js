@@ -36,7 +36,7 @@ async function google(path, opts) {
   } finally { clearTimeout(t); }
 }
 
-const tidy = s => String(s || '').replace(/,?\s*(New York|NY)(,\s*NY)?(\s*\d{5})?,\s*(USA|United States)$/i, '').replace(/,\s*(USA|United States|Singapore|Hong Kong|Canada)$/i, '').replace(/,?\s*Singapore\s*\d{6}$/i, '').replace(/,?\s*Toronto,?\s*ON\s*[A-Z]\d[A-Z]\s*\d[A-Z]\d$/i, '').replace(/,?\s*MA\s*\d{5}$/i, '').trim();
+const tidy = s => String(s || '').replace(/,?\s*(New York|NY)(,\s*NY)?(\s*\d{5})?,\s*(USA|United States)$/i, '').replace(/,\s*(USA|United States|Singapore|Hong Kong|Canada)$/i, '').replace(/,?\s*Singapore\s*\d{6}$/i, '').replace(/,?\s*Toronto,?\s*ON\s*[A-Z]\d[A-Z]\s*\d[A-Z]\d$/i, '').replace(/,?\s*MA\s*\d{5}$/i, '').replace(/,?\s*(DC|VA|MD)\s*\d{5}$/i, '').trim();
 
 module.exports = async (req, res) => {
   if (cors(req, res)) return;

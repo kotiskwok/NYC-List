@@ -55,6 +55,7 @@ const CITIES = {
   sg: { name: 'Singapore', short: 'Singapore', area: 'Singapore', eg: '"Tiong Bahru", "Tanjong Pagar"', eg1: '"Tiong Bahru"', addr: '"78 Yong Siak St"', box: [1.2, 103.6, 1.48, 104.05] },
   hk: { name: 'Hong Kong', short: 'Hong Kong', area: 'Hong Kong (Hong Kong Island, Kowloon, the New Territories and the outlying islands)', eg: '"Sheung Wan", "Mong Kok"', eg1: '"Sheung Wan"', addr: '"18 Hollywood Rd"', box: [22.15, 113.82, 22.57, 114.45] },
   bos: { name: 'Boston', short: 'Boston', area: 'Boston and its close neighbors (Cambridge, Somerville, Brookline and nearby towns)', eg: '"Back Bay", "North End"', eg1: '"South End"', addr: '"100 Hanover St"', box: [42.22, -71.2, 42.43, -70.95] },
+  dc: { name: 'Washington, DC', short: 'DC', area: 'Washington, DC and its close neighbors (Arlington, Alexandria, Bethesda, Silver Spring and nearby)', eg: '"Dupont Circle", "Navy Yard"', eg1: '"Shaw"', addr: '"1309 5th St NE"', box: [38.76, -77.25, 39.04, -76.88] },
   // New York State outside the city (outline matches data/nys-data.js in the app). NYC spots are matched to nyc first.
   nys: { name: 'New York State', short: 'New York State', pin: 'NY', state: true, area: 'New York State outside the city of New York (Long Island, Westchester, the Hudson Valley, the Catskills, the Capital Region, the Adirondacks, the Finger Lakes and Western New York)',
     eg: '"Hudson", "Beacon"', eg1: '"Woodstock"', addr: '"610 Warren St"', box: [40.45, -79.8, 45.05, -71.75],

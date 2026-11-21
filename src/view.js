@@ -1689,7 +1689,7 @@ function Onboarding(v) {
       ${back}
       ${art('🏠', '#FCCC0A')}
       ${title('Where’s Home, ' + v.obFirst + '?', 'Pick your city, then your address if you like. We’ll use it to show how far each spot is from your couch. It stays private to your account.')}
-      <div role="radiogroup" aria-label="Your City" style=${S('align-self:stretch;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px')}>
+      <div role="radiogroup" aria-label="Your City" style=${S('align-self:stretch;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px')}>
         ${v.cityRows.filter(c => c.id !== 'nys' && c.id !== 'nj').map(c => html`<button key=${c.id} type="button" role="radio" aria-checked=${c.on} onClick=${c.onClick} style=${S(`height:62px;border-radius:20px;border:${c.on ? '0' : '1px solid rgba(255,255,255,.95)'};background:${c.on ? '#10183F' : 'rgba(255,255,255,.75)'};color:${c.on ? '#fff' : '#10183F'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:${c.on ? '0 8px 18px rgba(16,24,63,.25)' : 'inset 0 2px 1px #fff'}`)}><span class="emo" aria-hidden="true" style=${S('font-size:20px')}>${c.emoji}</span><span style=${S('font-size:12px;font-weight:900;font-style:italic')}>${c.short}</span></button>`)}
       </div>
       <form onSubmit=${v.obFind} style=${S('align-self:stretch;display:flex;flex-direction:column;gap:10px;margin-top:auto;text-align:left')}>

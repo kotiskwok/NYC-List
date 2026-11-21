@@ -36,7 +36,10 @@ CITIES.nj={id:'nj',name:'New Jersey',short:'NJ',emoji:'🍅',state:1,data:'NJS',
 CITIES.bos={id:'bos',name:'Boston',short:'BOS',emoji:'🦞',q:'Boston, MA',qc:'Boston, Massachusetts',center:[42.355,-71.075],box:[42.22,-71.2,42.43,-70.95],bounds:[[42.15,-71.3],[42.5,-70.85]],
   regions:['Boston','Cambridge','Somerville','Brookline','Nearby'],transit:'The T',layerSub:'Red, Orange, Blue & Green Line Stations',layers:['bus','ferry','bike'],busSub:'MBTA Buses & Silver Line',
   ferry:{label:'Ferries',sub:'MBTA Harbor Ferries',col:'#008EAA'},bike:{name:'Bluebikes',url:'https://gbfs.lyft.com/gbfs/2.3/bos/en/',ext:'.json'}};
-const CITY_ORDER=['nyc','sg','hk','to','bos','nys','nj'];
+CITIES.dc={id:'dc',name:'Washington, DC',short:'DC',emoji:'🏛️',q:'Washington, DC',qc:'Washington, District of Columbia',center:[38.9,-77.03],box:[38.76,-77.25,39.04,-76.88],bounds:[[38.68,-77.45],[39.12,-76.78]],
+  regions:['Northwest','Northeast','Southeast','Southwest','Arlington','Alexandria','Maryland','Northern Virginia'],transit:'Metro',layerSub:'Red, Orange, Blue, Silver, Green & Yellow Line Stations',layers:['bus','bike'],busSub:'Metrobus',
+  bike:{name:'Capital Bikeshare',url:'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/',ext:'.json'}};
+const CITY_ORDER=['nyc','sg','hk','to','bos','dc','nys','nj'];
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
 const cityOf=p=>(p&&p.city&&CITIES[p.city])?p.city:'nyc';
 const CDATA=()=>(window.CITY_DATA||{})[CUR.id]||{};
@@ -246,7 +249,7 @@ const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const r
 const withCity=q=>{const re=CUR.id==='nyc'?/new york|nyc|brooklyn|queens|bronx|staten/i:new RegExp(CUR.q,'i');return re.test(q)?q:q+', '+CUR.qc;};
 // Opening hours (from /api/hours, stored on the spot as hours:{p:[[openDay,openMin,closeDay,closeMin]…],s,t}).
 // Each map's clock, so Open Now is right wherever you are.
-const TZ={nyc:'America/New_York',nys:'America/New_York',nj:'America/New_York',bos:'America/New_York',to:'America/Toronto',sg:'Asia/Singapore',hk:'Asia/Hong_Kong'};
+const TZ={nyc:'America/New_York',nys:'America/New_York',nj:'America/New_York',bos:'America/New_York',dc:'America/New_York',to:'America/Toronto',sg:'Asia/Singapore',hk:'Asia/Hong_Kong'};
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WEEK=10080;
 const cityNow=id=>{try{const f=new Intl.DateTimeFormat('en-US',{timeZone:TZ[id]||TZ.nyc,weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(new Date()),g=t=>(f.find(x=>x.type===t)||{}).value;
   return DAYS.indexOf(g('weekday'))*1440+(+g('hour')%24)*60+(+g('minute'));}catch(e){const d=new Date();return d.getDay()*1440+d.getHours()*60+d.getMinutes();}};
@@ -1060,7 +1063,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       cityRows:CITY_ORDER.map(k=>{const c=CITIES[k],n=k===CUR.id?s.places.length:(s.otherPlaces||[]).filter(p=>cityOf(p)===k).length;
         return {id:k,name:c.name,short:c.short,emoji:c.emoji,transit:c.transit,count:n,on:k===CUR.id,onClick:()=>this.setCity(k)};}),
       layerRows:(()=>{const lr=(key,label,sub,on,stv,col,onClick)=>({key,label,sub:on&&stv==='loading'?'Loading…':on&&stv==='error'?'Not Available Right Now':sub,on,col,onClick});
-        const rows=[{key:'sub',label:CUR.id==='nyc'?'Subway':CUR.transit,sub:CUR.layerSub,on:s.showSubway,col:CUR.id==='nyc'?'#EE352E':CUR.id==='sg'?'#D42E12':CUR.id==='hk'?'#ED1D24':CUR.id==='nys'?'#0039A6':CUR.id==='nj'?'#003DA5':CUR.id==='bos'?'#DA291C':'#DA251D',onClick:()=>this.setState({showSubway:!s.showSubway})}];
+        const rows=[{key:'sub',label:CUR.id==='nyc'?'Subway':CUR.transit,sub:CUR.layerSub,on:s.showSubway,col:CUR.id==='nyc'?'#EE352E':CUR.id==='sg'?'#D42E12':CUR.id==='hk'?'#ED1D24':CUR.id==='nys'?'#0039A6':CUR.id==='nj'?'#003DA5':CUR.id==='bos'?'#DA291C':CUR.id==='dc'?'#BF0D3E':'#DA251D',onClick:()=>this.setState({showSubway:!s.showSubway})}];
         CUR.layers.forEach(k=>{
           if(k==='bus')rows.push(lr('bus','Bus Routes',CUR.busSub,s.showBus,s.busState,'#006CB7',()=>this.setState({showBus:!s.showBus,busState:s.busState==='error'?'':s.busState})));
           if(k==='tram')rows.push(lr('tram',CUR.tram.label,CUR.tram.sub,s.showTram,s.tramState,CUR.tram.col,()=>this.setState({showTram:!s.showTram,tramState:s.tramState==='error'?'':s.tramState})));
