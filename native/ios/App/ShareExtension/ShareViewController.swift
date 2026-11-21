@@ -1,6 +1,7 @@
 import UIKit
 import SwiftUI
 import UniformTypeIdentifiers
+import UserNotifications
 
 /// "Share → Spotted In" from TikTok, Instagram, Threads, Google Maps or Safari.
 /// Saves the link to the app group's inbox; the app reads it the next time it opens
@@ -33,7 +34,36 @@ class ShareViewController: UIViewController {
         Task { @MainActor in
             let link = await self.findLink()
             if let link = link { self.save(link) }
-            self.show(saved: link != nil, link: link ?? "")
+            // With notifications allowed, close straight away and let a real iPhone banner say it's saved:
+            // nothing stays on screen over the app you shared from. Otherwise show the ticket as before.
+            if await self.banner(saved: link != nil, link: link ?? "") {
+                self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+            } else {
+                self.show(saved: link != nil, link: link ?? "")
+            }
+        }
+    }
+
+    /// Posts "Saved To Spotted In" as a notification banner. Returns false when notifications aren't allowed.
+    private func banner(saved: Bool, link: String) async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        let status = await center.notificationSettings().authorizationStatus
+        guard status == .authorized || status == .provisional || status == .ephemeral else { return false }
+        let city = UserDefaults(suiteName: suite)?.string(forKey: cityKey) ?? ""
+        let content = UNMutableNotificationContent()
+        if saved {
+            content.title = "Saved To Spotted In"
+            content.body = "From \(sourceName(link)) to My Map\(city.isEmpty ? "" : " · " + city).\nIt fills itself in next time you open the app."
+        } else {
+            content.title = "Nothing To Save"
+            content.body = "There was no link in that.\nTry Share → Copy Link, then paste it in the app."
+        }
+        content.threadIdentifier = "spotted-in-saves"
+        do {
+            try await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+            return true
+        } catch {
+            return false
         }
     }
 
@@ -100,6 +130,16 @@ class ShareViewController: UIViewController {
     }
 }
 
+/// Where a link is from, like the app's source badges.
+fileprivate func sourceName(_ link: String) -> String {
+    let host = (URL(string: link)?.host?.lowercased() ?? "").replacingOccurrences(of: "www.", with: "")
+    if host.contains("tiktok") { return "TikTok" }
+    if host.contains("instagram") || host.contains("instagr.am") { return "Instagram" }
+    if host.contains("threads") { return "Threads" }
+    if host.contains("goo.gl") || host.contains("google") { return "Google Maps" }
+    return host.isEmpty ? "A Website" : host
+}
+
 fileprivate func rgb(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(red: r / 255, green: g / 255, blue: b / 255) }
 
 /// Design "C1 · Ticket Toast": a dark liquid-glass ticket that drops in at the top of the screen. A blue stub on
@@ -124,14 +164,7 @@ struct ShareCard: View {
     private let mono9 = Font.system(size: 9.5, weight: .bold, design: .monospaced)
 
     /// Where the link is from, like the app's source badges.
-    private var source: String {
-        let host = (URL(string: link)?.host?.lowercased() ?? "").replacingOccurrences(of: "www.", with: "")
-        if host.contains("tiktok") { return "TikTok" }
-        if host.contains("instagram") || host.contains("instagr.am") { return "Instagram" }
-        if host.contains("threads") { return "Threads" }
-        if host.contains("goo.gl") || host.contains("google") { return "Google Maps" }
-        return host.isEmpty ? "A Website" : host
-    }
+    private var source: String { sourceName(link) }
 
     var body: some View {
         ZStack(alignment: .top) {

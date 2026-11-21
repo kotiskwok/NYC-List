@@ -39,7 +39,7 @@ const NYCNative = (() => {
   // Links saved from the share sheet ("Share → Spotted In") wait in a shared app-group inbox.
   async function takeInbox() {
     if (!Inbox) return;
-    try { const r = await Inbox.takeLinks(); const links = (r && r.links) || []; if (links.length) window.dispatchEvent(new CustomEvent('nyc-shared', { detail: links })); } catch (e) {}
+    try { const r = await Inbox.takeLinks(); const links = (r && r.links) || []; if (links.length) { window.dispatchEvent(new CustomEvent('nyc-shared', { detail: links })); setTimeout(() => NYCNativeAsk(), 4000); } } catch (e) {}
   }
   function fromUrl(u) {
     // nyclist://add?url=<link>  or an invite: nyclist://join?code=<code> / https://…/?join=<code>
@@ -56,6 +56,7 @@ const NYCNative = (() => {
   }
   window.addEventListener('load', () => setTimeout(takeInbox, 600));
 
+  const NYCNativeAsk = () => { try { window.NYCNative && NYCNative.askNotify && NYCNative.askNotify(); } catch (e) {} };
   // Has location already been allowed? (Nearby Nudges never trigger the permission prompt themselves.)
   const locAllowed = () => Geo && Geo.checkPermissions ? Geo.checkPermissions().then(r => r && (r.location === 'granted' || r.coarseLocation === 'granted')).catch(() => false) : Promise.resolve(false);
   return {
@@ -64,6 +65,8 @@ const NYCNative = (() => {
     // Status-bar text: dark on the light theme, light on the dark one.
     statusBar(dark) { try { StatusBar && StatusBar.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); } catch (e) {} },
     // Tells the share card which city's map new spots go to.
+    // Ask once (iOS's own prompt) so saves from the share sheet can show a real banner. Never asks twice.
+    askNotify() { try { if (localStorage.getItem('nycList.notifyAsked')) return; localStorage.setItem('nycList.notifyAsked', '1'); Inbox && Inbox.notifications && Inbox.notifications({ ask: true }).catch(() => {}); } catch (e) {} },
     setCity(short) { try { Inbox && Inbox.setCity && Inbox.setCity({ city: short }); } catch (e) {} }
   };
 })();
