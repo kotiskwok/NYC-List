@@ -641,7 +641,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
     this.toast(orig?'Saved. Looking good!':'Stuck it on the map!!');}
-  // Apple requires in-app account deletion. Server: /api/delete-account (needs SUPABASE_SERVICE_ROLE_KEY in Vercel).
+  // Apple requires in-app account deletion. Server: /api/delete-account (photos, then nyc_delete_me() from supabase/delete-account.sql).
   async deleteAccount(){const s=this.state;if(s.acctDel===2)return;if(s.acctDel!==1){this.setState({acctDel:1});clearTimeout(this._adt);this._adt=setTimeout(()=>this.setState({acctDel:0}),6000);return;}
     this.setState({acctDel:2});const token=await NYCSync.getToken();
     try{const r=await fetch(API('/api/delete-account'),{method:'POST',headers:{authorization:'Bearer '+token}});const j=await r.json().catch(()=>null);
@@ -1220,7 +1220,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       syncLabel:({saved:'All Changes Saved',saving:'Saving…',syncing:'Syncing…',offline:'Offline. Saves when you’re back online.'})[s.syncState]||'Connecting…',
       openAcct:()=>s.auth==='signedIn'&&this.setState({acctOpen:true}),closeAcct:()=>this.setState({acctOpen:false}),acctOpen:s.acctOpen&&s.auth==='signedIn',
       syncEmail:s.syncEmail,signOut:()=>NYCSync.signOut(),
-      delAcctLabel:s.acctDel===2?'Deleting…':s.acctDel===1?'Tap again to delete everything. This can’t be undone.':'Delete My Account',deleteAccount:()=>this.deleteAccount(),privacyUrl:SITE()+'/privacy.html',syncNow:()=>{NYCSync.syncNow();this.toast('Syncing…');},
+      delAcctLabel:s.acctDel===2?'Deleting…':s.acctDel===1?'Tap again to delete everything. This can’t be undone.':'Delete My Account',deleteAccount:()=>this.deleteAccount(),privacyUrl:SITE()+'/privacy.html',termsUrl:SITE()+'/terms.html',syncNow:()=>{NYCSync.syncNow();this.toast('Syncing…');},
       showPrice:!!f.cat&&this.priced(f.cat),priceHint:f.price?PRICE_HINT[f.price-1]+' · Tap Again To Clear':'How pricey is it? Optional.',
       priceChips:PRICES.map((lb,i)=>{const on=f.price===i+1;return {label:lb,bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.14)',onClick:()=>this.setForm({price:on?0:i+1})};}),
       exShowPrice:!s.exCats.length||s.exCats.some(id=>this.priced(id)),clearPrices:()=>this.setState({exPrices:[]}),clearPricesLabel:s.exPrices.length?'Clear':'',

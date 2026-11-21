@@ -782,7 +782,7 @@ function ReviewSheet(v) {
         : html`<label style=${S(`position:relative;height:52px;border-radius:18px;border:1.5px dashed rgba(16,24,63,.25);display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;color:${inkOf('#F45FA0')};cursor:pointer`)}>${Ico('M4 8h3l2-3h6l2 3h3v11H4z M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 18, 'currentColor', 2.2)}Add A Photo<input type="file" accept="image/*" onChange=${r.onPhoto} style=${S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')}/></label>`}
       ${r.msg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C')}>${r.msg}</div>`}
       <button onClick=${r.save} disabled=${r.busy} class=${r.busy ? 'ai-busy' : ''} style=${S('height:54px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-size:16px;font-weight:900;font-style:italic;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>${r.busy ? 'Posting…' : r.mine ? 'Update Review' : 'Post Review'}</button>
-      <span style=${S('font-size:11.5px;line-height:1.4;color:#4A5275;text-align:center')}>Other Spotted In users who saved this place can read your review and see your first name. Keep it kind — no hate, harassment or spam. Reported reviews are hidden.</span>
+      <span style=${S('font-size:11.5px;line-height:1.4;color:#4A5275;text-align:center')}>Other Spotted In users who saved this place can read your review and see your first name. Keep it kind: no hate, harassment or spam.<br/>Reported reviews are hidden, and anything that breaks the <a href=${v.termsUrl} target="_blank" rel="noopener" style=${S('color:#1B3DB8;font-weight:800')}>Terms of Use</a> is removed within 24 hours.</span>
       ${r.mine && html`<button onClick=${r.del} style=${S('align-self:center;border:0;background:none;color:#E8242C;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;padding:4px')}>Delete My Review</button>`}
     </div>
   </div>`;
@@ -1617,7 +1617,7 @@ function AccountSheet(v) {
       </div>
       <div style=${S('display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center')}>
         <button onClick=${v.deleteAccount} style=${S('border:0;background:none;color:#E8242C;font-weight:700;font-size:12.5px;cursor:pointer;padding:6px')}>${v.delAcctLabel}</button>
-        <span style=${S('font-size:11px;color:#6A7090')}>Deletes your account, your map and the lists you made. <a href=${v.privacyUrl} target="_blank" rel="noopener">Privacy Policy</a></span>
+        <span style=${S('font-size:11px;color:#6A7090')}>Deletes your account, your map, your reviews and the lists you made. <a href=${v.privacyUrl} target="_blank" rel="noopener">Privacy Policy</a> · <a href=${v.termsUrl} target="_blank" rel="noopener">Terms of Use</a></span>
       </div>
     </div>
   </div>`;
@@ -1829,6 +1829,7 @@ function AuthScreen(v) {
         </div>
         ${v.hasAuthMsg && html`<div role="status" style=${S('font-size:13px;font-weight:700;color:#E8242C;line-height:1.35;margin:0 4px')}>${Lines(v.authMsg)}</div>`}
         <button type="submit" style=${S('height:54px;margin-top:4px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-weight:900;font-style:italic;font-size:19px;cursor:pointer;box-shadow:0 8px 18px rgba(255,107,26,.35)')}>${v.authBtn}</button>
+        ${v.authUp && html`<span style=${S('display:block;margin-top:2px;font-size:11.5px;line-height:1.45;font-weight:600;color:#4A5275;text-align:center')}>By creating an account, you agree to the <a href=${v.termsUrl} target="_blank" rel="noopener" style=${S('color:#1B3DB8;font-weight:800')}>Terms of Use</a> and <a href=${v.privacyUrl} target="_blank" rel="noopener" style=${S('color:#1B3DB8;font-weight:800')}>Privacy Policy</a>.</span>`}
       </form>
       <button onClick=${v.authToggle} class="lg" style=${S('align-self:center;margin-bottom:auto;height:44px;padding:0 20px;border-radius:999px;border:1px solid rgba(255,255,255,.85);background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);color:#1B3DB8;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap')}>${v.authSwitch}</button>
     </div>

@@ -170,7 +170,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Sign-in screen** (design SI1 · Frosted Over Your Map): a blurred, drawn map with colored pins (`AuthBackdrop`, night map in dark mode) behind a frosted glass card with the logo, email/password and a show-password eye, plus a glass **New Here? Create An Account** pill. Invite links show "Kotis Invited You".
 - **Welcome steps:** name, home city (NYC, SG, HKG, TO or BOS) and optional home address, then **Show Me Around**.
 - **How-to tour:** five cards (**Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**), with icon tabs, swipe or Next/Back, and Skip. The welcome toast shows when it closes. Reopen from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
-- **Your Account:** profile photo, sync status, **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), **Nearby Nudges** (on/off, per device), **My Public Map**, Sync Now, Sign Out, **Delete My Account** (needs `SUPABASE_SERVICE_ROLE_KEY`, see §6).
+- **Your Account:** profile photo, sync status, **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), **Nearby Nudges** (on/off, per device), **My Public Map**, Sync Now, Sign Out, **Delete My Account** (tap twice), and links to the Privacy Policy and Terms of Use.
 
 ### Nearby Nudges
 - While the app is open and location is already allowed (it never asks itself), a glass banner slides in from the top: "PSST · 3 MIN AWAY · Devoción · Get the Vodka Pizza." with **Show Me** / **Not Now**.
@@ -225,11 +225,11 @@ From the iPhone Claude app you can still change the code and the website; only t
 | `GOOGLE_MAPS_API_KEY` | ✅ set | Suggestions, pinning, photos, opening hours, place ids for reviews |
 | `OPENAI_API_KEY` | ✅ set | Hearing what's said in videos and reels |
 | `MAPKIT_TEAM_ID`, `MAPKIT_KEY_ID`, `MAPKIT_PRIVATE_KEY` | ✅ set | Apple Maps base map |
-| `SUPABASE_SERVICE_ROLE_KEY` | ❌ not set | **Delete My Account** (Apple requires it before full App Store review). Supabase → Project Settings → API Keys → secret key. |
+| `SUPABASE_SERVICE_ROLE_KEY` | not needed | Delete My Account now works through `supabase/delete-account.sql` with the person's own sign-in. The key is only an optional fallback. |
 
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
 - **Supabase setup:** Authentication → Site URL is the Vercel address; "Allow new users to sign up" stays on (friends join lists).
-- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps). If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
+- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
 - **Quick checks:** `GET /api/extract?probe=1` → `{"ffmpeg":true,"speech":true}`. `GET /api/photo?probe=1` → 204 when Google photos work.
 
 ---
@@ -279,7 +279,7 @@ Endpoints check the caller's Supabase token, except `photo`, `geocode`, `bus` an
 | `POST /api/transcribe` | OpenAI speech-to-text for phone videos. |
 | `GET /api/bus` | NYC bus route lines. |
 | `GET /api/mapkit-token` | Apple Maps token for the live site, previews and the iPhone app. |
-| `POST /api/delete-account` | Deletes the signed-in account (needs the service-role key). |
+| `POST /api/delete-account` | Deletes the signed-in account: their photos, then `nyc_delete_me()` (everything else cascades). |
 
 **How links are read (`api/extract.js`):** TikTok via the desktop page (caption, location tag, photo-mode images, video with that page's cookies, TikTok captions); Instagram via `/embed/captioned/` (caption, every carousel photo, reel video); videos via `watchVideo` (a frame about every 5 seconds with `ffmpeg-static`, plus speech-to-text); Google Maps via `api/_gmaps.js` (follows share links as a phone); Threads and other sites via `og:` tags. Every place is pinned with Google (`pinPlace`), and booking links are kept only if they appear in the post. `extract`, `find`, `booking` and `bus` may take up to 60 s (`vercel.json`). The root `package.json` exists only for `ffmpeg-static`.
 
@@ -373,9 +373,9 @@ Switch cities, plan a day and make a list with a friend.
 Tell me anything that's confusing, broken, slow or missing.
 Screenshots are the best!
 ```
-- Apps with posts from other people (reviews) need report/block (built) and, for full App Store review, terms of use that forbid abusive content.
+- Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 19 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 19 yet, it still needs Archive and Upload.
+- **Current build number:** 20 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 20 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
@@ -434,7 +434,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 | `manifest.webmanifest`, `icons/` | Home-screen name and icons, Android share target |
 | `vercel.json` | Function limits, `includeFiles` for ffmpeg, cache headers (`/path/:path*` patterns) |
 | `config.js` | Supabase URL and publishable key, `siteUrl` for the iPhone app |
-| `privacy.html`, `support.html` | App Store privacy and support pages |
+| `privacy.html`, `support.html`, `terms.html` | Privacy policy, support and Terms of Use pages |
 | `map.html` | The public profile map page (`/m/<slug>`) |
 | `native/` | iPhone app (and, once built, `native/android/` for Android): Xcode project, Share extension, `scripts/copy-web.mjs`, `design/app-icon.html`, `APP_STORE.md`, `README.md` |
 | `CLAUDE.md` | Short rules for Claude in the repo |
@@ -463,7 +463,5 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 
 - **Reviews redesign "Y1 · Photo Fades Into Blue Glass"** (on the design canvas): the spot's photo across the top fading into campaign-blue liquid glass, a glass **Must Go / It's Fine / Skip It** vote slider with percentages, glass photo tiles, reviewers' comments as speech bubbles tagged with their vote, and a floating **"Say something about [spot]…"** bar with a photo button. The vote becomes the rating for spots on everyone's own map (votes = ratings on map spots).
 - **Take the I'm In / Skip It votes off spots in shared lists** once Y1's map-spot votes are built (keep the per-person notes on lists unless Kotis says otherwise).
-- **Delete My Account** needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel before full App Store review.
-- **Terms of use** for reviews (Apple asks for this with user posts).
 - Saving a shared link in the background, without opening the app.
 - **Android app on Google Play** (plan in §8b).
