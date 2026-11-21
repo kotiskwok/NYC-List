@@ -12,4 +12,4 @@ jobs:
         run: npm ci && npm run sync
       - name: Build (no signing)
         working-directory: native/ios/App
-        run: xcodebuild -project App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)|PushNotifications" | head -30; exit ${PIPESTATUS[0]}
+        run: xcodebuild -project App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO > build.log 2>&1; s=$?; grep -E "error:|\*\* BUILD" build.log | head -20; exit $s
