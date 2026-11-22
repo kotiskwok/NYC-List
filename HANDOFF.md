@@ -166,7 +166,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - Then location (address, dropped pin or neighborhood), Category (or **+ New Category**), Price, Neighborhood, Notes and, for restaurants, **Booking Link**.
 
 ### Sharing into the app
-- **iPhone app:** **Share → Spotted In** from any app saves the link and, when notifications are allowed, closes straight away with a real iPhone banner ("Saved To Spotted In · From TikTok to My Map · NYC"). iOS draws its own sheet behind every share extension and apps can't remove it, so the banner avoids it. Without notifications it falls back to the dark glass ticket ("Saved To Spotted In", FROM / TO, Undo / Done) that closes after about 3 seconds. The app asks for notifications once, after the first shared link arrives (or on launch for people who already save from TikTok/Instagram/Threads): `NYCNative.askNotify()` → `AppGroupPlugin.notifications`. The app fills the spot in the next time it opens.
+- **iPhone app:** **Share → Spotted In** (design "C · Spot Preview", canvas https://claude.ai/artifact/B879k2jU4LJAzWApLStAVL): the share sheet closes at once with a faint "Reading The Post…" banner and uploads the link with this phone's share key to `/api/extract` in the background. The server (`api/_share.js`) reads the post like Add A Spot, saves the result as a share job and pushes "Spotted Lucali On The Map!!" · "Carroll Gardens · 18 min." · "Get the vodka pizza." with the spot's photo (added by the `NotificationService` extension) and **Plan It / Open Spotted In / Undo** on press-and-hold (categories in `AppDelegate`). When the app opens, `takeShareJobs` adds the spots (tagged `job`) and skips those links; a failed read falls back to Add A Spot with the link. Needs notifications allowed and `supabase/share.sql`; the share key is made on sign-in (`ensureShareKey`) and removed on Sign Out. Without a key or notifications it falls back to the "Saved To Spotted In" banner or ticket. The minutes in the banner are a rough estimate; the place card has the real one.
 - **Website:** `https://nyc-lovat.vercel.app/?add=<link>` opens Add A Spot with the link (Android share menu via the web manifest; works with an iPhone Shortcut).
 
 ### Account, welcome and tour
@@ -238,7 +238,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
 - **Supabase setup:** Authentication → Site URL is the Vercel address; "Allow new users to sign up" stays on (friends join lists).
-- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
+- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
 - **Quick checks:** `GET /api/extract?probe=1` → `{"ffmpeg":true,"speech":true}`. `GET /api/photo?probe=1` → 204 when Google photos work.
 
 ---
@@ -384,7 +384,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 23 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 23 yet, it still needs Archive and Upload.
+- **Current build number:** 24 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 24 yet, it still needs Archive and Upload.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
