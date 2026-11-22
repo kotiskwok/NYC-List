@@ -319,7 +319,7 @@ class Component extends DCLogic {
     this.setState({addOpen:true,tab:'map',placing:false,form:{...blank(),url:u},selId:null,routeFor:null,acctOpen:false,lookQ:'',lookResults:[],lookMsg:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:''});
     setTimeout(()=>{if(this.state.form.url===u){if(detect(u)==='link')this.setState({aiMsg:'Link added. Tap ✨ Fill From Link to read it.'});else this.aiAuto(u,true);}},400);}
   componentDidMount(){this._on=true;window.__nycApp=this;this._themeOff=window.onThemeChange&&onThemeChange(()=>this.themeChanged());window.NYCNative&&NYCNative.setCity(CUR.short);fetch(API('/api/photo?probe=1'),{cache:'no-store'}).then(r=>{if(r.status===204&&this._on){GPHOTO.on=true;this.setState({gphoto:true});}}).catch(()=>{});APPLE.fail=()=>{APPLE.state='off';this.allMaps().forEach(m=>this.dropApple(m));};this._share=SHARED_LINK;this._shareQ=[];setTimeout(()=>this.takeShared(),0);
-    setTimeout(()=>this.nudgeWatch(),2500);if(NATIVE)setTimeout(()=>{const st=this.state;if(this._on&&st.auth==='signedIn'&&!st.tourOpen&&!st.obOpen&&[...st.places,...(st.otherPlaces||[])].some(p=>/tiktok|insta|threads/.test(p.source||'')))window.NYCNative&&NYCNative.askNotify&&NYCNative.askNotify();},6000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>this.nudgeWatch(),800);});window.addEventListener('nyc-push-token',()=>this.savePushToken());window.addEventListener('nyc-open-trip',e=>{const id=e.detail;const go=()=>{if(this.state.trips.some(t=>t.id===id)){this.setState({tab:'lists',acctOpen:false,selId:null});this.openTrip(id);}else if(this._on)setTimeout(go,700);};go();});window.addEventListener('nyc-shared',e=>{const links=(e.detail||[]).filter(Boolean);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
+    setTimeout(()=>this.nudgeWatch(),2500);if(NATIVE)setTimeout(()=>{const st=this.state;if(this._on&&st.auth==='signedIn'&&!st.tourOpen&&!st.obOpen&&[...st.places,...(st.otherPlaces||[])].some(p=>/tiktok|insta|threads/.test(p.source||'')))window.NYCNative&&NYCNative.askNotify&&NYCNative.askNotify();},6000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){setTimeout(()=>this.nudgeWatch(),800);if(NATIVE)setTimeout(()=>this.takeShareJobs(),1200);}});window.addEventListener('nyc-push-token',()=>this.savePushToken());window.addEventListener('nyc-open-trip',e=>{const id=e.detail;const go=()=>{if(this.state.trips.some(t=>t.id===id)){this.setState({tab:'lists',acctOpen:false,selId:null});this.openTrip(id);}else if(this._on)setTimeout(go,700);};go();});window.addEventListener('nyc-share-action',e=>this.shareAction(e.detail||{}));window.addEventListener('nyc-shared',async e=>{let links=(e.detail||[]).filter(Boolean);links=await this.shareFilter(links);if(!links.length)return;this._shareQ.push(...links);if(!this._share&&!this.state.addOpen)this._share=this._shareQ.shift();this.takeShared();});window.NYCSync&&NYCSync.attach(this);window.NYCLists&&NYCLists.attach(this);const go=()=>{if(!this._on)return;
     if(window.L&&window.NYC_MAP&&this.mainMapRef.current){
       this.maps={main:this.makeMap(this.mainMapRef.current,'main'),ex:null,plan:null};window.__nycMaps=this.maps;
       const names=new Set(areas().map(a=>a.name));
@@ -332,7 +332,7 @@ class Component extends DCLogic {
     Object.keys(s.cityMeta||{}).forEach(k=>{const m=s.cityMeta[k];cm[k]=m?{...m,plan:fix(m.plan)}:m;});
     this.setState({places:a?a.list:s.places,otherPlaces:b?b.list:s.otherPlaces,plan:fix(s.plan),cityMeta:cm,selId:map[s.selId]||s.selId,routeFor:map[s.routeFor]||s.routeFor});
     return Object.keys(map).length;}
-  componentDidUpdate(){const s=this.state;if(this._ptAuth!==s.auth){this._ptAuth=s.auth;if(s.auth==='signedIn')setTimeout(()=>this.savePushToken(),1500);}if(this._pubAuth!==s.auth){this._pubAuth=s.auth;if(s.auth==='signedIn')setTimeout(()=>this.loadPubMap(),1200);else if(this.state.pubMap)this.setState({pubMap:null});}if(this._frT!==s.trips&&s.auth==='signedIn'){this._frT=s.trips;clearTimeout(this._frTo);this._frTo=setTimeout(()=>this.loadFriendScores(),1500);}if(this._nh!==s.here){this._nh=s.here;if(s.here)setTimeout(()=>this._on&&this.checkNudge(),0);}if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
+  componentDidUpdate(){const s=this.state;if(this._ptAuth!==s.auth){this._ptAuth=s.auth;if(s.auth==='signedIn'){setTimeout(()=>this.savePushToken(),1500);setTimeout(()=>this.ensureShareKey(),2000);setTimeout(()=>this.takeShareJobs(),2500);}}if(this._pubAuth!==s.auth){this._pubAuth=s.auth;if(s.auth==='signedIn')setTimeout(()=>this.loadPubMap(),1200);else if(this.state.pubMap)this.setState({pubMap:null});}if(this._frT!==s.trips&&s.auth==='signedIn'){this._frT=s.trips;clearTimeout(this._frTo);this._frTo=setTimeout(()=>this.loadFriendScores(),1500);}if(this._nh!==s.here){this._nh=s.here;if(s.here)setTimeout(()=>this._on&&this.checkNudge(),0);}if((this._dp!==s.places||this._do!==s.otherPlaces)&&!s.aiAdding){this._dp=s.places;this._do=s.otherPlaces;const n=this.foldDupes();if(n){this.toast(n===1?'That spot was already on your map. Kept just one.':'Cleaned up '+n+' duplicate spots.');return;}}
 if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._shareQ&&this._shareQ.length&&(s.auth==='signedIn'||s.auth==='local'))this._share=this._shareQ.shift();if(this._share)this.takeShared();
     if(this._pl!==s.places||this._ct!==s.cats||this._hm!==s.home||this._pn!==s.plan||this._op!==s.otherPlaces||this._cm!==s.cityMeta||this._lo!==s.listOrder){this._lo=s.listOrder;this._pl=s.places;this._ct=s.cats;this._hm=s.home;this._pn=s.plan;this._op=s.otherPlaces;this._cm=s.cityMeta;
       try{localStorage.setItem(LS,JSON.stringify(this.snapshot()))}catch(e){}
@@ -843,6 +843,43 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
   async sharePub(){const url=this.pubLink();if(!url)return;const text='My Spotted In map 🗽';
     if(navigator.share){try{await navigator.share({title:'My Spotted In Map',text,url});return;}catch(e){if(e&&e.name==='AbortError')return;}}
     (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>this.toast('Link copied. Go send it!')).catch(()=>this.toast('Press and hold the link to copy it.'));}
+  // ---- Share → Spotted In, read straight away (supabase/share.sql, api/_share.js) ----
+  // Signed in on the iPhone app: give this phone a share key, so the share sheet can send links for the server to read.
+  async ensureShareKey(){if(!NATIVE||!window.NYCNative||!NYCNative.setShareKey)return;const c=NYCSync.client&&NYCSync.client();if(!c||this.state.auth!=='signedIn'||this._skDone)return;
+    let k='';try{k=localStorage.getItem('nycList.shareKey')||'';}catch(e){}
+    if(!/^[a-f0-9]{64}$/.test(k)){const b=new Uint8Array(32);crypto.getRandomValues(b);k=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');}
+    const {error}=await c.rpc('nyc_set_share_key',{k});if(error)return;
+    try{localStorage.setItem('nycList.shareKey',k);}catch(e){}await NYCNative.setShareKey(k);this._skDone=true;}
+  async dropShareKey(){this._skDone=false;let k='';try{k=localStorage.getItem('nycList.shareKey')||'';localStorage.removeItem('nycList.shareKey');}catch(e){}
+    if(window.NYCNative&&NYCNative.setShareKey)await NYCNative.setShareKey('');const c=NYCSync.client&&NYCSync.client();
+    if(k&&c&&crypto.subtle){try{const h=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(k)))].map(x=>x.toString(16).padStart(2,'0')).join('');await c.from('nyc_share_keys').delete().eq('key_hash',h);}catch(e){}}}
+  // Add the spots the server read from shared links, then hand back the links still waiting for Add A Spot.
+  async takeShareJobs(){const c=NYCSync.client&&NYCSync.client();if(!c||this.state.auth!=='signedIn')return [];
+    const {data,error}=await c.from('nyc_share_jobs').select('id,link,status,result,created_at').order('created_at');if(error||!data)return [];
+    const done=data.filter(j=>j.status==='done'),failed=data.filter(j=>j.status==='failed'),stale=data.filter(j=>j.status==='reading'&&Date.now()-new Date(j.created_at)>3*6e4);
+    if(done.length){const all=[];done.forEach(j=>{const r=j.result||{},city=CITIES[r.city]?r.city:CUR.id;(r.places||[]).forEach((p,i)=>{if(!isFinite(p.lat)||!isFinite(p.lng))return;
+        const cat=p.category_id&&this.state.cats.some(x=>x.id===p.category_id)?p.category_id:(this.state.cats[0]||{}).id;
+        all.push({id:'p'+Date.now()+all.length,job:j.id,name:p.name,cat,area:(city===CUR.id&&(this.aiArea(p.neighborhood)||hoodAt([+p.lat,+p.lng])))||p.neighborhood||'',lat:r5(+p.lat),lng:r5(+p.lng),url:j.link,source:detect(j.link)||'link',
+          address:p.address||'',note:p.note||'',order:orderList(p.must_order),...(p.event&&p.event.name&&okDay(p.event.start_date)?{ev:{n:p.event.name,d1:p.event.start_date,...(okDay(p.event.end_date)&&p.event.end_date>p.event.start_date?{d2:p.event.end_date}:{}),...(p.event.time?{tm:p.event.time}:{})}}:{}),
+          reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false,city});});});
+      const here=all.filter(p=>p.city===CUR.id),there=all.filter(p=>p.city!==CUR.id);
+      this.setState(st=>({places:[...here,...st.places],otherPlaces:[...there,...(st.otherPlaces||[])]}));
+      this.toast(all.length===1?'Spotted '+all[0].name+' On The Map!!':'Spotted '+all.length+' New Spots On The Map!!');}
+    const clear=[...done,...failed,...stale].map(j=>j.id);if(clear.length)await c.from('nyc_share_jobs').delete().in('id',clear);
+    return {done:new Set(done.map(j=>j.link)),reading:new Set(data.filter(j=>j.status==='reading'&&!stale.includes(j)).map(j=>j.link))};}
+  // Shared links: skip the ones the server already read (or is reading); open Add A Spot only for the rest.
+  async shareFilter(links){if(!NATIVE||!window.NYCNative||!NYCNative.takeSent)return links;const sent=await NYCNative.takeSent();
+    if(!Object.keys(sent).length&&!links.length)return links;const r=await this.takeShareJobs();if(!r||!r.done)return links;
+    const keep=links.filter(l=>!r.done.has(l)&&!r.reading.has(l));
+    if(links.some(l=>r.reading.has(l))){this.toast('Still reading that post. One sec.');clearTimeout(this._sjT);this._sjT=setTimeout(()=>this.takeShareJobs(),12000);}
+    return keep;}
+  // Plan It / Undo / Open, pressed on "Spotted Lucali On The Map!!".
+  async shareAction({job,action}){await this.takeShareJobs();const find=()=>[...this.state.places,...(this.state.otherPlaces||[])].filter(p=>p.job===job);
+    const ps=find();if(!ps.length)return;
+    if(action==='undo'){this.setState(st=>({places:st.places.filter(p=>p.job!==job),otherPlaces:(st.otherPlaces||[]).filter(p=>p.job!==job)}));this.toast('Gone. Spot deleted.');return;}
+    const p=ps[0];if(cityOf(p)!==CUR.id)this.setCity(cityOf(p));
+    setTimeout(()=>{if(action==='plan'&&!(this.state.plan.ids||[]).includes(p.id))this.togglePlan(p.id);this.setState({tab:'map',selId:p.id,addOpen:false});
+      setTimeout(()=>this.maps&&this.maps.main.map.flyTo([p.lat,p.lng],15.5,{duration:.6}),80);},300);}
   // List notifications: keep this phone's Apple token on the signed-in account (supabase/push.sql).
   async savePushToken(){const t=window.__pushToken,c=NYCSync.client&&NYCSync.client();if(!t||!c||this.state.auth!=='signedIn'||this._ptSaved===t)return;
     const {error}=await c.rpc('nyc_save_push_token',{t,plat:'ios'});if(!error)this._ptSaved=t;}
@@ -1231,7 +1268,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       syncOn:s.auth==='signedIn',syncDot:({saved:C.green,saving:C.yellow,syncing:C.yellow,offline:'#A9ADC2'})[s.syncState]||'#A9ADC2',
       syncLabel:({saved:'All Changes Saved',saving:'Saving…',syncing:'Syncing…',offline:'Offline. Saves when you’re back online.'})[s.syncState]||'Connecting…',
       openAcct:()=>s.auth==='signedIn'&&this.setState({acctOpen:true}),closeAcct:()=>this.setState({acctOpen:false}),acctOpen:s.acctOpen&&s.auth==='signedIn',
-      syncEmail:s.syncEmail,signOut:()=>{const t=window.__pushToken,c=NYCSync.client&&NYCSync.client();this._ptSaved=null;Promise.resolve(t&&c?c.from('nyc_push_tokens').delete().eq('token',t):null).catch(()=>{}).then(()=>NYCSync.signOut());},
+      syncEmail:s.syncEmail,signOut:()=>{const t=window.__pushToken,c=NYCSync.client&&NYCSync.client();this._ptSaved=null;this.dropShareKey().catch(()=>{}).then(()=>t&&c?c.from('nyc_push_tokens').delete().eq('token',t):null).catch(()=>{}).then(()=>NYCSync.signOut());},
       delAcctLabel:s.acctDel===2?'Deleting…':s.acctDel===1?'Tap again to delete everything. This can’t be undone.':'Delete My Account',deleteAccount:()=>this.deleteAccount(),privacyUrl:SITE()+'/privacy.html',termsUrl:SITE()+'/terms.html',syncNow:()=>{NYCSync.syncNow();this.toast('Syncing…');},
       showPrice:!!f.cat&&this.priced(f.cat),priceHint:f.price?PRICE_HINT[f.price-1]+' · Tap Again To Clear':'How pricey is it? Optional.',
       priceChips:PRICES.map((lb,i)=>{const on=f.price===i+1;return {label:lb,bg:on?C.green:'#fff',fg:on?'#fff':C.navy,border:on?C.green:'rgba(16,24,63,.14)',onClick:()=>this.setForm({price:on?0:i+1})};}),

@@ -394,20 +394,27 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: 'AI isn’t set up yet. Add ANTHROPIC_API_KEY in Vercel.' });
 
-  if (!(await requireUser(req, res))) return;
-
   let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
+  // From the iPhone's share sheet: no sign-in, only this phone's share key (see share.js).
+  if (body && body.share_key) return require('./_share')(req, res, body, extractCore);
+  if (!(await requireUser(req, res))) return;
+  const [status, json] = await extractCore(body);
+  send(res, status, json);
+};
+
+// Reads a link (or notes, a transcript or video frames) and returns [status, { places, city, … }].
+async function extractCore(body) {
   const url = String(body.url || '').trim(), notes = String(body.notes || '').slice(0, 3000);
   const transcript = String(body.transcript || '').slice(0, 20000);
   const frames = (Array.isArray(body.frames) ? body.frames : []).filter(f => typeof f === 'string' && /^[A-Za-z0-9+/=]+$/.test(f) && f.length < 900000).slice(0, 4);
   const hasLink = /^https?:\/\//i.test(url);
-  if (!hasLink && !notes && !transcript && !frames.length) return send(res, 400, { error: 'Paste a link or pick a video first.' });
+  if (!hasLink && !notes && !transcript && !frames.length) return [400, { error: 'Paste a link or pick a video first.' }];
 
   const post = hasLink ? await readPost(url) : { source: transcript || frames.length ? 'video' : 'notes', text: [], image: '', author: '', finalUrl: '', spoken: '' };
   let vFrames = [], vSpoken = '';
   if (post.video && !transcript && !frames.length) { const w = await watchVideo(post.video, post.videoSec, post.videoHeaders).catch(() => null); if (w) { vFrames = w.frames; vSpoken = w.spoken; } }
   if (!post.text.length && !post.spoken && !post.image && !notes && !transcript && !frames.length) {
-    return send(res, 200, { places: [], readable: false, source: post.source, message: 'Couldn’t read this post. Paste the caption into Notes and tap Fill again.' });
+    return [200, { places: [], readable: false, source: post.source, message: 'Couldn’t read this post. Paste the caption into Notes and tap Fill again.' }];
   }
   try {
     let out;
@@ -429,10 +436,11 @@ module.exports = async (req, res) => {
     const hereCity = CITIES[body.city] ? body.city : 'nyc';
     let postCity = post.pin ? (inCityBox(post.pin.lat, post.pin.lng, CITIES[hereCity]) ? hereCity : Object.keys(CITIES).find(k => inCityBox(post.pin.lat, post.pin.lng, CITIES[k]))) : CITIES[out.post_city] ? out.post_city : null;
     await Promise.all(places.filter(p => p.lat == null).map(p => pinPlace(p, CITIES[postCity || hereCity])));
-    return send(res, 200, { places, city: postCity || hereCity, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript || vSpoken), source: post.source,
-      message: places.length ? '' : 'No specific places in this post. Add it by name instead.' });
+    return [200, { places, city: postCity || hereCity, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript || vSpoken), source: post.source,
+      message: places.length ? '' : 'No specific places in this post. Add it by name instead.' }];
   } catch (e) {
-    return send(res, 502, { error: 'AI couldn’t read it right now. ' + (e.message || 'Try Again') });
+    return [502, { error: 'AI couldn’t read it right now. ' + (e.message || 'Try Again') }];
   }
-};
+}
+module.exports.extractCore = extractCore;
 module.exports.readPost = readPost; module.exports.watchVideo = watchVideo;

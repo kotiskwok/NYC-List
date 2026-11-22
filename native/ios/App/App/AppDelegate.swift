@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,6 +8,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Press-and-hold buttons on "Spotted Lucali On The Map!!" (the app handles them when it opens).
+        let plan = UNNotificationAction(identifier: "plan", title: "Plan It", options: [.foreground])
+        let open = UNNotificationAction(identifier: "open", title: "Open Spotted In", options: [.foreground])
+        let undo = UNNotificationAction(identifier: "undo", title: "Undo", options: [.foreground, .destructive])
+        UNUserNotificationCenter.current().setNotificationCategories([
+            UNNotificationCategory(identifier: "SPOTTED", actions: [plan, open, undo], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "SPOTTED_MANY", actions: [open, undo], intentIdentifiers: [], options: [])
+        ])
         // Override point for customization after application launch.
         return true
     }

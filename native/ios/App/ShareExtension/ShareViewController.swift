@@ -34,9 +34,12 @@ class ShareViewController: UIViewController {
         Task { @MainActor in
             let link = await self.findLink()
             if let link = link { self.save(link) }
+            // Signed in on this phone (it has a share key): the server reads the post right away, puts the spot on the
+            // map and sends "Spotted Lucali On The Map!!". The link also stays in the inbox, in case that fails.
+            let reading = link != nil && self.sendToServer(link!)
             // With notifications allowed, close straight away and let a real iPhone banner say it's saved:
             // nothing stays on screen over the app you shared from. Otherwise show the ticket as before.
-            if await self.banner(saved: link != nil, link: link ?? "") {
+            if await self.banner(saved: link != nil, link: link ?? "", reading: reading) {
                 self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             } else {
                 self.show(saved: link != nil, link: link ?? "")
@@ -45,26 +48,53 @@ class ShareViewController: UIViewController {
     }
 
     /// Posts "Saved To Spotted In" as a notification banner. Returns false when notifications aren't allowed.
-    private func banner(saved: Bool, link: String) async -> Bool {
+    private func banner(saved: Bool, link: String, reading: Bool = false) async -> Bool {
         let center = UNUserNotificationCenter.current()
         let status = await center.notificationSettings().authorizationStatus
         guard status == .authorized || status == .provisional || status == .ephemeral else { return false }
         let city = UserDefaults(suiteName: suite)?.string(forKey: cityKey) ?? ""
         let content = UNMutableNotificationContent()
-        if saved {
+        if saved && reading {
+            content.title = "Reading The Post…"
+            content.body = "From \(sourceName(link)). Hang tight."
+        } else if saved {
             content.title = "Saved To Spotted In"
             content.body = "From \(sourceName(link)) to My Map\(city.isEmpty ? "" : " · " + city).\nIt fills itself in next time you open the app."
         } else {
             content.title = "Nothing To Save"
             content.body = "There was no link in that.\nTry Share → Copy Link, then paste it in the app."
         }
-        content.threadIdentifier = "spotted-in-saves"
+        content.threadIdentifier = "share"
         do {
             try await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
             return true
         } catch {
             return false
         }
+    }
+
+    /// Hands the link and this phone's share key to /api/extract in a background upload, which carries on after the
+    /// share sheet closes. Returns false when this phone has no share key yet (not signed in, or an older app build).
+    private func sendToServer(_ link: String) -> Bool {
+        let defaults = UserDefaults(suiteName: suite)
+        guard let shareKey = defaults?.string(forKey: "shareKey"), shareKey.count >= 48,
+              let site = URL(string: (defaults?.string(forKey: "siteUrl") ?? "https://nyc-lovat.vercel.app") + "/api/extract"),
+              let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: suite),
+              let body = try? JSONSerialization.data(withJSONObject: ["share_key": shareKey, "url": link]) else { return false }
+        let file = folder.appendingPathComponent("share-\(UUID().uuidString).json")
+        guard (try? body.write(to: file)) != nil else { return false }
+        var request = URLRequest(url: site)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let config = URLSessionConfiguration.background(withIdentifier: "com.kotiskwok.nyclist.share.\(UUID().uuidString)")
+        config.sharedContainerIdentifier = suite
+        config.timeoutIntervalForResource = 120
+        URLSession(configuration: config).uploadTask(with: request, fromFile: file).resume()
+        // Tell the app which links the server is reading, so it waits for the result instead of opening Add A Spot.
+        var sent = defaults?.dictionary(forKey: "sentLinks") as? [String: Double] ?? [:]
+        sent[link] = Date().timeIntervalSince1970
+        defaults?.set(sent, forKey: "sentLinks")
+        return true
     }
 
     private func save(_ link: String) {

@@ -62,7 +62,8 @@ const NYCNative = (() => {
   if (Push) {
     try {
       Push.addListener('registration', t => { if (t && t.value) { window.__pushToken = t.value; window.dispatchEvent(new CustomEvent('nyc-push-token', { detail: t.value })); } });
-      Push.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; if (d.trip) window.dispatchEvent(new CustomEvent('nyc-open-trip', { detail: d.trip })); });
+      Push.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; if (d.trip) window.dispatchEvent(new CustomEvent('nyc-open-trip', { detail: d.trip }));
+        if (d.job) window.dispatchEvent(new CustomEvent('nyc-share-action', { detail: { job: d.job, action: (a && a.actionId) || 'tap' } })); });
       Push.checkPermissions().then(p => { if (p && p.receive === 'granted') pushRegister(); }).catch(() => {});
     } catch (e) {}
   }
@@ -77,6 +78,9 @@ const NYCNative = (() => {
     // Tells the share card which city's map new spots go to.
     // Ask once (iOS's own prompt) so saves from the share sheet can show a real banner. Never asks twice.
     askNotify() { try { if (localStorage.getItem('nycList.notifyAsked')) return; localStorage.setItem('nycList.notifyAsked', '1'); (Push ? Push.requestPermissions().then(p => { if (p && p.receive === 'granted') pushRegister(); }) : Inbox && Inbox.notifications && Inbox.notifications({ ask: true })).catch(() => {}); } catch (e) {} },
+    // Share → Spotted In read straight away: this phone's share key (empty when signed out) and the links it sent.
+    setShareKey(key) { try { return Inbox && Inbox.setShareKey ? Inbox.setShareKey({ key: key || '', site: SITE() }) : Promise.resolve(null); } catch (e) { return Promise.resolve(null); } },
+    takeSent() { try { return Inbox && Inbox.takeSent ? Inbox.takeSent().then(r => (r && r.sent) || {}).catch(() => ({})) : Promise.resolve({}); } catch (e) { return Promise.resolve({}); } },
     setCity(short) { try { Inbox && Inbox.setCity && Inbox.setCity({ city: short }); } catch (e) {} }
   };
 })();
