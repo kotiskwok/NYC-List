@@ -21,7 +21,7 @@ It has six maps, each with its own spots, home and day plan:
 
 The app is built around major cities only. The New York State and New Jersey maps were removed in Nov 2026 (spots saved there stay in the account but show on no map, public map or friends' view: `GONE_MAPS` in `logic.js`; `data/nys-data.js` and `data/nj-data.js` are no longer loaded).
 
-- **Website (also installs to the home screen):** https://nyc-lovat.vercel.app
+- **Website:** https://spottedinapp.com (intro page) with the web app at https://spottedinapp.com/app (also installs to the home screen). https://nyc-lovat.vercel.app still serves the app at "/".
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
 - **Accounts:** email and password; everything syncs between devices.
 
@@ -353,10 +353,9 @@ Get There shows the subway or train route next to walking, and opens Google Maps
 Map Layers turns on subway lines, buses and bike docks if you want them.
 Pop-ups and markets keep their dates, and drop off the map once they're over.
 
-SEVEN MAPS
-Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston, New York State and New Jersey.
+SIX MAPS
+Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston and Washington, DC.
 Each one uses its own transit for travel times.
-New York State and New Jersey are for day trips and weekends, with driving and Metro-North, LIRR, Amtrak, NJ Transit and PATH.
 
 EXPLORE
 Swipe through your saved spots like a deck of cards: right to add it to your plan, left to skip, tap to open it.
@@ -376,6 +375,12 @@ Each list is a boarding pass in your wallet, with a countdown to the trip.
 Inside, the days run down a timeline, so you can add spots straight to Day 1 or Day 2.
 Invite friends with a link, and everyone can add spots, vote I'm In or Skip It, and leave notes for the group.
 You'll see when a friend is looking at the list, and changes show up for everyone within a second.
+
+FRIENDS
+Tap your photo, or swipe in from the left edge, to open Friends.
+Pick a username, then add friends by username or with your friend link.
+See what friends saved and where they went, and save their spots to your map.
+You choose what friends can see in What My Friends See.
 
 NEARBY NUDGES
 Walk near a saved spot you haven't tried and get a little heads-up.
