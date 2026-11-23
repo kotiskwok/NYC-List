@@ -35,7 +35,9 @@ CITIES.dc={id:'dc',name:'Washington, DC',short:'DC',emoji:'🏛️',q:'Washingto
   bike:{name:'Capital Bikeshare',url:'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/',ext:'.json'}};
 const CITY_ORDER=['nyc','sg','hk','to','bos','dc'];
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
-const cityOf=p=>(p&&p.city&&CITIES[p.city])?p.city:'nyc';
+// Spots saved on the removed New York State and New Jersey maps stay in the account but show on no map.
+const GONE_MAPS=new Set(['nys','nj']);
+const cityOf=p=>(p&&p.city&&(CITIES[p.city]||GONE_MAPS.has(p.city)))?p.city:'nyc';
 const CDATA=()=>(window.CITY_DATA||{})[CUR.id]||{};
 // (State maps for New York State and New Jersey were removed; spots saved there show on the NYC map.)
 // inCore = inside the five boroughs (NYC's subway area; the NYC box also covers Jersey City and Hoboken, so New Jersey is cut out).
@@ -817,7 +819,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     const {data,error}=await c.from('nyc_public_maps').select('slug,live,mode').eq('owner',u.id).maybeSingle();
     if(error){if(this.pubMissing(error))this.setState({pubState:'missing'});return;}this.setState({pubMap:data||null,pubState:''});}
   // What goes public: never home, notes, plans or lists. Events that are over are left out.
-  pubData(mode){const s=this.state,all=[...s.places.map(p=>p.city?p:{...p,city:CUR.id}),...(s.otherPlaces||[])].filter(p=>!p.draft&&isFinite(p.lat)&&!evOver(p));
+  pubData(mode){const s=this.state,all=[...s.places.map(p=>p.city?p:{...p,city:CUR.id}),...(s.otherPlaces||[])].filter(p=>!GONE_MAPS.has(p.city)&&!p.draft&&isFinite(p.lat)&&!evOver(p));
     const pick=all.filter(p=>mode==='been'?p.visited:mode==='picked'?p.pub:true).slice(0,1500),used=new Set(pick.map(p=>p.cat));
     return {spots:pick.map(p=>({name:p.name,cat:p.cat,area:p.area||'',lat:+p.lat,lng:+p.lng,city:p.city||'nyc',price:this.priced(p.cat)?(p.price||0):0,order:p.order||[],
       ...(evOf(p)?{ev:p.ev}:{}),...(/^https:\/\//.test(p.photo||'')?{photo:p.photo}:{}),...(p.gid?{gid:p.gid}:{}),been:!!p.visited,...(/^https:\/\//.test(p.url||'')?{url:p.url}:{})})),

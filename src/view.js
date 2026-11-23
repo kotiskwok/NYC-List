@@ -1356,13 +1356,13 @@ function FriendProfile(v) {
 }
 
 // Your username: pick one so friends can find you (Add A Friend and Your Account).
-function UsernameCard(u) {
+function UsernameCard(u, bare) {
   if (!u || !u.ready) return null;
   if (!u.editing) return html`<div style=${S(`${ROW};border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px`)}>
     <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}>${frMono('YOUR USERNAME')}<span style=${S('font-size:17px;font-weight:900;font-style:italic;color:#10183F;overflow:hidden;text-overflow:ellipsis')}>@${u.name}</span></span>
     <button onClick=${u.edit} style=${S('height:34px;padding:0 14px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Change</button></div>`;
   return html`<form onSubmit=${u.save} style=${S(`${ROW};border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:8px`)}>
-    <label for="fr-user">${frMono(u.has ? 'CHANGE YOUR USERNAME' : 'PICK A USERNAME')}</label>
+    <label for="fr-user" style=${S(bare ? 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)' : '')}>${frMono(u.has ? 'CHANGE YOUR USERNAME' : 'PICK A USERNAME')}</label>
     <div style=${S('display:flex;gap:8px;align-items:center')}>
       <span style=${S('flex:1;min-width:0;height:44px;border-radius:14px;background:#fff;border:1.5px solid rgba(16,24,63,.12);display:flex;align-items:center;padding:0 12px;gap:2px')}>
         <span aria-hidden="true" style=${S('font-size:16px;font-weight:800;color:#4A5275')}>@</span>
@@ -1371,8 +1371,22 @@ function UsernameCard(u) {
       <button type="submit" disabled=${u.busy} class=${u.busy ? 'ai-busy' : ''} style=${S('height:44px;padding:0 16px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer')}>${u.busy ? 'Saving…' : 'Save'}</button>
       ${u.has && html`<button type="button" onClick=${u.cancel} style=${S('height:44px;padding:0 12px;border-radius:999px;border:0;background:transparent;color:#4A5275;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Cancel</button>`}
     </div>
-    ${u.msg ? html`<div role="status" style=${S('font-size:12.5px;font-weight:700;color:#E8242C')}>${Lines(u.msg)}</div>` : html`<div style=${S('font-size:12px;font-weight:600;color:#4A5275')}>Friends can find you by it.</div>`}
+    ${u.msg ? html`<div role="status" style=${S('font-size:12.5px;font-weight:700;color:#E8242C')}>${Lines(u.msg)}</div>` : !bare && html`<div style=${S('font-size:12px;font-weight:600;color:#4A5275')}>Friends can find you by it.</div>`}
   </form>`;
+}
+
+// Accounts without a username pick one before going on (it's how friends find each other).
+function UsernameGate(v) {
+  return html`<div role="dialog" aria-modal="true" aria-label="Pick A Username" style=${S('position:absolute;inset:0;z-index:1150;background:rgba(16,24,63,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px')}>
+    <div class="lg" style=${S(`${GL2};width:100%;max-width:360px;border-radius:32px;padding:22px 18px 18px;display:flex;flex-direction:column;gap:14px`)}>
+      <div style=${S('display:flex;flex-direction:column;gap:6px;padding:0 4px')}>
+        ${frMono('NEW · FRIENDS')}
+        ${frH('Pick A', 'Username', 30)}
+        <div style=${S('font-size:14px;font-weight:600;line-height:1.45;color:#3C4466')}>Friends can find you by it.<br/>You can change it any time in Your Account.</div>
+      </div>
+      ${UsernameCard(v.frUser, true)}
+    </div>
+  </div>`;
 }
 
 function FriendAddSheet(v) {
@@ -2008,6 +2022,7 @@ function App(v) {
         ${v.frOpen && v.frProf && FriendProfile(v)}
         ${v.frOpen && v.frAdd && FriendAddSheet(v)}
         ${v.frOpen && v.frSee && FriendSeeSheet(v)}
+        ${v.frNeedUser && UsernameGate(v)}
         ${v.acctOpen && AccountSheet(v)}
         ${v.tripShare && TripShareSheet(v)}
         ${v.tripEdit && EditTripSheet(v)}

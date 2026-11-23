@@ -19,7 +19,7 @@ It has six maps, each with its own spots, home and day plan:
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
 | Washington, DC | DC 🏛️ | Metro (Red, Orange, Blue, Silver, Green, Yellow) |
 
-The app is built around major cities only. The New York State and New Jersey maps were removed in Nov 2026 (any spots saved there show on the NYC map; `data/nys-data.js` and `data/nj-data.js` are no longer loaded).
+The app is built around major cities only. The New York State and New Jersey maps were removed in Nov 2026 (spots saved there stay in the account but show on no map, public map or friends' view: `GONE_MAPS` in `logic.js`; `data/nys-data.js` and `data/nj-data.js` are no longer loaded).
 
 - **Website (also installs to the home screen):** https://nyc-lovat.vercel.app
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -172,7 +172,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - Tap your profile photo on the Map tab: a warm tinted glass drawer (design G3) slides in from the left with **Your Friends**, friends' faces, **Activity** / **Friends · N**, then **What My Friends See** and **Your Account** at the bottom. A red badge on the photo counts friend requests.
 - **Activity:** "Sonia added Lucali · 2h" (only for friends who share everything) and "Mei went to Thai Diner" (when they mark Been There), last 45 days, grouped Today / This Week / Earlier, each with **+ Save To My Map**.
 - **Friend's profile:** photo, Friends Since, counts, tabs **Lists / Saved / Been There** (lists open to show their spots), **…** → Remove Friend (they aren't told).
-- **Usernames:** pick one in Add A Friend or Your Account (`@kotis`: 3–20 lowercase letters, numbers, _ or ., unique, optional). **Find by username** in Add A Friend searches as you type (starts-with, 8 results, only people who picked one) with Add / Requested / Accept / Friends.
+- **Usernames:** everyone without one gets a **Pick A Username** popup after the welcome steps or the next time they open the app (`UsernameGate`, `frNeedUser`). Pick one in Add A Friend or Your Account (`@kotis`: 3–20 lowercase letters, numbers, _ or ., unique, optional). **Find by username** in Add A Friend searches as you type (starts-with, 8 results, only people who picked one) with Add / Requested / Accept / Friends.
 - **Add A Friend:** share or copy your link `/?friend=<code>`. Opening it sends you a request (or makes you friends straight away if you'd already asked them); you tap **Accept** or **Decline**. Sent requests can be cancelled; friends can be removed.
 - **What Friends See:** **Everything** / **Only Places I've Been** / **Nobody** (the default), which of your lists friends can open, and per spot the Edit sheet's **Keep This One From Friends** switch (`place.fpriv`). Never home, notes or plans.
 - Code: `src/friends.js` (`friendVals()`), views `FriendsDrawer`, `FriendProfile`, `FriendAddSheet`, `FriendSeeSheet` in `view.js`. Data: `supabase/friends.sql` (`nyc_friend_profiles` with a snapshot the app rewrites 4 s after your spots or lists change, `nyc_friends`, `nyc_friend_requests`, RPCs `nyc_friend_me/add/accept/remove`, `nyc_friends_state`, `nyc_friend_preview`). A spot's added time comes from its id (`p<timestamp>`); Been There time is `place.vat`. Friend Score also counts friends' reviews.

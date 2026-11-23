@@ -97,11 +97,11 @@ async function load(){
   try{const r=await fetch(cfg.supabaseUrl+'/rest/v1/nyc_public_maps?select=name,data,updated_at&live=eq.true&slug=eq.'+encodeURIComponent(slug),{headers:{apikey:cfg.supabaseAnonKey,authorization:'Bearer '+cfg.supabaseAnonKey}});
     const rows=r.ok?await r.json():null;D=rows&&rows[0];}catch(e){}
   if(!D)return fail('This Map Is Off','The link may have changed, or its owner turned the public map off.');
-  const spots=((D.data&&D.data.spots)||[]).filter(p=>isFinite(p.lat)&&isFinite(p.lng)&&!evOver(p.ev));
-  spots.forEach(p=>{if(!CITY[p.city])p.city='nyc';});D.spots=spots;(D.data.cats||[]).forEach(c=>cats[c.id]=c);
+  let spots=((D.data&&D.data.spots)||[]).filter(p=>isFinite(p.lat)&&isFinite(p.lng)&&!evOver(p.ev));
+  D.spots=spots.filter(p=>!p.city||CITY[p.city]);(D.data.cats||[]).forEach(c=>cats[c.id]=c);
   const name=(D.name||'').trim(),pos=name?(/s$/i.test(name)?name+'’':name+'’s'):'My';
   document.title=pos+' Map · Spotted In';$('title').innerHTML=esc(pos)+' <em>Map</em>';
-  const by={};spots.forEach(p=>by[p.city||'nyc']=(by[p.city||'nyc']||0)+1);
+  const by={};D.spots.forEach(p=>by[p.city||'nyc']=(by[p.city||'nyc']||0)+1);
   const have=ORDER.filter(k=>by[k]);city=have.sort((a,b)=>by[b]-by[a])[0]||'nyc';
   $('cities').innerHTML=have.length>1?ORDER.filter(k=>by[k]).map(k=>`<button class="chip" data-city="${k}">${CITY[k][2]} ${CITY[k][1]} · ${by[k]}</button>`).join(''):'';
   $('cities').onclick=e=>{const b=e.target.closest('[data-city]');if(b){city=b.dataset.city;catOn='';sel=null;render(true);}};

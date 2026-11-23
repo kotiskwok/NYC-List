@@ -97,7 +97,7 @@ Object.assign(Component.prototype, {
     if (error) { this.setState({ frMe: m }); this.toast('Couldn’t save that. Check your connection?'); return; }
     this._frPubSig = null; },
   frSnapshot(m) { const s = this.state; m = m || s.frMe || {}; const spotsOn = m.mode === 'all' || m.mode === 'been'; if (!spotsOn && !(m.lists || []).length) return {};
-    const all = [...s.places.map(p => p.city ? p : { ...p, city: CUR.id }), ...(s.otherPlaces || [])].filter(p => !p.draft && !p.fpriv && isFinite(p.lat) && !evOver(p));
+    const all = [...s.places.map(p => p.city ? p : { ...p, city: CUR.id }), ...(s.otherPlaces || [])].filter(p => !GONE_MAPS.has(p.city) && !p.draft && !p.fpriv && isFinite(p.lat) && !evOver(p));
     const pick = !spotsOn ? [] : all.filter(p => m.mode === 'been' ? p.visited : true).slice(0, 1500), used = new Set(pick.map(p => p.cat));
     const spots = pick.map(p => ({ id: p.id, name: p.name, cat: p.cat, area: p.area || '', lat: +p.lat, lng: +p.lng, city: p.city || 'nyc', been: !!p.visited,
       ...(addedAt(p) ? { at: addedAt(p) } : {}), ...(p.vat ? { vat: p.vat } : {}), ...(/^https:\/\//.test(p.photo || '') ? { photo: p.photo } : {}),
@@ -127,7 +127,9 @@ Object.assign(Component.prototype, {
     const photo = id => window.NYCSync && NYCSync.avatarUrl ? NYCSync.avatarUrl(id, 0) : null;
     const person = f => ({ id: f.id, name: f.name ? frFirst(f.name) : f.username ? '@' + f.username : 'Someone', handle: f.username ? '@' + f.username : '', initial: ((f.name || f.username || '?').trim()[0] || '?').toUpperCase(), bg: frCol(f.id), src: photo(f.id) });
     const incoming = (st.incoming || []).length;
-    const base = { frUser: k ? this.frUserVals() : null, frAvail: k, frBadge: k && incoming ? incoming : 0, frOpen: k && s.frOpen,
+    const base = { frUser: k ? this.frUserVals() : null, frAvail: k,
+      // Everyone picks a username once: after the welcome steps, or the next time an older account opens the app.
+      frNeedUser: k && !!s.frMe && !s.frMe.username && s.frSetup !== 'missing' && !s.obNeed && !s.tourOpen, frBadge: k && incoming ? incoming : 0, frOpen: k && s.frOpen,
       openFriends: () => { if (!k) return; this.setState({ frOpen: true, acctOpen: false, frProfile: null }); if (Date.now() - (s.frAt || 0) > 30000) this.frRefresh(); } };
     if (!base.frOpen) return base;
     const fmtSpot = (fid, p) => { const c = this.frCats(fid)[p.cat] || { name: 'Spot', color: '#888' };
