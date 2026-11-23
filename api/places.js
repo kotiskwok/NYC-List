@@ -40,7 +40,7 @@ const tidy = s => String(s || '').replace(/,?\s*(New York|NY)(,\s*NY)?(\s*\d{5})
 
 module.exports = async (req, res) => {
   // GET /api/geocode is rewritten here (vercel.json) to stay within the plan's 12 functions.
-  if (req.method === 'GET' && /[?&]geo=1(&|$)/.test(req.url || '')) return require('./_geocode')(req, res);
+  if (req.method === 'GET') return require('./_geocode')(req, res);
   if (cors(req, res)) return;
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   if (!process.env.GOOGLE_MAPS_API_KEY) return send(res, 503, { error: 'Google place search isn’t set up (add GOOGLE_MAPS_API_KEY in Vercel).' });
