@@ -52,6 +52,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @media (prefers-reduced-motion:reduce){.fr-anim{animation:none!important}}
 .hov:hover{background:var(--cream)!important}
 #root{height:100%}
+/* Computer layout (D3): the middle window passes clicks through except where a sheet is. */
+.desk-sheet>*{pointer-events:auto}
 .mono{font-family:var(--mono)}
 /* Glass buttons squish a little when pressed. */
 .lg{transition:transform .35s cubic-bezier(.3,1.5,.5,1)}

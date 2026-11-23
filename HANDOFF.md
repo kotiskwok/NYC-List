@@ -195,6 +195,10 @@ From the iPhone Claude app you can still change the code and the website; only t
 - `map.html` (vercel.json rewrites `/m/:slug` to it): Apple Map with pins, a city switcher, category chips, a list, and a spot card (photo, What To Order, event, Open In Google Maps, See The Post). Reads `nyc_public_maps` with the public key.
 - Never home, notes, plans or lists. The app rewrites the row 4 s after spots change (`publishPub`). Needs `supabase/public.sql`.
 
+### Web app on a computer (design D3)
+- Wider than 1024 px (and not the iPhone app): `DeskApp` in `view.js` instead of the phone layout. The main map fills the window; a glass top bar (logo, city, "Ask Spotted anything" which opens Explore, **Add A Spot**, your photo for Friends); a 400 px glass sidebar with **Spots / Explore / Route / Lists** (Spots is `DeskSpots`, a list of the map's spots with the category chips; the other tabs are the phone screens); the place card, a list stop or Get There floating on the right; every sheet (Add A Spot, Your Account, Friends, sign-in, city picker…) in a window in the middle. `--st` / `--sb` shift the phone screens' spacing inside the sidebar and window.
+- `state.desk` follows `DESK_MQ` (min-width 1024px and min-height 620px) through a matchMedia listener; maps are resized when it flips.
+
 ### Website (spottedinapp.com, design L4 with boarding passes)
 - `home.html` is the intro page: "Your saved posts, turned into plans." with three list boarding passes, From Your Feed To Your Table (Share It / Spot It / Go), Now Spotting In (six cities, "More cities on the way."), and a navy "Your next plan is already saved." block. App Store button: apps.apple.com/app/id6828702049; Open The Web App goes to `/app`. Works on phones.
 - `middleware.ts` (Vercel Routing Middleware, `@vercel/functions`) shows `home.html` at "/" only on spottedinapp.com and www; every other host (nyc-lovat.vercel.app, previews) still serves the app at "/". Links with `?join=`, `?friend=` or `?add=` go to the app. `vercel.json` rewrites `/app` to `index.html` on every host. `home.html` also forwards sign-in confirmation links (tokens in the #hash) to `/app`.

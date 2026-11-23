@@ -144,7 +144,7 @@ function MapScreen(v) {
   return html`
   <div data-screen-label="Map" style=${S(`position:absolute;inset:0;display:${v.mapDisplay}`)}>
     <div ref=${v.mainMapRef} style=${S('position:absolute;inset:0')}></div>
-    <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:500;display:${hide};flex-direction:column;gap:16px;pointer-events:none`)}>
+    <div style=${S(`position:absolute;top:${T(56)};left:16px;right:16px;z-index:500;display:${v.desk ? 'none' : hide};flex-direction:column;gap:16px;pointer-events:none`)}>
       <div class="lg" style=${S(`${GL};pointer-events:auto;border-radius:32px;padding:16px 16px 13px`)}>
         <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <div style=${S('min-width:0')}>
@@ -1999,7 +1999,92 @@ function AuthScreen(v) {
   </div>`;
 }
 
+// ---- Web app on a computer (design D3 · D1 + D2): the map fills the window, a glass top bar, a glass sidebar with
+// Spots / Explore / Route / Lists, the place card floating on the right, and sheets in a window in the middle.
+// The sidebar and the middle window reuse the phone screens; --st and --sb shift their top and bottom spacing.
+const DK_GLASS = 'background:linear-gradient(165deg,rgba(255,255,255,.82),rgba(255,255,255,.55));-webkit-backdrop-filter:blur(28px) saturate(200%);backdrop-filter:blur(28px) saturate(200%);border:1px solid rgba(255,255,255,.9);box-shadow:inset 0 1.5px 0 #FFFFFF,0 20px 46px rgba(16,24,63,.18)';
+function DeskSpots(v) {
+  return html`<div class="noscroll" style=${S('position:absolute;inset:0;overflow-y:auto;padding:4px 14px 16px;display:flex;flex-direction:column;gap:10px')}>
+    <div style=${S('display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:0 4px')}>
+      <span style=${S('display:flex;align-items:baseline;gap:8px')}><span style=${S('font-size:40px;font-weight:200;letter-spacing:-2px;line-height:.9')}>${v.spotCount}</span><span style=${S('font-size:17px;font-weight:900;font-style:italic')}>${v.spotCount === 1 ? 'Spot To Try' : 'Spots To Try'}</span></span>
+      <span style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:.8px;color:#4A5275;white-space:nowrap`)}>${v.visitedCount} VISITED · ${v.planCount} IN PLAN</span>
+    </div>
+    <nav aria-label="Categories" style=${S('display:flex;gap:6px;flex-wrap:wrap')}>
+      ${v.mapChips.map((c, i) => html`<button key=${i} onClick=${c.onClick} aria-pressed=${c.bg !== '#fff'} style=${S(`height:32px;padding:0 12px;border-radius:999px;border:0;font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;${c.bg === '#fff' ? 'background:rgba(255,255,255,.8);color:#10183F' : `background:${c.bg};color:${c.fg}`}`)}>${i > 0 && html`<span style=${S(`width:8px;height:8px;border-radius:50%;background:${c.dot}`)}></span>`}${i ? c.label : 'All'}</button>`)}
+    </nav>
+    ${v.deskSpots.length ? v.deskSpots.map(p => html`<button key=${p.id} onClick=${p.onClick} aria-current=${p.sel ? 'true' : null} style=${S(`display:flex;gap:12px;align-items:center;padding:10px;border-radius:18px;border:0;text-align:left;cursor:pointer;color:#10183F;font-family:inherit;${p.sel ? 'background:#FFFFFF;box-shadow:0 0 0 2px #FF6B1A,0 8px 18px rgba(16,24,63,.1)' : 'background:rgba(255,255,255,.6)'}`)}>
+        <span style=${S(`position:relative;overflow:hidden;width:56px;height:56px;flex:none;border-radius:14px;background:${p.col};color:${p.fg};display:flex;align-items:center;justify-content:center`)}>${CatIcon(p.emoji, 22, p.fg)}${Photo(p.img)}</span>
+        <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}>
+          <span style=${S('font-size:16px;font-weight:900;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${p.name}</span>
+          <span style=${S('font-size:12.5px;font-weight:600;color:#4A5275;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${p.sub}</span>
+          ${p.dish && html`<span style=${S(`font-size:12px;font-weight:800;color:${THEME.dark ? '#FF9A5C' : '#B8460A'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>Get the ${p.dish.toLowerCase()}.</span>`}
+        </span>
+        ${(p.visited || p.inPlan) && html`<span style=${S(`flex:none;${MONO};font-size:9.5px;font-weight:700;letter-spacing:.6px;color:${p.visited ? '#16805A' : '#1B3DB8'}`)}>${p.visited ? 'BEEN' : 'IN PLAN'}</span>`}
+      </button>`) : html`<div style=${S('padding:20px 6px;display:flex;flex-direction:column;gap:10px;align-items:flex-start')}><div style=${S('font-size:14px;font-weight:600;color:#3C4466')}>No spots here yet.</div><button onClick=${v.openAdd} style=${S('height:40px;padding:0 16px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer')}>Add A Spot</button></div>`}
+  </div>`;
+}
+function DeskApp(v) {
+  const tabs = [['map', 'Spots', v.goMap, 'M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z M12 6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5', v.tabMapFg],
+    ['explore', 'Explore', v.goExplore, 'M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18z M15.5 8.5l-2 5-5 2 2-5z', v.tabExFg],
+    ['plan', 'Route', v.goPlan, 'M6 19a2 2 0 1 0 0-4a2 2 0 0 0 0 4z M18 9a2 2 0 1 0 0-4a2 2 0 0 0 0 4z M8 17h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7', v.tabPlanFg],
+    ['lists', 'Lists', v.goLists, 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z', v.tabListFg]];
+  const sheetOpen = v.pickerOpen || v.acctOpen || v.tripShare || v.tripEdit || v.tripPick || v.listChoose || v.newTrip || v.addY === '0%' || v.authOpen || v.cityOpen || v.obOpen || v.reviewSheet || v.tourOpen || v.frNeedUser || (v.frOpen && (v.frProf || v.frAdd || v.frSee));
+  return html`
+  <div class="desk" style=${S('position:fixed;inset:0;overflow:hidden;background:var(--bgfx)')}>
+    ${MapScreen(v)}
+    <header style=${S('position:absolute;left:20px;right:20px;top:18px;z-index:900;display:flex;align-items:center;gap:12px;pointer-events:none')}>
+      <div style=${S(`${DK_GLASS};pointer-events:auto;height:56px;padding:0 10px 0 18px;border-radius:999px;display:flex;align-items:center;gap:12px`)}>
+        <span role="img" aria-label="Spotted In" style=${S('display:flex;align-items:flex-end;gap:6px')}>${Wordmark(22, .6)}${InPill(12)}</span>
+        <span aria-hidden="true" style=${S('width:1px;height:26px;background:rgba(16,24,63,.15)')}></span>
+        <button onClick=${v.openCity} aria-label=${'Change City — Now ' + v.cityName} style=${S('height:34px;padding:0 10px 0 12px;border-radius:999px;border:0;background:#FFC425;color:#10183F;font-family:inherit;font-size:13px;font-weight:900;font-style:italic;cursor:pointer;display:flex;align-items:center;gap:4px')}>${v.cityShort}${Ico('M6 9l6 6 6-6', 12, 'currentColor', 3)}</button>
+      </div>
+      <button onClick=${v.goExplore} style=${S(`${DK_GLASS};pointer-events:auto;flex:1;max-width:560px;height:56px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 20px;color:#7A4FD6;font-family:inherit;cursor:pointer;text-align:left`)}>${Ico(SPARK, 20)}<span style=${S('font-size:15px;font-weight:700;color:#6A7090')}>Ask Spotted anything… “cozy date night near me”</span></button>
+      <span style=${S('flex:1')}></span>
+      <button onClick=${v.openAdd} style=${S('pointer-events:auto;height:56px;padding:0 22px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 10px 22px rgba(255,107,26,.35)')}>${Ico('M12 5v14M5 12h14', 18, 'currentColor', 2.8)}Add A Spot</button>
+      ${v.syncOn && html`<button onClick=${v.frAvail ? v.openFriends : v.openAcct} aria-label=${v.frAvail ? 'Friends And Your Account' : 'Your Account'} style=${S('pointer-events:auto;position:relative;flex:none;border:0;padding:0;background:none;border-radius:50%;cursor:pointer')}>${Avatar(v.avatarSrc, v.avatarInitial, 56, '#1B3DB8', 'border:3px solid #FFFFFF;box-shadow:0 8px 18px rgba(16,24,63,.2)')}${v.frBadge > 0 && html`<span aria-hidden="true" style=${S('position:absolute;right:-3px;top:-3px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#E8242C;color:#fff;border:2px solid #FFFFFF;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.frBadge}</span>`}</button>`}
+    </header>
+    <aside aria-label="Spotted In" style=${S(`${DK_GLASS};position:absolute;left:20px;top:92px;bottom:20px;width:400px;z-index:800;border-radius:32px;display:flex;flex-direction:column;overflow:hidden`)}>
+      <nav aria-label="Sections" style=${S('flex:none;margin:14px 14px 10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.06)')}>
+        ${tabs.map(([k, label, go, d, fg]) => { const on = fg === '#1B3DB8'; return html`<button key=${k} onClick=${go} aria-current=${on ? 'page' : null} style=${S(`position:relative;height:38px;border:0;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;${on ? 'background:#FFFFFF;color:#10183F;box-shadow:0 3px 8px rgba(16,24,63,.1)' : 'background:transparent;color:#4A5275'}`)}>${Ico(d, 15)}${label}${k === 'plan' && v.planCount > 0 && html`<span style=${S('min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#FF6B1A;color:#fff;font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.planCount}</span>`}</button>`; })}
+      </nav>
+      <div style=${S('position:relative;flex:1;min-height:0;overflow:hidden;--st:0px;--sb:-70px')}>
+        ${v.tabMapFg === '#1B3DB8' ? DeskSpots(v) : html`${ExploreScreen(v)}${PlanScreen(v)}${ListsScreen(v)}`}
+      </div>
+    </aside>
+    <div style=${S('position:absolute;right:20px;top:92px;bottom:20px;width:400px;z-index:850;pointer-events:none;--st:0px;--sb:-10px')}>
+      <div style=${S('position:absolute;inset:0;pointer-events:auto;display:' + (v.hasSel || v.hasTripSel || v.routeOpen ? 'block' : 'none'))}>
+        ${v.hasSel && PlaceCard(v)}${v.hasTripSel && TripSelCard(v)}${v.routeOpen && RouteSheet(v)}
+      </div>
+    </div>
+    ${v.frOpen && FriendsDrawer(v)}
+    ${sheetOpen && html`<div aria-hidden="true" style=${S('position:absolute;inset:0;z-index:1090;background:rgba(16,24,63,.3)')}></div>`}
+    <div class="desk-sheet" style=${S('position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:460px;height:min(880px,calc(100vh - 40px));z-index:1100;border-radius:38px;overflow:hidden;pointer-events:none;--st:30px;--sb:0px')}>
+      ${v.pickerOpen && Picker(v)}
+      ${v.frOpen && v.frProf && FriendProfile(v)}
+      ${v.frOpen && v.frAdd && FriendAddSheet(v)}
+      ${v.frOpen && v.frSee && FriendSeeSheet(v)}
+      ${v.frNeedUser && UsernameGate(v)}
+      ${v.acctOpen && AccountSheet(v)}
+      ${v.tripShare && TripShareSheet(v)}
+      ${v.tripEdit && EditTripSheet(v)}
+      ${v.tripPick && TripPicker(v)}
+      ${v.listChoose && ListChooser(v)}
+      ${v.newTrip && NewTripSheet(v)}
+      ${AddSheet(v)}
+      ${v.authOpen && AuthScreen(v)}
+      ${v.cityOpen && CityPicker(v)}
+      ${v.obOpen && Onboarding(v)}
+      ${v.reviewSheet && ReviewSheet(v)}
+      ${v.tourOpen && !v.obOpen && Tour(v)}
+    </div>
+    ${v.nudgeCard && !v.obOpen && !v.tourOpen && Nudge(v.nudgeCard)}
+    ${v.hasToast && html`
+    <div role="status" style=${S('position:absolute;top:90px;left:0;right:0;z-index:1300;display:flex;justify-content:center;pointer-events:none')}><div style=${S('max-width:90%;text-align:center;background:#10183F;color:#FFC425;font-weight:800;font-size:14px;padding:12px 20px;border-radius:24px;box-shadow:0 8px 24px rgba(16,24,63,.35)')}>${Lines(v.toast)}</div></div>`}
+  </div>`;
+}
+
 function App(v) {
+  if (v.desk) return DeskApp(v);
   return html`
   <div class="stage">
     <div class="device">
