@@ -1357,7 +1357,7 @@ function FriendProfile(v) {
         <span style=${S('font-size:12.5px;font-weight:600;color:#4A5275;line-height:1.4')}>You stop seeing each other’s spots.<br/>They aren’t told.</span>
         <div style=${S('display:flex;gap:8px')}><button onClick=${p.remove} style=${S('height:38px;padding:0 16px;border-radius:999px;border:0;background:#E8242C;color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer')}>Remove Friend</button><button onClick=${p.cancelRemove} style=${S('height:38px;padding:0 16px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer')}>Keep</button></div>
       </div>`}
-      <div style=${S('display:flex;align-items:center;gap:14px')}>${Avatar(p.src, p.initial, 72, p.bg, 'border:3px solid #FFFFFF;box-shadow:0 6px 16px rgba(16,24,63,.15)')}<div style=${S('display:flex;flex-direction:column;gap:6px;min-width:0')}>${frH(p.name, '', 32)}${p.since && frMono(p.since)}</div></div>
+      <div style=${S('display:flex;align-items:center;gap:14px')}>${Avatar(p.src, p.initial, 72, p.bg, 'border:3px solid #FFFFFF;box-shadow:0 6px 16px rgba(16,24,63,.15)')}<div style=${S('display:flex;flex-direction:column;gap:6px;min-width:0')}>${frH(p.name, '', 32)}${p.handle && html`<span style=${S('font-size:14px;font-weight:700;color:#4A5275')}>${p.handle}</span>`}${p.since && frMono(p.since)}</div></div>
       <div style=${S(`${ROW};border-radius:20px;padding:12px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))`)}>${p.counts.map(([n, l], i) => html`<div key=${l} style=${S(`padding:0 14px;${i ? 'border-left:1px solid rgba(16,24,63,.1)' : ''}`)}><div style=${S('font-size:26px;font-weight:200;letter-spacing:-1px;color:#10183F')}>${n}</div>${frMono(l)}</div>`)}</div>
       <div role="tablist" aria-label=${p.name + '’s Places'} style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>
         ${p.tabs.map(t => html`<button key=${t.key} role="tab" aria-selected=${t.on} onClick=${t.pick} style=${S(`height:34px;border:0;border-radius:999px;font-family:inherit;font-size:13px;cursor:pointer;${t.on ? 'background:#FFFFFF;font-weight:800;color:#10183F;box-shadow:0 3px 8px rgba(16,24,63,.1)' : 'background:transparent;font-weight:700;color:#4A5275'}`)}>${t.label}</button>`)}
@@ -1375,12 +1375,44 @@ function FriendProfile(v) {
   </section>`;
 }
 
+// Your username: pick one so friends can find you (Add A Friend and Your Account).
+function UsernameCard(u) {
+  if (!u || !u.ready) return null;
+  if (!u.editing) return html`<div style=${S(`${ROW};border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px`)}>
+    <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}>${frMono('YOUR USERNAME')}<span style=${S('font-size:17px;font-weight:900;font-style:italic;color:#10183F;overflow:hidden;text-overflow:ellipsis')}>@${u.name}</span></span>
+    <button onClick=${u.edit} style=${S('height:34px;padding:0 14px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Change</button></div>`;
+  return html`<form onSubmit=${u.save} style=${S(`${ROW};border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:8px`)}>
+    <label for="fr-user">${frMono(u.has ? 'CHANGE YOUR USERNAME' : 'PICK A USERNAME')}</label>
+    <div style=${S('display:flex;gap:8px;align-items:center')}>
+      <span style=${S('flex:1;min-width:0;height:44px;border-radius:14px;background:#fff;border:1.5px solid rgba(16,24,63,.12);display:flex;align-items:center;padding:0 12px;gap:2px')}>
+        <span aria-hidden="true" style=${S('font-size:16px;font-weight:800;color:#4A5275')}>@</span>
+        <input id="fr-user" value=${u.draft} onInput=${u.onInput} autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" maxlength="21" placeholder="kotis" style=${S('flex:1;min-width:0;border:0;outline:none;background:transparent;font-family:inherit;font-size:16px;font-weight:700;color:#10183F')}/>
+      </span>
+      <button type="submit" disabled=${u.busy} class=${u.busy ? 'ai-busy' : ''} style=${S('height:44px;padding:0 16px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer')}>${u.busy ? 'Saving…' : 'Save'}</button>
+      ${u.has && html`<button type="button" onClick=${u.cancel} style=${S('height:44px;padding:0 12px;border-radius:999px;border:0;background:transparent;color:#4A5275;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer')}>Cancel</button>`}
+    </div>
+    ${u.msg ? html`<div role="status" style=${S('font-size:12.5px;font-weight:700;color:#E8242C')}>${Lines(u.msg)}</div>` : html`<div style=${S('font-size:12px;font-weight:600;color:#4A5275')}>Friends can find you by it.</div>`}
+  </form>`;
+}
+
 function FriendAddSheet(v) {
   const a = v.frAdd, btn = (t, on, bg, fg) => html`<button onClick=${on} style=${S(`height:34px;padding:0 14px;border-radius:999px;border:0;background:${bg};color:${fg};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap`)}>${t}</button>`;
   const who = (f, sub, right) => html`<div key=${f.id} style=${S('display:flex;align-items:center;gap:11px;min-height:48px')}>${Avatar(f.src, f.initial, 40, f.bg)}<div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900;color:#10183F')}>${f.name}</span>${sub && html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${sub}</span>`}</div>${right}</div>`;
+  const act = r => r.status === 'friends' ? html`<button onClick=${r.open} style=${S('height:34px;padding:0 12px;border-radius:999px;border:0;background:transparent;color:#16805A;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:4px')}>${Ico('M5 12l5 5 9-10', 13, 'currentColor', 2.8)}Friends</button>`
+    : r.status === 'sent' ? html`<span style=${S('font-size:13px;font-weight:800;color:#4A5275;padding:0 6px')}>Requested</span>`
+    : r.status === 'incoming' ? btn('Accept', r.accept, '#FF6B1A', '#fff') : btn('Add', r.add, '#FF6B1A', '#fff');
   return Sheet('Add A Friend', a.close, html`
+    <div role="search" style=${S('display:flex;align-items:center;gap:8px;height:48px;border-radius:999px;background:#fff;border:1.5px solid rgba(16,24,63,.12);padding:0 8px 0 14px')}>
+      ${Ico('M11 18a7 7 0 1 0 0-14a7 7 0 0 0 0 14z M20 20l-4-4', 18, '#4A5275')}
+      <input value=${a.q} onInput=${a.onQ} aria-label="Find By Username" placeholder="Find by username" autocapitalize="none" autocorrect="off" spellcheck="false" style=${S('flex:1;min-width:0;border:0;outline:none;background:transparent;font-family:inherit;font-size:16px;font-weight:700;color:#10183F')}/>
+      ${a.q && html`<button onClick=${a.clearQ} aria-label="Clear" style=${S('width:32px;height:32px;border-radius:50%;border:0;background:rgba(16,24,63,.07);color:#10183F;display:flex;align-items:center;justify-content:center;cursor:pointer')}>${Ico('M6 6l12 12M18 6L6 18', 14)}</button>`}
+    </div>
+    ${a.searching && html`<div style=${S('font-size:13px;font-weight:600;color:#4A5275')}>Looking…</div>`}
+    ${a.none && html`<div style=${S('font-size:13px;font-weight:600;color:#4A5275')}>${a.none}</div>`}
+    ${a.results.map(r => who(r, r.handle, act(r)))}
+    ${!a.q && UsernameCard(v.frUser)}
     <div style=${S(`${ROW};border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px`)}>
-      <div style=${S('font-size:14px;font-weight:700;line-height:1.4;color:#10183F')}>Send your friend link.<br/>When they open it, you’ll get a request here.</div>
+      <div style=${S('font-size:14px;font-weight:700;line-height:1.4;color:#10183F')}>Or send your friend link.<br/>When they open it, you’ll get a request here.</div>
       <div style=${S(`${MONO};font-size:11px;font-weight:700;color:#4A5275;word-break:break-all`)}>${a.link || '…'}</div>
       <div style=${S('display:flex;gap:8px')}>
         <button onClick=${a.share} style=${S('flex:1;height:42px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>Share My Link</button>
@@ -1699,6 +1731,7 @@ function AccountSheet(v) {
         </div>
       </div>
       ${v.avatarMsg && html`<div role="status" style=${S('font-size:12.5px;font-weight:700;color:#E8242C;margin-top:-6px')}>${Lines(v.avatarMsg)}</div>`}
+      ${UsernameCard(v.frUser)}
       <div style=${S('background:#fff;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:6px')}>
         <span style=${S('font-size:12px;font-weight:700;color:#4A5275')}>Signed In As</span>
         <span style=${S('font-weight:800;font-size:15px;word-break:break-all')}>${v.syncEmail}</span>

@@ -42,14 +42,40 @@ Object.assign(Component.prototype, {
       const r = await k.c.from('nyc_friend_profiles').select('owner,name,mode,data,updated_at').in('owner', ids.slice(0, 300));
       if (r.error || !r.data) return; const m = {}; r.data.forEach(x => { m[x.owner] = x; }); this.setState({ frData: m, frAt: Date.now() }); } catch (e) {} },
   async frAddCode(code) { const k = this.frClient(); if (!k) return; frClear();
-    try { const { data, error } = await k.c.rpc('nyc_friend_add', { code });
+    try { const { data, error } = await k.c.rpc('nyc_friend_add', { code }); await this.frAddResult(data, error); } catch (e) {} },
+  async frAddUser(u) { const k = this.frClient(); if (!k) return;
+    try { const { data, error } = await k.c.rpc('nyc_friend_add_user', { p_username: u }); await this.frAddResult(data, error); } catch (e) {}
+    if (this.state.frQ) this.frSearch(this.state.frQ, true); },
+  async frAddResult(data, error) { try {
       if (error) { this.toast(/too many/i.test(error.message || '') ? 'That’s a lot of friend requests. Try again later.' : 'Couldn’t send that friend request. Check your connection?'); return; }
       const st = data && data.status, n = frFirst(data && data.name);
       if (st === 'self') this.toast('That’s your own friend link. Send it to a friend!');
-      else if (st === 'bad') this.toast('That friend link doesn’t work anymore. Ask for a new one.');
-      else if (st === 'friends') { this.toast('You and ' + n + ' are friends!!'); await this.frRefresh(); this.setState({ frOpen: true, frProfile: data.id, frProfTab: 'lists', acctOpen: false }); return; }
+      else if (st === 'bad') this.toast('Couldn’t find them. Ask for their link or username.');
+      else if (st === 'friends') { this.toast('You and ' + n + ' are friends!!'); await this.frRefresh(); this.setState({ frOpen: true, frAddOpen: false, frProfile: data.id, frProfTab: 'lists', acctOpen: false }); return; }
       else this.toast('Friend request sent to ' + n + '.\nYou’ll see their spots once they say yes.');
       this.frRefresh(); } catch (e) {} },
+  // Find people by username (as you type, after 2 characters).
+  frSearch(q, now) { this.setState({ frQ: q }); clearTimeout(this._frQT); const u = String(q || '').trim().replace(/^@/, '').toLowerCase();
+    if (u.length < 2) { this.setState({ frRes: null, frSearching: false }); return; }
+    this.setState({ frSearching: true });
+    this._frQT = setTimeout(async () => { const k = this.frClient(); if (!k) return;
+      try { const { data, error } = await k.c.rpc('nyc_friend_find', { q: u }); if (this.state.frQ !== q) return;
+        this.setState({ frRes: error ? [] : (data || []), frSearching: false }); } catch (e) { this.setState({ frSearching: false }); } }, now ? 0 : 300); },
+  async frSetUsername() { const k = this.frClient(), raw = String(this.state.frUDraft || '').trim().replace(/^@/, '').toLowerCase(); if (!k || this.state.frUBusy) return;
+    if (raw && !/^[a-z0-9_.]{3,20}$/.test(raw)) { this.setState({ frUMsg: 'Use 3–20 letters, numbers, _ or .' }); return; }
+    this.setState({ frUBusy: true, frUMsg: '' });
+    try { const { data, error } = await k.c.rpc('nyc_friend_set_username', { p_username: raw });
+      if (error) { this.setState({ frUBusy: false, frUMsg: this.pubMissing(error) ? 'Usernames need one setup step first.' : 'Couldn’t save that. Check your connection?' }); return; }
+      if (data === 'taken') { this.setState({ frUBusy: false, frUMsg: '@' + raw + ' is taken. Try another?' }); return; }
+      if (data === 'bad') { this.setState({ frUBusy: false, frUMsg: 'Use 3–20 letters, numbers, _ or .' }); return; }
+      this.setState({ frUBusy: false, frUEdit: false, frMe: { ...(this.state.frMe || {}), username: raw || null } });
+      this.toast(raw ? 'You’re @' + raw + ' now.\nFriends can find you by it.' : 'Username removed.'); }
+    catch (e) { this.setState({ frUBusy: false, frUMsg: 'Couldn’t save that. Check your connection?' }); } },
+  frUserVals() { const s = this.state, m = s.frMe || {};
+    return { name: m.username || '', has: !!m.username, editing: !!s.frUEdit || !m.username, draft: s.frUDraft == null ? (m.username || '') : s.frUDraft, msg: s.frUMsg || '', busy: !!s.frUBusy, ready: !!s.frMe,
+      onInput: e => this.setState({ frUDraft: e.target.value.replace(/\s/g, '').toLowerCase().slice(0, 21), frUMsg: '' }),
+      save: e => { e && e.preventDefault && e.preventDefault(); this.frSetUsername(); },
+      edit: () => this.setState({ frUEdit: true, frUDraft: m.username || '', frUMsg: '' }), cancel: () => this.setState({ frUEdit: false, frUDraft: null, frUMsg: '' }) }; },
   async frAccept(id) { const k = this.frClient(); if (!k) return; const r = (this.state.frState.incoming || []).find(x => x.id === id);
     const { data, error } = await k.c.rpc('nyc_friend_accept', { other: id });
     if (error || !data) { this.toast('Couldn’t accept that. Try again?'); return; }
@@ -60,7 +86,7 @@ Object.assign(Component.prototype, {
     const { error } = await k.c.rpc('nyc_friend_remove', { other: id }); if (error) { this.toast('Couldn’t remove them. Try again?'); return; }
     this.setState({ frProfile: null, frConfirm: null }); this.toast(frFirst(f && f.name) + ' is off your friends list.'); this.frRefresh(); },
   async frShare() { const url = this.frLink(); if (!url) { this.toast('Friends need one setup step first.'); return; }
-    const text = 'Be my friend on Spotted In 🗽 You’ll see my spots and I’ll see yours.';
+    const un = this.state.frMe && this.state.frMe.username, text = 'Be my friend on Spotted In 🗽 ' + (un ? 'I’m @' + un + '. ' : '') + 'You’ll see my spots and I’ll see yours.';
     if (navigator.share) { try { await navigator.share({ title: 'Spotted In', text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => this.toast('Link copied. Go send it!')).catch(() => this.toast('Press and hold the link to copy it.')); },
   frCopy() { const url = this.frLink(); if (!url) return; (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => this.toast('Link copied.')).catch(() => this.toast('Press and hold the link to copy it.')); },
@@ -99,9 +125,9 @@ Object.assign(Component.prototype, {
     this.saveToMyMap({ ...p, source: 'friend' }, this.frCats(fid)); },
   friendVals() { const s = this.state, k = s.auth === 'signedIn', st = s.frState || {}, me = window.NYCLists && NYCLists.uid();
     const photo = id => window.NYCSync && NYCSync.avatarUrl ? NYCSync.avatarUrl(id, 0) : null;
-    const person = f => ({ id: f.id, name: frFirst(f.name), initial: frFirst(f.name)[0].toUpperCase(), bg: frCol(f.id), src: photo(f.id) });
+    const person = f => ({ id: f.id, name: f.name ? frFirst(f.name) : f.username ? '@' + f.username : 'Someone', handle: f.username ? '@' + f.username : '', initial: ((f.name || f.username || '?').trim()[0] || '?').toUpperCase(), bg: frCol(f.id), src: photo(f.id) });
     const incoming = (st.incoming || []).length;
-    const base = { frAvail: k, frBadge: k && incoming ? incoming : 0, frOpen: k && s.frOpen,
+    const base = { frUser: k ? this.frUserVals() : null, frAvail: k, frBadge: k && incoming ? incoming : 0, frOpen: k && s.frOpen,
       openFriends: () => { if (!k) return; this.setState({ frOpen: true, acctOpen: false, frProfile: null }); if (Date.now() - (s.frAt || 0) > 30000) this.frRefresh(); } };
     if (!base.frOpen) return base;
     const fmtSpot = (fid, p) => { const c = this.frCats(fid)[p.cat] || { name: 'Spot', color: '#888' };
@@ -135,11 +161,15 @@ Object.assign(Component.prototype, {
       frPeople: friends, frCount: friends.length, frGroups: groups, frIncoming: incoming,
       frFeedEmpty: !groups.length ? (friends.length ? 'Nothing new from your friends yet.\nWhen they add spots or go somewhere, it shows up here.' : 'Add your friends to see where they’re going and what they’re saving.') : '',
       frProf: prof,
-      frAdd: s.frAddOpen ? { link: this.frLink().replace(/^https?:\/\//, ''), share: () => this.frShare(), copy: () => this.frCopy(), close: () => this.setState({ frAddOpen: false }),
+      frAdd: s.frAddOpen ? { q: s.frQ || '', onQ: e => this.frSearch(e.target.value), clearQ: () => this.frSearch(''), searching: !!s.frSearching,
+        results: (s.frRes || []).map(r => ({ ...person(r), status: r.status, add: () => this.frAddUser(r.username), accept: () => this.frAccept(r.id).then(() => this.frSearch(s.frQ, true)),
+          open: r.status === 'friends' ? () => this.setState({ frAddOpen: false, frProfile: r.id, frProfTab: 'lists' }) : null })),
+        none: s.frRes && !s.frRes.length && !s.frSearching ? 'No one with that username yet.' : '',
+        link: this.frLink().replace(/^https?:\/\//, ''), share: () => this.frShare(), copy: () => this.frCopy(), close: () => this.setState({ frAddOpen: false }),
         incoming: (st.incoming || []).map(r => ({ ...person(r), when: ago(new Date(r.at).getTime()), accept: () => this.frAccept(r.id), decline: () => this.frDecline(r.id) })),
         outgoing: (st.outgoing || []).map(r => ({ ...person(r), name: r.name ? frFirst(r.name) : 'Someone', when: ago(new Date(r.at).getTime()), cancel: () => this.frDecline(r.id, true) })),
         friends: friends.map(f => ({ ...f, remove: () => this.setState({ frConfirm: f.id }), confirm: s.frConfirm === f.id, sure: () => this.frRemove(f.id), notSure: () => this.setState({ frConfirm: null }) })) } : null,
-      frOpenAdd: () => this.setState({ frAddOpen: true, frConfirm: null }),
+      frOpenAdd: () => this.setState({ frAddOpen: true, frConfirm: null, frQ: '', frRes: null }),
       frSee: s.frSeeOpen ? { modes: [['all', 'Everything', 'Spots you add and places you’ve been'], ['been', 'Only Places I’ve Been', 'Not your to-try list'], ['none', 'Nobody', 'Friends see nothing new from you']]
           .map(([key, label, sub]) => ({ key, label, sub, on: (m.mode || 'none') === key, pick: () => this.frSetSee({ mode: key }) })),
         lists: mine.map((t, i) => { const on = (m.lists || []).includes(t.id); return { key: t.id, name: t.name, col: WALLET[i % WALLET.length][1], on,

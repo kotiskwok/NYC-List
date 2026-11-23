@@ -10,7 +10,8 @@
 -- nyc_friends          two rows per friendship (you → them, them → you).
 -- nyc_friend_requests  a request waiting for a yes.
 --
--- Adding works by link: /?friend=<code>. Opening it sends a request; the other person taps Accept.
+-- Adding works by link (/?friend=<code>) or by username (@kotis). Either sends a request; the other person taps Accept.
+-- Usernames are optional, lowercase, 3–20 letters, numbers, _ or . and unique. Only people with one can be found by search.
 
 create table if not exists public.nyc_friend_profiles (
   owner      uuid primary key default auth.uid() references auth.users (id) on delete cascade,
@@ -21,6 +22,14 @@ create table if not exists public.nyc_friend_profiles (
   data       jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.nyc_friend_profiles add column if not exists username text;
+create unique index if not exists nyc_friend_profiles_username on public.nyc_friend_profiles (username);
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'nyc_friend_profiles_username_ok') then
+    alter table public.nyc_friend_profiles add constraint nyc_friend_profiles_username_ok check (username ~ '^[a-z0-9_.]{3,20}$');
+  end if;
+end $$;
 
 create table if not exists public.nyc_friends (
   user_id   uuid not null references auth.users (id) on delete cascade,
@@ -82,7 +91,7 @@ begin
   insert into public.nyc_friend_profiles (owner, name) values (auth.uid(), left(coalesce(p_name, ''), 60))
   on conflict (owner) do update set name = case when excluded.name <> '' then excluded.name else public.nyc_friend_profiles.name end
   returning * into r;
-  return json_build_object('code', r.code, 'mode', r.mode, 'lists', r.lists);
+  return json_build_object('code', r.code, 'mode', r.mode, 'lists', r.lists, 'username', r.username);
 end $$;
 
 -- Whose link this is (shown before you send the request, even before you have an account).
@@ -137,14 +146,62 @@ $$;
 create or replace function public.nyc_friends_state() returns json
   language sql stable security definer set search_path = '' as $$
   select json_build_object(
-    'friends', coalesce((select json_agg(json_build_object('id', f.friend_id, 'name', coalesce(p.name, ''), 'since', f.since) order by f.since desc)
+    'friends', coalesce((select json_agg(json_build_object('id', f.friend_id, 'name', coalesce(p.name, ''), 'username', p.username, 'since', f.since) order by f.since desc)
       from public.nyc_friends f left join public.nyc_friend_profiles p on p.owner = f.friend_id where f.user_id = auth.uid()), '[]'::json),
-    'incoming', coalesce((select json_agg(json_build_object('id', r.from_id, 'name', coalesce(p.name, ''), 'at', r.at) order by r.at desc)
+    'incoming', coalesce((select json_agg(json_build_object('id', r.from_id, 'name', coalesce(p.name, ''), 'username', p.username, 'at', r.at) order by r.at desc)
       from public.nyc_friend_requests r left join public.nyc_friend_profiles p on p.owner = r.from_id where r.to_id = auth.uid()), '[]'::json),
-    'outgoing', coalesce((select json_agg(json_build_object('id', r.to_id, 'name', coalesce(p.name, ''), 'at', r.at) order by r.at desc)
+    'outgoing', coalesce((select json_agg(json_build_object('id', r.to_id, 'name', coalesce(p.name, ''), 'username', p.username, 'at', r.at) order by r.at desc)
       from public.nyc_friend_requests r left join public.nyc_friend_profiles p on p.owner = r.to_id where r.from_id = auth.uid()), '[]'::json));
 $$;
 
+-- Pick (or clear, with '') your username. Answers 'ok', 'taken' or 'bad'.
+create or replace function public.nyc_friend_set_username(p_username text) returns text
+  language plpgsql security definer set search_path = '' as $$
+declare u text := lower(btrim(ltrim(btrim(coalesce(p_username, '')), '@')));
+begin
+  if auth.uid() is null then raise exception 'Sign in first'; end if;
+  insert into public.nyc_friend_profiles (owner) values (auth.uid()) on conflict (owner) do nothing;
+  if u = '' then update public.nyc_friend_profiles set username = null where owner = auth.uid(); return 'ok'; end if;
+  if u !~ '^[a-z0-9_.]{3,20}$' then return 'bad'; end if;
+  if exists (select 1 from public.nyc_friend_profiles p where p.username = u and p.owner <> auth.uid()) then return 'taken'; end if;
+  update public.nyc_friend_profiles set username = u where owner = auth.uid();
+  return 'ok';
+exception when unique_violation then return 'taken';
+end $$;
+
+-- Find people by username (starts with what you typed, at least 2 characters, up to 8 people).
+-- status: 'friends', 'sent' (you asked them), 'incoming' (they asked you) or 'none'.
+create or replace function public.nyc_friend_find(q text) returns json
+  language sql stable security definer set search_path = '' as $$
+  with w as (select lower(btrim(ltrim(btrim(coalesce(q, '')), '@'))) as u)
+  select coalesce(json_agg(x order by x.exact desc, x.username), '[]'::json) from (
+    select p.owner as id, p.name, p.username, (p.username = w.u) as exact,
+      case when exists (select 1 from public.nyc_friends f where f.user_id = auth.uid() and f.friend_id = p.owner) then 'friends'
+           when exists (select 1 from public.nyc_friend_requests r where r.from_id = auth.uid() and r.to_id = p.owner) then 'sent'
+           when exists (select 1 from public.nyc_friend_requests r where r.from_id = p.owner and r.to_id = auth.uid()) then 'incoming'
+           else 'none' end as status
+    from public.nyc_friend_profiles p, w
+    where auth.uid() is not null and char_length(w.u) >= 2 and w.u ~ '^[a-z0-9_.]+$'
+      and left(p.username, char_length(w.u)) = w.u and p.owner <> auth.uid()
+    order by (p.username = w.u) desc, p.username limit 8) x;
+$$;
+
+-- Send a request by username. Same answers as nyc_friend_add.
+create or replace function public.nyc_friend_add_user(p_username text) returns json
+  language plpgsql security definer set search_path = '' as $$
+declare c text;
+begin
+  select p.code into c from public.nyc_friend_profiles p where p.username = lower(btrim(ltrim(btrim(coalesce(p_username, '')), '@')));
+  if c is null then return json_build_object('status', 'bad'); end if;
+  return public.nyc_friend_add(c);
+end $$;
+
+revoke execute on function public.nyc_friend_set_username(text) from public, anon;
+revoke execute on function public.nyc_friend_find(text) from public, anon;
+revoke execute on function public.nyc_friend_add_user(text) from public, anon;
+grant execute on function public.nyc_friend_set_username(text) to authenticated;
+grant execute on function public.nyc_friend_find(text) to authenticated;
+grant execute on function public.nyc_friend_add_user(text) to authenticated;
 revoke execute on function public.nyc_friend_me(text) from public, anon;
 revoke execute on function public.nyc_friend_add(text) from public, anon;
 revoke execute on function public.nyc_friend_accept(uuid) from public, anon;
