@@ -19,6 +19,19 @@
   },
   "headers": [
     {
+      "source": "/.well-known/:path*",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
       "source": "/",
       "headers": [
         {
@@ -92,6 +105,18 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/geocode",
+      "destination": "/api/places?geo=1"
+    },
+    {
+      "source": "/app",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/app/",
+      "destination": "/index.html"
+    },
     {
       "source": "/api/delete-account",
       "destination": "/api/account?do=delete"
