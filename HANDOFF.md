@@ -141,10 +141,10 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Peek strip** under the deck: a thumbnail of every match (first 60, then "+N" opens See All). The current one has an orange ring, passed ones fade, ones in your plan get a blue check; tap one to jump to it.
 - The deck ends with "That's All" (**See All** / **Shuffle Again**). Code: `FeedScreen`, `FeedCard`, `FeedStrip`, `FeedSearch` in `view.js`; `feedItems` (with `cur`, `seen`, `onJump`), `feedCount`, `feedWhenChips`, `feedCatChips`, `feedFilterN`, `deckGrab` in `renderVals()`; deck logic in `deckList`/`deckAct`/`deckDown`/`deckMove`/`deckUp`.
 
-### Route tab (Plan A Day)
-- Full-screen map with the dotted route and numbered pins. A glass panel shows total travel, a ride-vs-walk bar, when you're done, and **Start From** (First Stop / Home / My Location).
-- Pull-up timeline: **Leave At**, a **STAY** chip per stop (15 min–3 hrs), arrival times, line badges per leg. **Auto-Order**, reorder, remove, Add Spots, Clear, **Start Route In Google Maps**.
-
+### Route tab (Plan A Day, design RT-G2 · Floating Cards)
+- The map fills the screen. A glass bar on top shows the trip time, stop count, ride/walk and finish time; its navy button is the start point (**First Stop / Home / My Location**) and opens a glass panel with the start choice and **Leave At**.
+- Stops are glass cards you swipe sideways above **Start Route In Google Maps** (dark tinted glass): stop number and photo, time, name, area, stay length (tap to change), the leg from the stop before (tap for live times in Google Maps), ‹ › to reorder and ✕ to remove. The last card is the finish time with **Clear Plan**. **Plan A Day**, **Auto-Order** and **+** float above the cards.
+- Code: `PlanScreen` in `view.js`; `planStartOpen` in state; the map fits the route between the top bar and the cards (`syncPlan`).
 ### Lists tab (shared trip lists, e.g. "Sonia's Visit")
 - **Title:** "<First Name>'s Lists" ("Kotis' Lists" when the name ends in s), with a navy **+ New** pill.
 - **Tabs:** **Upcoming** (dated, not over), **Anytime** (no dates, or done), **Shared** (with or from friends).
