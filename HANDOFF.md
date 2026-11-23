@@ -170,6 +170,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Friends (side drawer, design A)
 - Tap your profile photo on the Map tab: a warm tinted glass drawer (design G3) slides in from the left with **Your Friends**, friends' faces, **Activity** / **Friends · N**, then **What My Friends See** and **Your Account** at the bottom. A red badge on the photo counts friend requests.
+- **Swipe:** on a phone, swipe right from the left edge of the screen to open the drawer (`edgeSwipe` in `logic.js`, first 24 px, signed in, no sheet open) and swipe it left to close (`dragLeft` in `view.js`).
 - **Activity:** "Sonia added Lucali · 2h" (only for friends who share everything) and "Mei went to Thai Diner" (when they mark Been There), last 45 days, grouped Today / This Week / Earlier, each with **+ Save To My Map**.
 - **Friend's profile:** photo, Friends Since, counts, tabs **Lists / Saved / Been There** (lists open to show their spots), **…** → Remove Friend (they aren't told).
 - **Usernames:** everyone without one gets a **Pick A Username** popup after the welcome steps or the next time they open the app (`UsernameGate`, `frNeedUser`). Pick one in Add A Friend or Your Account (`@kotis`: 3–20 lowercase letters, numbers, _ or ., unique, optional). **Find by username** in Add A Friend searches as you type (starts-with, 8 results, only people who picked one) with Add / Requested / Accept / Friends.

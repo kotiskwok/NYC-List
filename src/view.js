@@ -559,6 +559,31 @@ function PlanScreen(v) {
 // Swipe a sheet down to close it (like iOS sheets). Starts only when the sheet is scrolled to the top and the finger
 // moves down; the sheet follows the finger and closes past ~110px or on a quick flick, else springs back.
 // Native listeners so the touchmove can stop the page from scrolling; attached once per element.
+// Swipe the Friends drawer left to close it: it follows your finger and closes past ~80px or on a quick flick.
+const dragLeft = onClose => el => {
+  if (!el) return; el._close = onClose; if (el._dl) return; el._dl = 1;
+  let x0 = null, y0 = 0, dx = 0, t0 = 0, on = false, just = 0;
+  const panel = () => el.querySelector('aside');
+  const start = (x, y) => { x0 = x; y0 = y; dx = 0; t0 = Date.now(); on = false; };
+  const move = (x, y, e) => {
+    if (x0 == null) return; const d = x - x0, dv = y - y0;
+    if (!on) { if (d < -10 && Math.abs(d) > Math.abs(dv) * 1.3) { on = true; const p = panel(); if (p) { p.style.animation = 'none'; p.style.transition = 'none'; } } else if (Math.abs(dv) > 12 || d > 10) { x0 = null; return; } else return; }
+    dx = Math.min(0, d); if (e && e.cancelable) e.preventDefault();
+    const p = panel(); if (p) p.style.transform = `translateX(${dx}px)`; el.style.background = `rgba(16,24,63,${Math.max(0, .12 + dx / 2400)})`;
+  };
+  const end = () => {
+    if (x0 == null) return; x0 = null; if (!on) return; on = false; just = Date.now();
+    const p = panel(); if (!p) return;
+    const fast = -dx / Math.max(1, Date.now() - t0) > .5 && dx < -30;
+    p.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1)';
+    if (dx < -80 || fast) { p.style.transform = 'translateX(-105%)'; el.style.background = 'rgba(16,24,63,0)'; setTimeout(() => { el._close && el._close(); }, 200); }
+    else { p.style.transform = ''; el.style.background = ''; }
+  };
+  el.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  el.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
+  el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+  el.addEventListener('click', e => { if (Date.now() - just < 350) { e.stopPropagation(); e.preventDefault(); } }, true);
+};
 const dragDown = onClose => el => {
   if (!el) return; el._close = onClose; if (el._dd) return; el._dd = 1;
   let y0 = null, dy = 0, t0 = 0, on = false, just = 0;
@@ -1318,7 +1343,7 @@ function FriendsDrawer(v, docked) {
     </aside>`;
   if (docked) return panel;
   return html`
-  <div onClick=${v.frClose} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1040;background:rgba(16,24,63,.12);animation:frFade .2s ease')}>${panel}</div>`;
+  <div ref=${dragLeft(v.frClose)} onClick=${v.frClose} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1040;background:rgba(16,24,63,.12);animation:frFade .2s ease')}>${panel}</div>`;
 }
 
 function FriendProfile(v) {
