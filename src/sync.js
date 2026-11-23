@@ -52,8 +52,17 @@ const NYCSync = (() => {
   function attach(a) {
     app = a;
     if (!enabled) { set({ auth: 'local' }); return; }
+    // In the iPhone app the sign-in is also kept in the Keychain (AppGroup keep/recall/forget), so iOS
+    // clearing the web view's storage doesn't sign you out.
+    const C = window.Capacitor, KC = NATIVE && C && ((C.Plugins && C.Plugins.AppGroup) || (C.registerPlugin && C.registerPlugin('AppGroup')));
+    const storage = KC ? {
+      getItem: async k => { let v = null; try { v = localStorage.getItem(k); } catch (e) {}
+        if (v != null) return v; try { const r = await KC.recall({ key: k }); if (r && r.value) { try { localStorage.setItem(k, r.value); } catch (e) {} return r.value; } } catch (e) {} return null; },
+      setItem: async (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} try { await KC.keep({ key: k, value: v }); } catch (e) {} },
+      removeItem: async k => { try { localStorage.removeItem(k); } catch (e) {} try { await KC.forget({ key: k }); } catch (e) {} }
+    } : undefined;
     sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, ...(storage ? { storage } : {}) }
     });
     sb.auth.getSession().then(({ data }) => handle(data.session)).catch(() => set({ auth: user ? 'signedIn' : 'signedOut' }));
     sb.auth.onAuthStateChange((ev, session) => {

@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import UserNotifications
+import Security
 
 /// Hands links saved by the Share extension ("Share → Spotted In") to the web app.
 /// Both live in the app group below, so they can see the same UserDefaults.
@@ -13,7 +14,10 @@ public class AppGroupPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setCity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "notifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setShareKey", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "takeSent", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "takeSent", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "keep", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "recall", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "forget", returnType: CAPPluginReturnPromise)
     ]
 
     static let suite = "group.com.kotiskwok.nyclist"
@@ -72,5 +76,40 @@ public class AppGroupPlugin: CAPPlugin, CAPBridgedPlugin {
         let sent = defaults?.dictionary(forKey: "sentLinks") as? [String: Double] ?? [:]
         defaults?.removeObject(forKey: "sentLinks")
         call.resolve(["sent": sent])
+    }
+
+    // ---- Your sign-in, backed up in the iPhone's Keychain ----
+    // The web app keeps its Supabase sign-in in local storage, which iOS can clear. A copy lives here
+    // (this device only, readable after the phone's first unlock), so you stay signed in.
+    static let service = "com.kotiskwok.nyclist.session"
+    private func query(_ key: String) -> [String: Any] {
+        return [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: AppGroupPlugin.service, kSecAttrAccount as String: key]
+    }
+
+    @objc func keep(_ call: CAPPluginCall) {
+        guard let key = call.getString("key"), let value = call.getString("value"), let data = value.data(using: .utf8) else { call.reject("key and value needed"); return }
+        let q = query(key)
+        let attrs: [String: Any] = [kSecValueData as String: data, kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
+        var status = SecItemUpdate(q as CFDictionary, attrs as CFDictionary)
+        if status == errSecItemNotFound { status = SecItemAdd(q.merging(attrs) { $1 } as CFDictionary, nil) }
+        call.resolve(["ok": status == errSecSuccess])
+    }
+
+    @objc func recall(_ call: CAPPluginCall) {
+        guard let key = call.getString("key") else { call.resolve([:]); return }
+        var q = query(key)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: AnyObject?
+        if SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let data = out as? Data, let value = String(data: data, encoding: .utf8) {
+            call.resolve(["value": value])
+        } else {
+            call.resolve([:])
+        }
+    }
+
+    @objc func forget(_ call: CAPPluginCall) {
+        if let key = call.getString("key") { SecItemDelete(query(key) as CFDictionary) }
+        call.resolve()
     }
 }
