@@ -184,6 +184,10 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **What Friends See:** **Everything** / **Only Places I've Been** / **Nobody** (the default), which of your lists friends can open, and per spot the Edit sheet's **Keep This One From Friends** switch (`place.fpriv`). Never home, notes or plans.
 - Code: `src/friends.js` (`friendVals()`), views `FriendsDrawer`, `FriendProfile`, `FriendAddSheet`, `FriendSeeSheet` in `view.js`. Data: `supabase/friends.sql` (`nyc_friend_profiles` with a snapshot the app rewrites 4 s after your spots or lists change, `nyc_friends`, `nyc_friend_requests`, RPCs `nyc_friend_me/add/accept/remove`, `nyc_friends_state`, `nyc_friend_preview`). A spot's added time comes from its id (`p<timestamp>`); Been There time is `place.vat`. Friend Score also counts friends' reviews.
 
+### Saved sign-in (iPhone)
+- iOS offers **Save Password?** after you sign in and fills your email and password next time (Face ID / passcode), through the Passwords app. This works because the app and the site are linked: `webcredentials:nyc-lovat.vercel.app` in `App.entitlements` (Associated Domains) and `/.well-known/apple-app-site-association` on the site (team KQ79GMTSY2, bundle `com.kotiskwok.nyclist`). The sign-in form uses `autocomplete="username email"` and `current-password` / `new-password`.
+- The Supabase session is also kept in the iPhone's Keychain (`AppGroup.keep/recall/forget`, used as the auth `storage` in `sync.js`), so iOS clearing the web view's storage doesn't sign you out. Sign Out removes it.
+
 ### List notifications
 - When you add spots to a shared list, everyone else on it gets an iPhone notification a few seconds later, grouped: title = the list's name, body "Sonia added Lucali, Thai Diner and 1 more to Day 1." Tapping it opens the list. Nothing is sent for lists only you are on.
 - iPhone: `@capacitor/push-notifications` (asks with the share banner's prompt, `NYCNative.askNotify`), `aps-environment` in `App.entitlements`, `AppDelegate` forwards the token. The token is saved to `nyc_push_tokens` on sign-in (`savePushToken`) and removed on Sign Out.
