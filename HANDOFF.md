@@ -295,7 +295,7 @@ Endpoints check the caller's Supabase token, except `photo`, `geocode`, `bus` an
 | `POST /api/vibe` | Vibe search: Claude ranks the user's own saved spots against a plain-language request. |
 | `POST /api/booking` | A restaurant's one verified booking page (Google Places + Claude web search with citations). With `kind: 'order'` it answers what to order instead (`api/_order.js`; folded in because Vercel's plan allows 12 functions, and there are 12). |
 | `GET /api/photo?q=&ll=` | A spot's best Google photo as a JPEG, picked by Claude, up to 1600 px (only for the app's own pages). |
-| `GET /api/geocode` | OpenStreetMap address search for the iPhone app. |
+| `GET /api/geocode` | OpenStreetMap address search for the iPhone app (`_geocode.js`, served by `places.js` through a rewrite; `middleware.ts` counts as the 12th function). |
 | `POST /api/transcribe` | OpenAI speech-to-text for phone videos. |
 | `GET /api/bus` | NYC bus route lines. |
 | `GET /api/mapkit-token` | Apple Maps token for the live site, previews and the iPhone app. |

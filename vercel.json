@@ -106,6 +106,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/geocode",
+      "destination": "/api/places?geo=1"
+    },
+    {
       "source": "/app",
       "destination": "/index.html"
     },

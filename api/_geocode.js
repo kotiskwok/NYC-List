@@ -1,4 +1,4 @@
-// GET /api/geocode?<Nominatim search params>  → the same JSON as nominatim.openstreetmap.org/search.
+// GET /api/geocode?<Nominatim search params> (served by api/places.js through a vercel.json rewrite)  → the same JSON as nominatim.openstreetmap.org/search.
 // For the iPhone app: its web view sends no Referer, and OpenStreetMap's Nominatim refuses such requests,
 // so the app asks here and this forwards the search with the site's name, as Nominatim's usage policy asks.
 // Only the app's own pages may use it; answers are cached for a day.
