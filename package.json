@@ -3,6 +3,7 @@
   "private": true,
   "description": "Spotted In: static site in the repo root, server functions in api/. No build step.",
   "dependencies": {
-    "ffmpeg-static": "5.2.0"
+    "ffmpeg-static": "5.2.0",
+    "@vercel/functions": "^3.11.3"
   }
 }

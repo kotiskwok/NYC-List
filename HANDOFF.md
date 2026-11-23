@@ -195,6 +195,11 @@ From the iPhone Claude app you can still change the code and the website; only t
 - `map.html` (vercel.json rewrites `/m/:slug` to it): Apple Map with pins, a city switcher, category chips, a list, and a spot card (photo, What To Order, event, Open In Google Maps, See The Post). Reads `nyc_public_maps` with the public key.
 - Never home, notes, plans or lists. The app rewrites the row 4 s after spots change (`publishPub`). Needs `supabase/public.sql`.
 
+### Website (spottedinapp.com, design L4 with boarding passes)
+- `home.html` is the intro page: "Your saved posts, turned into plans." with three list boarding passes, From Your Feed To Your Table (Share It / Spot It / Go), Now Spotting In (six cities, "More cities on the way."), and a navy "Your next plan is already saved." block. App Store button: apps.apple.com/app/id6828702049; Open The Web App goes to `/app`. Works on phones.
+- `middleware.ts` (Vercel Routing Middleware, `@vercel/functions`) shows `home.html` at "/" only on spottedinapp.com and www; every other host (nyc-lovat.vercel.app, previews) still serves the app at "/". Links with `?join=`, `?friend=` or `?add=` go to the app. `vercel.json` rewrites `/app` to `index.html` on every host. `home.html` also forwards sign-in confirmation links (tokens in the #hash) to `/app`.
+- Design canvas: "Spotted In · Website" (L1–L6, web app D1–D3).
+
 ### Duplicates and photos
 - Duplicate spots (same `gid`, or the same name within ~150 m on the same map) fold into one automatically (`dedupeSpots` / `foldDupes`): the most complete copy stays and fills gaps from the other; plans are repointed.
 - Google photos: `/api/photo` looks at the first 6 Google photos and Claude picks the one showing the food, drinks, goods or inside (not storefronts, menus or selfies), returned at up to 1600 px; cached a month on Vercel's CDN. Your own spot photos save at 1600×1200, list photos at 1000×1000.
