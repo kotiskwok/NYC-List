@@ -1286,48 +1286,51 @@ const PEOPLE_I = 'M16 19c0-2.5-2.2-4.5-5-4.5S6 16.5 6 19 M11 12a3.2 3.2 0 1 0 0-
 const ADDP_I = 'M15 19c0-2.8-2.7-5-6-5s-6 2.2-6 5 M9 11a3.5 3.5 0 1 0 0-7a3.5 3.5 0 0 0 0 7 M19 8v6M16 11h6';
 const EYE_I = 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6';
 const LOCK_I = 'M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3';
+// Design G3 · Warm Tinted Glass: cream glass with orange, pink and blue glows; the map shows through.
+const FR_GLASS = 'background:radial-gradient(70% 30% at 0% 0%,rgba(255,107,26,.28),rgba(255,107,26,0) 70%),radial-gradient(70% 30% at 100% 55%,rgba(244,95,160,.2),rgba(244,95,160,0) 70%),radial-gradient(70% 30% at 10% 100%,rgba(27,61,184,.16),rgba(27,61,184,0) 70%),linear-gradient(160deg,rgba(255,243,223,.78),rgba(255,243,223,.5));-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border-right:1.5px solid rgba(255,255,255,.9);box-shadow:inset -2px 0 0 rgba(255,255,255,.7),inset 0 2px 1px rgba(255,255,255,.9),16px 0 44px rgba(16,24,63,.2)';
+const FR_CARD = 'background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1.5px 0 #FFFFFF';
 const frH = (bold, light, px) => html`<h2 style=${S(`margin:0;font-size:${px || 30}px;line-height:1;letter-spacing:-1px;font-weight:900;font-style:italic;color:#10183F`)}>${bold} <span style=${S('font-weight:200;font-style:normal')}>${light}</span></h2>`;
 const frMono = t => html`<div style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:1.1px;color:#4A5275`)}>${t}</div>`;
 const frRound = (d, label, onClick, bg, fg, px) => html`<button onClick=${onClick} aria-label=${label} style=${S(`position:relative;width:${px || 42}px;height:${px || 42}px;flex:none;border-radius:50%;border:0;background:${bg || 'rgba(16,24,63,.07)'};color:${fg || '#10183F'};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico(d, 19)}</button>`;
 const frSw = on => html`<span aria-hidden="true" style=${S(`width:50px;height:30px;flex:none;border-radius:999px;padding:3px;box-sizing:border-box;background:${on ? '#1F9D6B' : 'rgba(16,24,63,.16)'};display:flex;justify-content:${on ? 'flex-end' : 'flex-start'}`)}><span style=${S('width:24px;height:24px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 5px rgba(16,24,63,.25)')}></span></span>`;
 const frThumb = (x, px) => html`<span style=${S(`position:relative;overflow:hidden;width:${px}px;height:${px}px;flex:none;border-radius:12px;background:${tintOf(x.col)};color:${inkOf(x.col)};display:flex;align-items:center;justify-content:center`)}>${CatIcon(x.emoji, Math.round(px * .42), 'currentColor')}${Photo(x.img)}</span>`;
 const frSaveBtn = x => x.mine
-  ? html`<span style=${S('display:inline-flex;align-items:center;gap:4px;height:28px;font-size:12px;font-weight:800;color:#16805A')}>${Ico('M5 12l5 5 9-10', 13, 'currentColor', 2.8)}On Your Map</span>`
-  : html`<button onClick=${x.save} style=${S('height:28px;padding:0 11px;border-radius:999px;border:0;background:rgba(255,107,26,.14);color:#B8460A;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap')}>+ Save To My Map</button>`;
+  ? html`<span style=${S(`display:inline-flex;align-items:center;gap:4px;height:28px;font-size:12px;font-weight:800;color:${inkOf('#1F9D6B')}`)}>${Ico('M5 12l5 5 9-10', 13, 'currentColor', 2.8)}On Your Map</span>`
+  : html`<button onClick=${x.save} style=${S(`height:28px;padding:0 11px;border-radius:999px;border:0;background:rgba(255,107,26,.16);color:${THEME.dark ? '#FF9A5C' : '#B8460A'};font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`)}>+ Save To My Map</button>`;
 
 function FriendsDrawer(v) {
   const seg = (k, label) => html`<button role="tab" aria-selected=${v.frTab === k} onClick=${() => v.frSetTab(k)} style=${S(`height:34px;border:0;border-radius:999px;font-family:inherit;font-size:13px;cursor:pointer;${v.frTab === k ? 'background:#FFFFFF;font-weight:800;color:#10183F;box-shadow:0 3px 8px rgba(16,24,63,.1)' : 'background:transparent;font-weight:700;color:#4A5275'}`)}>${label}</button>`;
   return html`
-  <div onClick=${v.frClose} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1040;background:rgba(16,24,63,.28);animation:frFade .2s ease')}>
-    <aside aria-label="Your Friends" class="fr-anim" onClick=${e => e.stopPropagation()} style=${S(`position:absolute;left:0;top:0;bottom:0;width:min(86%,340px);border-radius:0 30px 30px 0;background:#FFF3DF;box-shadow:12px 0 40px rgba(16,24,63,.25);display:flex;flex-direction:column;animation:frIn .28s cubic-bezier(.2,.9,.3,1)`)}>
+  <div onClick=${v.frClose} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1040;background:rgba(16,24,63,.12);animation:frFade .2s ease')}>
+    <aside aria-label="Your Friends" class="fr-anim" onClick=${e => e.stopPropagation()} style=${S(`position:absolute;left:0;top:0;bottom:0;width:min(86%,340px);border-radius:0 34px 34px 0;overflow:hidden;${FR_GLASS};display:flex;flex-direction:column;animation:frIn .28s cubic-bezier(.2,.9,.3,1)`)}>
       <div style=${S(`flex:none;padding:${T(58)} 18px 0;display:flex;flex-direction:column;gap:14px`)}>
         <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
           ${frH('Your', 'Friends')}
           <span style=${S('position:relative;display:flex')}>${frRound(ADDP_I, 'Add A Friend', v.frOpenAdd, '#FF6B1A', '#FFFFFF')}${v.frIncoming > 0 && html`<span aria-hidden="true" style=${S('position:absolute;right:-3px;top:-3px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#E8242C;color:#fff;border:2px solid #FFF3DF;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.frIncoming}</span>`}</span>
         </div>
         ${v.frSetup ? '' : html`
-        ${v.frIncoming > 0 && html`<button onClick=${v.frOpenAdd} style=${S(`${ROW};height:46px;border-radius:16px;padding:0 14px;display:flex;align-items:center;gap:10px;color:#10183F;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;text-align:left`)}><span style=${S('width:9px;height:9px;border-radius:50%;background:#E8242C')}></span><span style=${S('flex:1')}>${v.frIncoming === 1 ? '1 Friend Request' : v.frIncoming + ' Friend Requests'}</span>${Ico('M9 6l6 6-6 6', 16)}</button>`}
+        ${v.frIncoming > 0 && html`<button onClick=${v.frOpenAdd} style=${S(`${FR_CARD};height:46px;border-radius:16px;padding:0 14px;display:flex;align-items:center;gap:10px;color:#10183F;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;text-align:left`)}><span style=${S('width:9px;height:9px;border-radius:50%;background:#E8242C')}></span><span style=${S('flex:1')}>${v.frIncoming === 1 ? '1 Friend Request' : v.frIncoming + ' Friend Requests'}</span>${Ico('M9 6l6 6-6 6', 16)}</button>`}
         ${v.frCount > 0 && html`<div class="noscroll" style=${S('display:flex;gap:12px;overflow-x:auto;margin:0 -18px;padding:2px 18px')}>
           ${v.frPeople.map(f => html`<button key=${f.id} onClick=${f.open} style=${S('flex:none;width:52px;display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;padding:0;color:#10183F;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer')}>${Avatar(f.src, f.initial, 48, f.bg, 'border:2px solid #FFFFFF')}<span style=${S('max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>${f.name}</span></button>`)}
         </div>`}
-        <div role="tablist" aria-label="Show" style=${S('display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>${seg('feed', 'Activity')}${seg('people', 'Friends · ' + v.frCount)}</div>`}
+        <div role="tablist" aria-label="Show" style=${S('display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.7)')}>${seg('feed', 'Activity')}${seg('people', 'Friends · ' + v.frCount)}</div>`}
       </div>
       <div class="noscroll" style=${S('flex:1;min-height:0;overflow-y:auto;padding:14px 18px 14px;display:flex;flex-direction:column;gap:14px')}>
         ${v.frSetup ? Msg('One Setup Step', 'Friends need their tables in Supabase.\nRun supabase/friends.sql once, then reopen this.') : v.frTab === 'feed' ? (v.frFeedEmpty ? html`
           <div style=${S('display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:6px 2px')}><div style=${S('font-size:14px;line-height:1.45;font-weight:600;color:#3C4466')}>${Lines(v.frFeedEmpty)}</div>${!v.frCount && html`<button onClick=${v.frOpenAdd} style=${S('height:40px;padding:0 16px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>Add A Friend</button>`}</div>`
-          : v.frGroups.map(g => html`<div key=${g.label} style=${S('display:flex;flex-direction:column;gap:14px')}>${frMono(g.label)}
-            ${g.items.map(x => html`<div key=${x.key} style=${S('display:flex;gap:11px;align-items:flex-start')}>
+          : v.frGroups.map(g => html`<div key=${g.label} style=${S('display:flex;flex-direction:column;gap:10px')}>${frMono(g.label)}
+            ${g.items.map(x => html`<div key=${x.key} style=${S(`display:flex;gap:11px;align-items:flex-start;padding:10px;border-radius:18px;${FR_CARD}`)}>
               <button onClick=${x.open} aria-label=${'Open ' + x.who.name + '’s Profile'} style=${S('flex:none;border:0;background:none;padding:0;cursor:pointer')}>${Avatar(x.who.src, x.who.initial, 38, x.who.bg, 'border:2px solid #FFFFFF')}</button>
               <div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}>
                 <div style=${S('font-size:14px;line-height:1.3;color:#10183F')}><b style=${S('font-weight:900')}>${x.who.name}</b> ${x.verb} <b style=${S('font-weight:900;font-style:italic')}>${x.name}</b></div>
-                <div style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${x.sub} · ${x.when}</div>
+                <div style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${x.sub}</div>
                 ${x.dish && html`<div style=${S('font-size:12px;font-weight:700;color:#10183F')}>Get the ${x.dish.toLowerCase()}.</div>`}
                 <div style=${S('margin-top:3px')}>${frSaveBtn(x)}</div>
               </div>
               ${frThumb(x, 48)}
             </div>`)}</div>`))
         : html`<div style=${S('display:flex;flex-direction:column;gap:8px')}>
-            ${v.frPeople.map(f => html`<button key=${f.id} onClick=${f.open} style=${S(`${ROW};border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:12px;color:#10183F;font-family:inherit;cursor:pointer;text-align:left`)}>${Avatar(f.src, f.initial, 40, f.bg)}<span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900')}>${f.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${f.sub}</span></span>${Ico('M9 6l6 6-6 6', 16)}</button>`)}
+            ${v.frPeople.map(f => html`<button key=${f.id} onClick=${f.open} style=${S(`${FR_CARD};border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:12px;color:#10183F;font-family:inherit;cursor:pointer;text-align:left`)}>${Avatar(f.src, f.initial, 40, f.bg)}<span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900')}>${f.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${f.sub}</span></span>${Ico('M9 6l6 6-6 6', 16)}</button>`)}
             <button onClick=${v.frOpenAdd} style=${S('height:46px;border-radius:18px;border:2px dashed rgba(16,24,63,.2);background:transparent;color:#10183F;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px')}>${Ico('M12 5v14M5 12h14', 16)}Add A Friend</button>
           </div>`}
       </div>

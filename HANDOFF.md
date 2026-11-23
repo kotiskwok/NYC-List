@@ -176,7 +176,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Your Account:** profile photo, sync status (reached from the Friends drawer's **Your Account** row), **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), **Nearby Nudges** (on/off, per device), **My Public Map**, Sync Now, Sign Out, **Delete My Account** (tap twice), and links to the Privacy Policy and Terms of Use.
 
 ### Friends (side drawer, design A)
-- Tap your profile photo on the Map tab: a drawer slides in from the left with **Your Friends**, friends' faces, **Activity** / **Friends · N**, then **What My Friends See** and **Your Account** at the bottom. A red badge on the photo counts friend requests.
+- Tap your profile photo on the Map tab: a warm tinted glass drawer (design G3) slides in from the left with **Your Friends**, friends' faces, **Activity** / **Friends · N**, then **What My Friends See** and **Your Account** at the bottom. A red badge on the photo counts friend requests.
 - **Activity:** "Sonia added Lucali · 2h" (only for friends who share everything) and "Mei went to Thai Diner" (when they mark Been There), last 45 days, grouped Today / This Week / Earlier, each with **+ Save To My Map**.
 - **Friend's profile:** photo, Friends Since, counts, tabs **Lists / Saved / Been There** (lists open to show their spots), **…** → Remove Friend (they aren't told).
 - **Usernames:** pick one in Add A Friend or Your Account (`@kotis`: 3–20 lowercase letters, numbers, _ or ., unique, optional). **Find by username** in Add A Friend searches as you type (starts-with, 8 results, only people who picked one) with Add / Requested / Accept / Friends.
