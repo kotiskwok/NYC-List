@@ -27,23 +27,17 @@ const CITIES={
   sg:{id:'sg',name:'Singapore',short:'SG',emoji:'🦁',q:'Singapore',qc:'Singapore',center:[1.3,103.84],box:[1.2,103.6,1.48,104.05],bounds:[[1.12,103.55],[1.52,104.12]],regions:['Central','East','North-East','North','West'],transit:'MRT',layerSub:'MRT & LRT Stations',layers:['bus'],busSub:'SBS, SMRT, Tower Transit & Go-Ahead'},
   hk:{id:'hk',name:'Hong Kong',short:'HKG',emoji:'🌃',q:'Hong Kong',qc:'Hong Kong',center:[22.3,114.17],box:[22.15,113.82,22.57,114.45],bounds:[[22.08,113.75],[22.62,114.5]],regions:['Hong Kong Island','Kowloon','New Territories','Lantau & Islands'],transit:'MTR',layerSub:'MTR Stations',layers:['bus','tram','ferry'],busSub:'KMB, Citybus, NLB & Minibus',tram:{label:'Trams',sub:'Ding Ding Lines On The Island',col:'#007F3D'},ferry:{label:'Ferries',sub:'Star Ferry & Outlying Islands',col:'#0B7BC1'}},
   to:{id:'to',name:'Toronto',short:'TO',emoji:'🍁',q:'Toronto',qc:'Toronto, Ontario, Canada',center:[43.66,-79.39],box:[43.58,-79.64,43.86,-79.11],bounds:[[43.5,-79.78],[43.92,-79.0]],regions:['Downtown','Midtown','East End','West End & York','North York','Scarborough','Etobicoke'],transit:'TTC',layerSub:'Subway & LRT Stations',layers:['tram','bus','bike'],busSub:'TTC Bus Routes',tram:{label:'Streetcars',sub:'TTC Streetcar Routes',col:'#DA251D'},bike:{name:'Bike Share Toronto',url:'https://toronto.publicbikesystem.net/customer/gbfs/v2/en/',ext:''}}};
-  // New York State: day trips and weekends away from the city. No subway; travel is by car or regional train from NYC.
-CITIES.nys={id:'nys',name:'New York State',short:'NYS',emoji:'🏞️',state:1,data:'NYS',q:'New York',qc:'New York State',center:[42.4,-74.6],z:7,minZ:6,box:[40.45,-79.8,45.05,-71.75],bounds:[[39.6,-80.8],[45.6,-70.9]],
-  regions:(window.NYS||{}).regions||[],transit:'Train',layerSub:'Metro-North, LIRR & Amtrak Stations',layers:[]};
-  // New Jersey: another state map like New York State (data/nj-data.js). Trips start from your NYC home by car, NJ Transit or PATH.
-CITIES.nj={id:'nj',name:'New Jersey',short:'NJ',emoji:'🍅',state:1,data:'NJS',hoodKm:25,labZ:12,q:'New Jersey',qc:'New Jersey',center:[40.15,-74.6],z:8,minZ:7,box:[38.9,-75.6,41.37,-73.88],bounds:[[38.4,-76.4],[41.8,-73.2]],
-  regions:(window.NJS||{}).regions||[],transit:'Train',layerSub:'NJ Transit, PATH & Light Rail Stations',layers:[]};
 CITIES.bos={id:'bos',name:'Boston',short:'BOS',emoji:'🦞',q:'Boston, MA',qc:'Boston, Massachusetts',center:[42.355,-71.075],box:[42.22,-71.2,42.43,-70.95],bounds:[[42.15,-71.3],[42.5,-70.85]],
   regions:['Boston','Cambridge','Somerville','Brookline','Nearby'],transit:'The T',layerSub:'Red, Orange, Blue & Green Line Stations',layers:['bus','ferry','bike'],busSub:'MBTA Buses & Silver Line',
   ferry:{label:'Ferries',sub:'MBTA Harbor Ferries',col:'#008EAA'},bike:{name:'Bluebikes',url:'https://gbfs.lyft.com/gbfs/2.3/bos/en/',ext:'.json'}};
 CITIES.dc={id:'dc',name:'Washington, DC',short:'DC',emoji:'🏛️',q:'Washington, DC',qc:'Washington, District of Columbia',center:[38.9,-77.03],box:[38.76,-77.25,39.04,-76.88],bounds:[[38.68,-77.45],[39.12,-76.78]],
   regions:['Northwest','Northeast','Southeast','Southwest','Arlington','Alexandria','Maryland','Northern Virginia'],transit:'Metro',layerSub:'Red, Orange, Blue, Silver, Green & Yellow Line Stations',layers:['bus','bike'],busSub:'Metrobus',
   bike:{name:'Capital Bikeshare',url:'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/',ext:'.json'}};
-const CITY_ORDER=['nyc','sg','hk','to','bos','dc','nys','nj'];
+const CITY_ORDER=['nyc','sg','hk','to','bos','dc'];
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
 const cityOf=p=>(p&&p.city&&CITIES[p.city])?p.city:'nyc';
 const CDATA=()=>(window.CITY_DATA||{})[CUR.id]||{};
-// State maps (New York State, New Jersey): outline, towns, hubs and rail in data/nys-data.js and data/nj-data.js (window[CUR.data]).
+// (State maps for New York State and New Jersey were removed; spots saved there show on the NYC map.)
 // inCore = inside the five boroughs (NYC's subway area; the NYC box also covers Jersey City and Hoboken, so New Jersey is cut out).
 // On a state map, trips may start in the city (your NYC home) and end anywhere in the state.
 const SD=c=>{c=c||CUR;return (c.state&&window[c.data])||{};};

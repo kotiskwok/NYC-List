@@ -8,7 +8,7 @@ Everything a new chat needs to keep working on **Spotted In**: what the app does
 
 **Spotted In** is Kotis's map of the places she's been meaning to try (restaurants, cafés, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station, travel time and opening hours. It also plans a day out, keeps shared trip lists with friends, and lets people rate and review the spots they've saved.
 
-It has eight maps, each with its own spots, home and day plan:
+It has six maps, each with its own spots, home and day plan:
 
 | Map | Button | Transit used for travel times |
 |---|---|---|
@@ -18,10 +18,8 @@ It has eight maps, each with its own spots, home and day plan:
 | Toronto | TO 🍁 | TTC subway, LRT, streetcars |
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
 | Washington, DC | DC 🏛️ | Metro (Red, Orange, Blue, Silver, Green, Yellow) |
-| New York State | NYS 🏞️ | Driving, and Metro-North / LIRR / Amtrak from NYC |
-| New Jersey | NJ 🍅 | Driving, and NJ Transit / PATH / Hudson-Bergen Light Rail from NYC |
 
-The app is built around major cities. New York State and New Jersey are the last two maps (state maps), for day trips and weekends outside the city.
+The app is built around major cities only. The New York State and New Jersey maps were removed in Nov 2026 (any spots saved there show on the NYC map; `data/nys-data.js` and `data/nj-data.js` are no longer loaded).
 
 - **Website (also installs to the home screen):** https://nyc-lovat.vercel.app
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -108,17 +106,13 @@ From the iPhone Claude app you can still change the code and the website; only t
 | Toronto | Subway/LRT, Streetcars, Buses, Bike Share Toronto |
 | Boston | The T stations, MBTA Buses & Silver Line, Ferries, Bluebikes |
 | Washington, DC | Metro stations, Metrobus, Capital Bikeshare |
-| New York State | Metro-North, LIRR & Amtrak stations |
-| New Jersey | NJ Transit, PATH & light rail stations (names from zoom 12) |
 
 - **DC map:** Metro stations from OpenStreetMap; neighborhoods grouped by DC quadrant (Northwest, Northeast, Southeast, Southwest, split at the Capitol) plus Arlington, Alexandria, Maryland and Northern Virginia. Metrobus lines come from the weekly route Action (`dc:bus`).
-- **New Jersey map:** works like the New York State map. Opens on the whole state; towns and Jersey City neighborhoods are grouped into Jersey City & Hoboken, Bergen & Passaic, Essex, Union & Morris, Central Jersey, Jersey Shore, South Jersey and Skylands. Train estimates go from your NYC home by subway to Penn Station (NJ Transit, with changes at Secaucus, Newark or Trenton noted in the line name), World Trade Center or 33rd St (PATH, and PATH + light rail). It uses your NYC home until you set one there. NYC subway stations never show as a New Jersey spot's nearest station.
-- **New York State map:** opens on the whole state. Spots get a town as their neighborhood, grouped into regions (Long Island, Westchester, Hudson Valley, Catskills, Capital Region, Adirondacks & North Country, Finger Lakes & Central NY, Western NY). It uses your NYC home until you set one there.
 - While a spot or directions are open, the header, chips and side buttons hide.
 
 ### Place card (tap a pin)
 - Photo banner (your own photo, or the spot's first Google Maps photo), category, neighborhood and source, the name in two weights, and **hours** ("Open · Closes 10 PM", "Closes Soon · 10 PM" in orange, "Asleep · Back Tue 8 AM").
-- A glass row: **From Home** (minutes, or hours) / **Price** / **Nearest station** with line badges and walk time (Metro-North, LIRR or Amtrak on the NYS map). Notes show one sentence per line.
+- A glass row: **From Home** (minutes, or hours) / **Price** / **Nearest station** with line badges and walk time. Notes show one sentence per line.
 - Round buttons: open the source post, **Plan**, **Visited**, **To List**, **Photo**, **Edit**. Then **Get There**.
 - **Reserve A Table** (restaurants, or any spot with a booking link): only ever the restaurant's **one real booking page**. A saved link (from the post, or the Edit sheet's **Booking Link**) opens directly ("Book On Resy"). Otherwise **Find Their Booking Page** asks `/api/booking` (Google Places says whether it takes reservations; Claude web search must cite the page, on a booking site or the restaurant's own site) and saves the link on the spot. If there isn't one: "Walk-In Only" / "No Online Booking Found" (remembered 30 days), with **Check Again** and **Add Their Link**.
 - **What To Order:** yellow chips under the notes (the first gets a ⭐; shops say "What To Get"). The AI fills them from the post (`must_order`); edit them in the Edit sheet (comma-separated). Spots without any get **✨ Find What To Order** (Claude web search via `POST /api/booking` with `kind: 'order'`; "nothing found" is remembered 30 days in `orderChk`).
@@ -130,7 +124,6 @@ From the iPhone Claude app you can still change the code and the website; only t
 ### Get There
 - Start from **My Location**, **Home** or **A Saved Spot**.
 - In the cities: an estimated route by subway/MRT/T/streetcar/tram/ferry with line badges, transfers and walking legs, compared with walking, drawn on the map in each line's colour.
-- On the NYS and NJ maps: **Drive**, and **Train** (subway to Grand Central, Penn or the PATH, regional train, then a walk or short drive; a station you can walk from wins over a slightly quicker one that needs a taxi). The fastest is marked.
 - Each option opens Google Maps for live times. Drag the sheet down to shrink it to a small bar above the tab bar.
 
 ### Explore tab ("Swipe + Peek Strip", design EX1b)
