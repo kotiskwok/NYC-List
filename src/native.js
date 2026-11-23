@@ -46,6 +46,7 @@ const NYCNative = (() => {
     try {
       const q = new URL(u).searchParams, join = q.get('join') || q.get('code');
       if (join && /join/.test(u)) { localStorage.setItem('nycList.join', join); location.reload(); return; }
+      const fr = q.get('friend'); if (fr) { localStorage.setItem('nycList.friend', fr.toLowerCase()); location.reload(); return; }
       const add = q.get('add') || q.get('url'); if (add) window.dispatchEvent(new CustomEvent('nyc-shared', { detail: [add] }));
     } catch (e) {}
     takeInbox();

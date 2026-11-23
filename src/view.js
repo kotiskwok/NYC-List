@@ -154,7 +154,7 @@ function MapScreen(v) {
               <span style=${S('display:flex;flex-direction:column;font-size:21px;line-height:.98;font-weight:900;font-style:italic;letter-spacing:-.4px')}><span>${v.spotCount === 1 ? 'Spot' : 'Spots'}</span><span>To Try</span></span>
             </div>
           </div>
-          ${v.syncOn && html`<button class="lg" onClick=${v.openAcct} aria-label=${'Your Account: ' + v.syncLabel} style=${S('position:relative;flex:none;border:0;padding:0;background:none;border-radius:50%;cursor:pointer')}>${Avatar(v.avatarSrc, v.avatarInitial, 52, '#1B3DB8', 'border:2px solid #FFFFFF;box-shadow:0 6px 16px rgba(16,24,63,.18)')}<span style=${S(`position:absolute;right:0;bottom:0;width:13px;height:13px;border-radius:50%;background:${v.syncDot};border:2px solid #FFFFFF`)}></span></button>`}
+          ${v.syncOn && html`<button class="lg" onClick=${v.frAvail ? v.openFriends : v.openAcct} aria-label=${v.frAvail ? 'Friends And Your Account' + (v.frBadge ? ': ' + v.frBadge + ' Friend Request' + (v.frBadge > 1 ? 's' : '') : '') : 'Your Account: ' + v.syncLabel} style=${S('position:relative;flex:none;border:0;padding:0;background:none;border-radius:50%;cursor:pointer')}>${Avatar(v.avatarSrc, v.avatarInitial, 52, '#1B3DB8', 'border:2px solid #FFFFFF;box-shadow:0 6px 16px rgba(16,24,63,.18)')}<span style=${S(`position:absolute;right:0;bottom:0;width:13px;height:13px;border-radius:50%;background:${v.syncDot};border:2px solid #FFFFFF`)}></span>${v.frBadge > 0 && html`<span aria-hidden="true" style=${S('position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#E8242C;color:#fff;border:2px solid #FFFFFF;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.frBadge}</span>`}</button>`}
         </div>
         <div style=${S('display:flex;align-items:baseline;gap:16px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(16,24,63,.08);font-size:11.5px;font-weight:700;color:#4A5275;white-space:nowrap')}>
           <span><span style=${S('font-size:21px;font-weight:200;letter-spacing:-.8px;color:#10183F')}>${v.visitedCount}</span> Visited</span>
@@ -1281,6 +1281,138 @@ function NewTripSheet(v) {
     <button onClick=${n.create} style=${S(`flex:none;margin-top:4px;height:50px;border-radius:999px;border:0;background:${n.btnBg};color:#fff;font-weight:900;font-stretch:100%;font-style:italic;font-size:19px;cursor:pointer;box-shadow:0 8px 22px rgba(16,24,63,.2),inset 0 1px 0 rgba(255,255,255,.4)`)}>${n.btn}</button>`, 'Cancel', 1080);
 }
 
+// ---- Friends: a drawer from your profile photo (activity and friends), a friend's profile, adding friends, what friends see ----
+const PEOPLE_I = 'M16 19c0-2.5-2.2-4.5-5-4.5S6 16.5 6 19 M11 12a3.2 3.2 0 1 0 0-6.4a3.2 3.2 0 0 0 0 6.4 M17 12.5a2.7 2.7 0 1 0-1-5.2 M18.5 18.5c0-1.8-1-3.3-2.5-4';
+const ADDP_I = 'M15 19c0-2.8-2.7-5-6-5s-6 2.2-6 5 M9 11a3.5 3.5 0 1 0 0-7a3.5 3.5 0 0 0 0 7 M19 8v6M16 11h6';
+const EYE_I = 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6';
+const LOCK_I = 'M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3';
+const frH = (bold, light, px) => html`<h2 style=${S(`margin:0;font-size:${px || 30}px;line-height:1;letter-spacing:-1px;font-weight:900;font-style:italic;color:#10183F`)}>${bold} <span style=${S('font-weight:200;font-style:normal')}>${light}</span></h2>`;
+const frMono = t => html`<div style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:1.1px;color:#4A5275`)}>${t}</div>`;
+const frRound = (d, label, onClick, bg, fg, px) => html`<button onClick=${onClick} aria-label=${label} style=${S(`position:relative;width:${px || 42}px;height:${px || 42}px;flex:none;border-radius:50%;border:0;background:${bg || 'rgba(16,24,63,.07)'};color:${fg || '#10183F'};display:flex;align-items:center;justify-content:center;cursor:pointer`)}>${Ico(d, 19)}</button>`;
+const frSw = on => html`<span aria-hidden="true" style=${S(`width:50px;height:30px;flex:none;border-radius:999px;padding:3px;box-sizing:border-box;background:${on ? '#1F9D6B' : 'rgba(16,24,63,.16)'};display:flex;justify-content:${on ? 'flex-end' : 'flex-start'}`)}><span style=${S('width:24px;height:24px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 5px rgba(16,24,63,.25)')}></span></span>`;
+const frThumb = (x, px) => html`<span style=${S(`position:relative;overflow:hidden;width:${px}px;height:${px}px;flex:none;border-radius:12px;background:${tintOf(x.col)};color:${inkOf(x.col)};display:flex;align-items:center;justify-content:center`)}>${CatIcon(x.emoji, Math.round(px * .42), 'currentColor')}${Photo(x.img)}</span>`;
+const frSaveBtn = x => x.mine
+  ? html`<span style=${S('display:inline-flex;align-items:center;gap:4px;height:28px;font-size:12px;font-weight:800;color:#16805A')}>${Ico('M5 12l5 5 9-10', 13, 'currentColor', 2.8)}On Your Map</span>`
+  : html`<button onClick=${x.save} style=${S('height:28px;padding:0 11px;border-radius:999px;border:0;background:rgba(255,107,26,.14);color:#B8460A;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap')}>+ Save To My Map</button>`;
+
+function FriendsDrawer(v) {
+  const seg = (k, label) => html`<button role="tab" aria-selected=${v.frTab === k} onClick=${() => v.frSetTab(k)} style=${S(`height:34px;border:0;border-radius:999px;font-family:inherit;font-size:13px;cursor:pointer;${v.frTab === k ? 'background:#FFFFFF;font-weight:800;color:#10183F;box-shadow:0 3px 8px rgba(16,24,63,.1)' : 'background:transparent;font-weight:700;color:#4A5275'}`)}>${label}</button>`;
+  return html`
+  <div onClick=${v.frClose} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1040;background:rgba(16,24,63,.28);animation:frFade .2s ease')}>
+    <aside aria-label="Your Friends" class="fr-anim" onClick=${e => e.stopPropagation()} style=${S(`position:absolute;left:0;top:0;bottom:0;width:min(86%,340px);border-radius:0 30px 30px 0;background:#FFF3DF;box-shadow:12px 0 40px rgba(16,24,63,.25);display:flex;flex-direction:column;animation:frIn .28s cubic-bezier(.2,.9,.3,1)`)}>
+      <div style=${S(`flex:none;padding:${T(58)} 18px 0;display:flex;flex-direction:column;gap:14px`)}>
+        <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
+          ${frH('Your', 'Friends')}
+          <span style=${S('position:relative;display:flex')}>${frRound(ADDP_I, 'Add A Friend', v.frOpenAdd, '#FF6B1A', '#FFFFFF')}${v.frIncoming > 0 && html`<span aria-hidden="true" style=${S('position:absolute;right:-3px;top:-3px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#E8242C;color:#fff;border:2px solid #FFF3DF;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.frIncoming}</span>`}</span>
+        </div>
+        ${v.frSetup ? '' : html`
+        ${v.frIncoming > 0 && html`<button onClick=${v.frOpenAdd} style=${S(`${ROW};height:46px;border-radius:16px;padding:0 14px;display:flex;align-items:center;gap:10px;color:#10183F;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;text-align:left`)}><span style=${S('width:9px;height:9px;border-radius:50%;background:#E8242C')}></span><span style=${S('flex:1')}>${v.frIncoming === 1 ? '1 Friend Request' : v.frIncoming + ' Friend Requests'}</span>${Ico('M9 6l6 6-6 6', 16)}</button>`}
+        ${v.frCount > 0 && html`<div class="noscroll" style=${S('display:flex;gap:12px;overflow-x:auto;margin:0 -18px;padding:2px 18px')}>
+          ${v.frPeople.map(f => html`<button key=${f.id} onClick=${f.open} style=${S('flex:none;width:52px;display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;padding:0;color:#10183F;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer')}>${Avatar(f.src, f.initial, 48, f.bg, 'border:2px solid #FFFFFF')}<span style=${S('max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>${f.name}</span></button>`)}
+        </div>`}
+        <div role="tablist" aria-label="Show" style=${S('display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>${seg('feed', 'Activity')}${seg('people', 'Friends · ' + v.frCount)}</div>`}
+      </div>
+      <div class="noscroll" style=${S('flex:1;min-height:0;overflow-y:auto;padding:14px 18px 14px;display:flex;flex-direction:column;gap:14px')}>
+        ${v.frSetup ? Msg('One Setup Step', 'Friends need their tables in Supabase.\nRun supabase/friends.sql once, then reopen this.') : v.frTab === 'feed' ? (v.frFeedEmpty ? html`
+          <div style=${S('display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:6px 2px')}><div style=${S('font-size:14px;line-height:1.45;font-weight:600;color:#3C4466')}>${Lines(v.frFeedEmpty)}</div>${!v.frCount && html`<button onClick=${v.frOpenAdd} style=${S('height:40px;padding:0 16px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>Add A Friend</button>`}</div>`
+          : v.frGroups.map(g => html`<div key=${g.label} style=${S('display:flex;flex-direction:column;gap:14px')}>${frMono(g.label)}
+            ${g.items.map(x => html`<div key=${x.key} style=${S('display:flex;gap:11px;align-items:flex-start')}>
+              <button onClick=${x.open} aria-label=${'Open ' + x.who.name + '’s Profile'} style=${S('flex:none;border:0;background:none;padding:0;cursor:pointer')}>${Avatar(x.who.src, x.who.initial, 38, x.who.bg, 'border:2px solid #FFFFFF')}</button>
+              <div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}>
+                <div style=${S('font-size:14px;line-height:1.3;color:#10183F')}><b style=${S('font-weight:900')}>${x.who.name}</b> ${x.verb} <b style=${S('font-weight:900;font-style:italic')}>${x.name}</b></div>
+                <div style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${x.sub} · ${x.when}</div>
+                ${x.dish && html`<div style=${S('font-size:12px;font-weight:700;color:#10183F')}>Get the ${x.dish.toLowerCase()}.</div>`}
+                <div style=${S('margin-top:3px')}>${frSaveBtn(x)}</div>
+              </div>
+              ${frThumb(x, 48)}
+            </div>`)}</div>`))
+        : html`<div style=${S('display:flex;flex-direction:column;gap:8px')}>
+            ${v.frPeople.map(f => html`<button key=${f.id} onClick=${f.open} style=${S(`${ROW};border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:12px;color:#10183F;font-family:inherit;cursor:pointer;text-align:left`)}>${Avatar(f.src, f.initial, 40, f.bg)}<span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900')}>${f.name}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${f.sub}</span></span>${Ico('M9 6l6 6-6 6', 16)}</button>`)}
+            <button onClick=${v.frOpenAdd} style=${S('height:46px;border-radius:18px;border:2px dashed rgba(16,24,63,.2);background:transparent;color:#10183F;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px')}>${Ico('M12 5v14M5 12h14', 16)}Add A Friend</button>
+          </div>`}
+      </div>
+      <div style=${S(`flex:none;padding:10px 18px ${B(18)};border-top:1px solid rgba(16,24,63,.08);display:flex;flex-direction:column;gap:4px`)}>
+        ${!v.frSetup && html`<button onClick=${v.frOpenSee} style=${S('height:44px;border:0;background:none;padding:0;display:flex;align-items:center;gap:10px;color:#1B3DB8;font-family:inherit;cursor:pointer;text-align:left')}>${Ico(EYE_I, 18)}<span style=${S('flex:1;display:flex;flex-direction:column')}><span style=${S('font-size:14px;font-weight:800')}>What My Friends See</span><span style=${S('font-size:11.5px;font-weight:600;color:#4A5275')}>${v.frSeeLabel}</span></span></button>`}
+        <button onClick=${v.frOpenAcct} style=${S('height:48px;border:0;background:none;padding:0;display:flex;align-items:center;gap:10px;color:#10183F;font-family:inherit;cursor:pointer;text-align:left')}>${Avatar(v.avatarSrc, v.avatarInitial, 32, '#1B3DB8')}<span style=${S('flex:1;font-size:14px;font-weight:800')}>Your Account</span>${Ico('M9 6l6 6-6 6', 16)}</button>
+      </div>
+    </aside>
+  </div>`;
+}
+
+function FriendProfile(v) {
+  const p = v.frProf;
+  const row = x => html`<div key=${x.key} style=${S(`${ROW};border-radius:18px;padding:10px;display:flex;gap:12px;align-items:center`)}>
+    ${frThumb(x, 52)}
+    <div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}>
+      <span style=${S('font-size:15px;font-weight:900;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#10183F')}>${x.name}</span>
+      <span style=${S('font-size:12px;font-weight:600;color:#4A5275;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${x.sub}${x.dish ? ' · Get the ' + x.dish.toLowerCase() : ''}</span>
+      <span>${frSaveBtn(x)}</span>
+    </div></div>`;
+  return html`
+  <section aria-label=${p.name + '’s Profile'} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1045;background:radial-gradient(60% 34% at 0% 0%,rgba(255,107,26,.2),rgba(255,107,26,0) 70%),radial-gradient(60% 34% at 100% 30%,rgba(244,95,160,.16),rgba(244,95,160,0) 70%),#FFF3DF;display:flex;flex-direction:column;animation:frFade .2s ease')}>
+    <div style=${S(`flex:none;padding:${T(54)} 16px 0;display:flex;flex-direction:column;gap:14px`)}>
+      <div style=${S('display:flex;justify-content:space-between')}>${frRound(BACK, 'Back', p.back)}${frRound('M5 12h.01M12 12h.01M19 12h.01', 'Remove ' + p.name + ' As A Friend', p.askRemove)}</div>
+      ${p.confirm && html`<div role="alertdialog" aria-label="Remove Friend" style=${S('background:#fff;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 26px rgba(16,24,63,.12)')}>
+        <span style=${S('font-size:15px;font-weight:900;color:#10183F')}>Remove ${p.name}?</span>
+        <span style=${S('font-size:12.5px;font-weight:600;color:#4A5275;line-height:1.4')}>You stop seeing each other’s spots.<br/>They aren’t told.</span>
+        <div style=${S('display:flex;gap:8px')}><button onClick=${p.remove} style=${S('height:38px;padding:0 16px;border-radius:999px;border:0;background:#E8242C;color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer')}>Remove Friend</button><button onClick=${p.cancelRemove} style=${S('height:38px;padding:0 16px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer')}>Keep</button></div>
+      </div>`}
+      <div style=${S('display:flex;align-items:center;gap:14px')}>${Avatar(p.src, p.initial, 72, p.bg, 'border:3px solid #FFFFFF;box-shadow:0 6px 16px rgba(16,24,63,.15)')}<div style=${S('display:flex;flex-direction:column;gap:6px;min-width:0')}>${frH(p.name, '', 32)}${p.since && frMono(p.since)}</div></div>
+      <div style=${S(`${ROW};border-radius:20px;padding:12px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))`)}>${p.counts.map(([n, l], i) => html`<div key=${l} style=${S(`padding:0 14px;${i ? 'border-left:1px solid rgba(16,24,63,.1)' : ''}`)}><div style=${S('font-size:26px;font-weight:200;letter-spacing:-1px;color:#10183F')}>${n}</div>${frMono(l)}</div>`)}</div>
+      <div role="tablist" aria-label=${p.name + '’s Places'} style=${S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.07)')}>
+        ${p.tabs.map(t => html`<button key=${t.key} role="tab" aria-selected=${t.on} onClick=${t.pick} style=${S(`height:34px;border:0;border-radius:999px;font-family:inherit;font-size:13px;cursor:pointer;${t.on ? 'background:#FFFFFF;font-weight:800;color:#10183F;box-shadow:0 3px 8px rgba(16,24,63,.1)' : 'background:transparent;font-weight:700;color:#4A5275'}`)}>${t.label}</button>`)}
+      </div>
+    </div>
+    <div class="noscroll" style=${S(`flex:1;min-height:0;overflow-y:auto;padding:14px 16px ${B(24)};display:flex;flex-direction:column;gap:10px`)}>
+      ${p.empty ? html`<div style=${S('font-size:14px;font-weight:600;color:#3C4466;padding:8px 2px')}>${p.empty}</div>` : p.tab === 'lists' ? p.lists.map(l => html`<div key=${l.key} style=${S('display:flex;flex-direction:column;gap:8px')}>
+          <button onClick=${l.toggle} aria-expanded=${l.open} style=${S(`height:62px;border:0;border-radius:20px;padding:0 16px;display:flex;align-items:center;gap:12px;background:${l.bg};color:${l.fg};font-family:inherit;cursor:pointer;text-align:left;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.5),0 8px 18px rgba(16,24,63,.14)`)}>
+            <span style=${S('font-size:14px;font-weight:800;letter-spacing:2px')}>${l.code}</span><span style=${S('flex:1;min-width:0;font-size:17px;font-weight:900;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${l.name}</span>
+            <span style=${S(`${MONO};font-size:10px;font-weight:700;letter-spacing:1px;opacity:.9`)}>${l.n} ${l.n === 1 ? 'SPOT' : 'SPOTS'}</span>${Ico(l.open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6', 16, 'currentColor', 2.6)}</button>
+          ${l.stops.map(row)}</div>`)
+        : p.spots.map(row)}
+      <div style=${S('display:flex;align-items:center;gap:8px;margin-top:6px;color:#4A5275;font-size:12px;font-weight:600')}>${Ico(LOCK_I, 14)}${p.name} chose what you see here.</div>
+    </div>
+  </section>`;
+}
+
+function FriendAddSheet(v) {
+  const a = v.frAdd, btn = (t, on, bg, fg) => html`<button onClick=${on} style=${S(`height:34px;padding:0 14px;border-radius:999px;border:0;background:${bg};color:${fg};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap`)}>${t}</button>`;
+  const who = (f, sub, right) => html`<div key=${f.id} style=${S('display:flex;align-items:center;gap:11px;min-height:48px')}>${Avatar(f.src, f.initial, 40, f.bg)}<div style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900;color:#10183F')}>${f.name}</span>${sub && html`<span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${sub}</span>`}</div>${right}</div>`;
+  return Sheet('Add A Friend', a.close, html`
+    <div style=${S(`${ROW};border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px`)}>
+      <div style=${S('font-size:14px;font-weight:700;line-height:1.4;color:#10183F')}>Send your friend link.<br/>When they open it, you’ll get a request here.</div>
+      <div style=${S(`${MONO};font-size:11px;font-weight:700;color:#4A5275;word-break:break-all`)}>${a.link || '…'}</div>
+      <div style=${S('display:flex;gap:8px')}>
+        <button onClick=${a.share} style=${S('flex:1;height:42px;border-radius:999px;border:0;background:#FF6B1A;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(255,107,26,.3)')}>Share My Link</button>
+        <button onClick=${a.copy} style=${S('height:42px;padding:0 16px;border-radius:999px;border:0;background:rgba(16,24,63,.07);color:#10183F;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer')}>Copy</button>
+      </div>
+    </div>
+    ${a.incoming.length > 0 && html`${frMono('REQUESTS · ' + a.incoming.length)}${a.incoming.map(r => who(r, 'Wants to be friends · ' + r.when, html`<span style=${S('display:flex;gap:6px')}>${btn('Accept', r.accept, '#FF6B1A', '#fff')}${btn('Decline', r.decline, 'rgba(16,24,63,.07)', '#10183F')}</span>`))}`}
+    ${a.outgoing.length > 0 && html`${frMono('WAITING FOR A YES · ' + a.outgoing.length)}${a.outgoing.map(r => who(r, 'Sent ' + r.when, btn('Cancel', r.cancel, 'rgba(16,24,63,.07)', '#10183F')))}`}
+    ${a.friends.length > 0 && html`${frMono('YOUR FRIENDS · ' + a.friends.length)}${a.friends.map(f => who(f, f.confirm ? 'Remove ' + f.name + '? They aren’t told.' : '', f.confirm
+        ? html`<span style=${S('display:flex;gap:6px')}>${btn('Remove', f.sure, '#E8242C', '#fff')}${btn('Keep', f.notSure, 'rgba(16,24,63,.07)', '#10183F')}</span>`
+        : btn('Remove', f.remove, 'rgba(232,36,44,.1)', '#C21D24')))}`}`, 'Done', 1070);
+}
+
+function FriendSeeSheet(v) {
+  const e = v.frSee;
+  return Sheet('What Friends See', e.close, html`
+    ${frMono('WHEN YOU ADD OR VISIT A SPOT')}
+    <div role="radiogroup" aria-label="What friends see" style=${S('display:flex;flex-direction:column;gap:8px')}>
+      ${e.modes.map(m => html`<button key=${m.key} role="radio" aria-checked=${m.on} onClick=${m.pick} style=${S(`display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:18px;border:0;font-family:inherit;cursor:pointer;text-align:left;color:#10183F;${m.on ? 'background:#FFFFFF;box-shadow:0 0 0 2px #FF6B1A' : 'background:rgba(255,255,255,.55)'}`)}>
+        <span aria-hidden="true" style=${S(`width:20px;height:20px;flex:none;border-radius:50%;box-sizing:border-box;border:${m.on ? '6px solid #FF6B1A' : '2px solid rgba(16,24,63,.3)'};background:#fff`)}></span>
+        <span style=${S('display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:900')}>${m.label}</span><span style=${S('font-size:12px;font-weight:600;color:#4A5275')}>${m.sub}</span></span></button>`)}
+    </div>
+    ${frMono('LISTS FRIENDS CAN OPEN')}
+    ${e.noLists ? html`<div style=${S('font-size:13px;font-weight:600;color:#4A5275')}>Make a list on the Lists tab, then share it with friends here.</div>` : html`
+    <div style=${S(`${ROW};border-radius:20px;padding:4px 14px`)}>
+      ${e.lists.map(l => html`<button key=${l.key} role="switch" aria-checked=${l.on} onClick=${l.toggle} style=${S('width:100%;display:flex;align-items:center;gap:12px;min-height:50px;border:0;background:none;padding:0;color:#10183F;font-family:inherit;cursor:pointer;text-align:left')}><span aria-hidden="true" style=${S(`width:12px;height:12px;flex:none;border-radius:4px;background:${l.col}`)}></span><span style=${S('flex:1;min-width:0;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>${l.name}</span>${frSw(l.on)}</button>`)}
+    </div>`}
+    ${frMono('ONE SPOT AT A TIME')}
+    <div style=${S(`${ROW};border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:12px`)}>${Ico(LOCK_I, 20, '#4A5275')}<div style=${S('flex:1;font-size:13px;font-weight:600;line-height:1.4;color:#10183F')}>Any spot can stay just yours.<br/>Edit → <b>Keep This One From Friends</b>.${e.kept ? html`<br/><span style=${S('color:#4A5275')}>${e.kept} kept so far.</span>` : ''}</div></div>
+    <div style=${S('font-size:12px;font-weight:600;line-height:1.45;color:#4A5275')}>Friends never see your home, notes or plans.</div>`, 'Done', 1070);
+}
+
 function TabBar(v) {
   // Round 2 deep glass: a clear frosted pill with the tabs, and a separate light glass + button.
   const on = fg => fg === '#1B3DB8';
@@ -1504,6 +1636,11 @@ function AddSheet(v) {
     <button type="button" role="switch" aria-checked=${!!f.pub} onClick=${v.togglePubField} style=${S('display:flex;align-items:center;gap:12px;border:0;background:none;padding:4px 2px;text-align:left;cursor:pointer;color:#10183F;font-family:inherit')}>
       <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:800')}>On My Public Map</span><span style=${S('font-size:11.5px;font-weight:600;color:#6A7090')}>Anyone with your map link can see it.</span></span>
       <span style=${S(`width:50px;height:30px;flex:none;border-radius:999px;padding:3px;background:${f.pub ? '#1F9D6B' : 'rgba(16,24,63,.16)'};display:flex;justify-content:${f.pub ? 'flex-end' : 'flex-start'}`)}><span style=${S('width:24px;height:24px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 5px rgba(16,24,63,.25)')}></span></span>
+    </button>`}
+    ${v.showFprivField && html`
+    <button type="button" role="switch" aria-checked=${!!f.fpriv} onClick=${v.toggleFprivField} style=${S('display:flex;align-items:center;gap:12px;border:0;background:none;padding:4px 2px;text-align:left;cursor:pointer;color:#10183F;font-family:inherit')}>
+      <span style=${S('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}><span style=${S('font-size:15px;font-weight:800')}>Keep This One From Friends</span><span style=${S('font-size:11.5px;font-weight:600;color:#6A7090')}>Friends won’t see this spot.</span></span>
+      ${frSw(!!f.fpriv)}
     </button>`}
     ${f.id && html`<div style=${S('display:flex;justify-content:center')}><button onClick=${() => { const sure = v.delLabel !== 'Delete'; v.deleteSel(); if (sure) v.closeAdd(); }} style=${S('border:0;background:none;color:#E8242C;font-weight:800;font-size:14px;cursor:pointer;padding:8px')}>${v.delLabel === 'Delete' ? 'Delete This Spot' : v.delLabel}</button></div>`}`;
 
@@ -1855,6 +1992,10 @@ function App(v) {
         ${v.routeOpen && RouteSheet(v)}
         ${v.pickerOpen && Picker(v)}
         ${TabBar(v)}
+        ${v.frOpen && FriendsDrawer(v)}
+        ${v.frOpen && v.frProf && FriendProfile(v)}
+        ${v.frOpen && v.frAdd && FriendAddSheet(v)}
+        ${v.frOpen && v.frSee && FriendSeeSheet(v)}
         ${v.acctOpen && AccountSheet(v)}
         ${v.tripShare && TripShareSheet(v)}
         ${v.tripEdit && EditTripSheet(v)}

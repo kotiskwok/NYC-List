@@ -305,7 +305,8 @@ Object.assign(Component.prototype, {
   saveToMyMap(p, cats) {
     const s = this.state; let cat = p.cat, newCats = null;
     if (!s.cats.some(c => c.id === cat)) { const c = (cats || {})[cat]; if (c) newCats = [...s.cats, { id: c.id, name: c.name, color: c.color, emoji: emo(c) }]; else cat = (s.cats[0] || {}).id; }
-    const np = { id: 'p' + Date.now(), name: p.name, cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0, visited: false };
+    const np = { id: 'p' + Date.now(), name: p.name, cat, area: p.area, lat: p.lat, lng: p.lng, url: p.url || '', source: p.source || 'manual', address: p.address || '', note: p.note || '', price: p.price || 0, visited: false,
+      ...(p.gid ? { gid: p.gid } : {}), ...(/^https:\/\//.test(p.photo || '') ? { photo: p.photo } : {}), ...((p.order || []).length ? { order: p.order.slice(0, 6) } : {}) };
     // A spot in another city goes to that city's map.
     const home = inBox([np.lat, np.lng]) ? CUR.id : CITY_ORDER.find(k => inBox([np.lat, np.lng], CITIES[k])) || CUR.id; np.city = home;
     if (home === CUR.id) this.setState(st => ({ places: [np, ...st.places], ...(newCats ? { cats: newCats } : {}) }));

@@ -173,7 +173,15 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Sign-in screen** (design SI1 · Frosted Over Your Map): a blurred, drawn map with colored pins (`AuthBackdrop`, night map in dark mode) behind a frosted glass card with the logo, email/password and a show-password eye, plus a glass **New Here? Create An Account** pill. Invite links show "Kotis Invited You".
 - **Welcome steps:** name, home city (NYC, SG, HKG, TO, BOS or DC) and optional home address, then **Show Me Around**.
 - **How-to tour:** five cards (**Save A Spot, Your Map, Where To Today?, Plan Your Day, Lists With Friends**), with icon tabs, swipe or Next/Back, and Skip. The welcome toast shows when it closes. Reopen from **Your Account → How To Use Spotted In**. Copy lives in `TOUR` in `view.js`.
-- **Your Account:** profile photo, sync status, **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), **Nearby Nudges** (on/off, per device), **My Public Map**, Sync Now, Sign Out, **Delete My Account** (tap twice), and links to the Privacy Policy and Terms of Use.
+- **Your Account:** profile photo, sync status (reached from the Friends drawer's **Your Account** row), **How To Use Spotted In**, **Appearance** (Automatic / Light / Dark), **Nearby Nudges** (on/off, per device), **My Public Map**, Sync Now, Sign Out, **Delete My Account** (tap twice), and links to the Privacy Policy and Terms of Use.
+
+### Friends (side drawer, design A)
+- Tap your profile photo on the Map tab: a drawer slides in from the left with **Your Friends**, friends' faces, **Activity** / **Friends · N**, then **What My Friends See** and **Your Account** at the bottom. A red badge on the photo counts friend requests.
+- **Activity:** "Sonia added Lucali · 2h" (only for friends who share everything) and "Mei went to Thai Diner" (when they mark Been There), last 45 days, grouped Today / This Week / Earlier, each with **+ Save To My Map**.
+- **Friend's profile:** photo, Friends Since, counts, tabs **Lists / Saved / Been There** (lists open to show their spots), **…** → Remove Friend (they aren't told).
+- **Add A Friend:** share or copy your link `/?friend=<code>`. Opening it sends you a request (or makes you friends straight away if you'd already asked them); you tap **Accept** or **Decline**. Sent requests can be cancelled; friends can be removed.
+- **What Friends See:** **Everything** / **Only Places I've Been** / **Nobody** (the default), which of your lists friends can open, and per spot the Edit sheet's **Keep This One From Friends** switch (`place.fpriv`). Never home, notes or plans.
+- Code: `src/friends.js` (`friendVals()`), views `FriendsDrawer`, `FriendProfile`, `FriendAddSheet`, `FriendSeeSheet` in `view.js`. Data: `supabase/friends.sql` (`nyc_friend_profiles` with a snapshot the app rewrites 4 s after your spots or lists change, `nyc_friends`, `nyc_friend_requests`, RPCs `nyc_friend_me/add/accept/remove`, `nyc_friends_state`, `nyc_friend_preview`). A spot's added time comes from its id (`p<timestamp>`); Been There time is `place.vat`. Friend Score also counts friends' reviews.
 
 ### List notifications
 - When you add spots to a shared list, everyone else on it gets an iPhone notification a few seconds later, grouped: title = the list's name, body "Sonia added Lucali, Thai Diner and 1 more to Day 1." Tapping it opens the list. Nothing is sent for lists only you are on.
@@ -238,7 +246,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
 - **Supabase setup:** Authentication → Site URL is the Vercel address; "Allow new users to sign up" stays on (friends join lists).
-- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
+- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading), `supabase/friends.sql` (friends). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
 - **Quick checks:** `GET /api/extract?probe=1` → `{"ffmpeg":true,"speech":true}`. `GET /api/photo?probe=1` → 204 when Google photos work.
 
 ---
@@ -430,6 +438,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 | `src/logic.js` | Behaviour: maps (`CITIES`, `TZ`), categories, Leaflet/Apple maps and layers, travel estimates, opening hours (`openInfo`), Explore (greeting, vibe chips, vibe search, deck), plan, Add A Spot and AI fill, reservations (`findBooking`), reviews, theme switching, `renderVals()` |
 | `src/view.js` | All screens; theme engine (`THEME`, `darkVal`, `S()`); glass styles; `Lines()`; flat-button helpers (`tintOf`, `inkOf`); `PlaceCard`, `Reviews`, `ReviewSheet`, `Tour` (`TOUR` copy), `RouteSheet`, `DeckCard`, the logo |
 | `src/lists.js` | Shared lists (`NYCLists`), boarding-pass wallet and reorder, tabs, list codes and barcodes, votes and notes, invites, presence |
+| `src/friends.js` | Friends: friend links and requests, the activity feed, friend profiles, what friends see |
 | `src/sync.js` | Supabase client, sign-in, three-way merge sync |
 | `src/native.js` | iPhone-only bridges |
 | `src/video.js` | On-phone video audio and frame extraction |
