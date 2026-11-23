@@ -131,7 +131,9 @@ Object.assign(Component.prototype, {
       // Everyone picks a username once: after the welcome steps, or the next time an older account opens the app.
       frNeedUser: k && !!s.frMe && !s.frMe.username && s.frSetup !== 'missing' && !s.obNeed && !s.tourOpen, frBadge: k && incoming ? incoming : 0, frOpen: k && s.frOpen,
       openFriends: () => { if (!k) return; this.setState({ frOpen: true, acctOpen: false, frProfile: null }); if (Date.now() - (s.frAt || 0) > 30000) this.frRefresh(); } };
-    if (!base.frOpen) return base;
+    // On a wide computer screen the panel is docked on the left and always open.
+    base.frDock = k && !!s.desk && !!s.deskWide && s.frSetup !== 'missing';
+    if (!base.frOpen && !base.frDock) return base;
     const fmtSpot = (fid, p) => { const c = this.frCats(fid)[p.cat] || { name: 'Spot', color: '#888' };
       return { key: fid + (p.id || p.name), name: p.name, sub: [p.area, c.name].filter(Boolean).join(' · '), img: placeImg(p), col: c.color, emoji: emo(c), dish: (p.order || [])[0] || '',
         mine: this.onMyMap(p), save: e => { e && e.stopPropagation(); this.frSave(fid, p); } }; };

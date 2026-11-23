@@ -197,6 +197,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Web app on a computer (design D3)
 - Wider than 1024 px (and not the iPhone app): `DeskApp` in `view.js` instead of the phone layout. The main map fills the window; a glass top bar (logo, city, "Ask Spotted anything" which opens Explore, **Add A Spot**, your photo for Friends); a 400 px glass sidebar with **Spots / Explore / Route / Lists** (Spots is `DeskSpots`, a list of the map's spots with the category chips; the other tabs are the phone screens); the place card, a list stop or Get There floating on the right; every sheet (Add A Spot, Your Account, Friends, sign-in, city picker…) in a window in the middle. `--st` / `--sb` shift the phone screens' spacing inside the sidebar and window.
+- On screens 1280 px and wider, Friends is docked on the far right and always open (`FriendsDrawer(v, true)`, `frDock`, `state.deskWide`); the top bar, place card and map buttons make room for it, and your photo opens Your Account. Narrower computers keep Friends behind your photo.
 - `state.desk` follows `DESK_MQ` (min-width 1024px and min-height 620px) through a matchMedia listener; maps are resized when it flips.
 
 ### Website (spottedinapp.com, design L4 with boarding passes)

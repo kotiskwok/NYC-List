@@ -169,7 +169,7 @@ function MapScreen(v) {
         <button key=${i} onClick=${c.onClick} style=${S(`flex:none;display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;border:none;background:${c.bg};color:${c.fg};font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;box-shadow:0 6px 16px rgba(16,24,63,.2)`)}>${i > 0 && html`<span style=${S(`width:9px;height:9px;border-radius:50%;background:${c.dot}`)}></span>`}${i ? c.label : 'All Spots'}</button>`)}
       </nav>
     </div>
-    <div style=${S(`position:absolute;right:16px;bottom:${B(v.nearest ? 196 : 112)};z-index:600;display:${hide};flex-direction:column;gap:10px`)}>
+    <div style=${S(`position:absolute;right:${v.frDock ? 336 : 16}px;bottom:${B(v.nearest ? 196 : 112)};z-index:600;display:${hide};flex-direction:column;gap:10px`)}>
       <button class="lg" onClick=${v.toggleLayers} aria-label="Map Layers" aria-expanded=${v.layersOpen} style=${S(`${sideBtn};${v.layersOn ? 'border:1px solid rgba(255,255,255,.5);background:#10183F;box-shadow:0 10px 26px rgba(16,24,63,.3)' : GL};color:${v.layersOn ? '#FFC425' : '#10183F'}`)}>${Ico('M12 3l9 5-9 5-9-5z M3 13l9 5 9-5', 22)}</button>
       <button class="lg" onClick=${v.locateMe} aria-label="My Location" style=${S(`${sideBtn};${v.locBg === '#fff' ? GL : 'border:1px solid rgba(255,255,255,.5);background:' + v.locBg + ';box-shadow:0 10px 26px rgba(16,24,63,.3)'};color:${v.locBg === '#fff' ? '#1B3DB8' : v.locFg}`)}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"></path></svg></button>
     </div>
@@ -1275,11 +1275,11 @@ const frSaveBtn = x => x.mine
   ? html`<span style=${S(`display:inline-flex;align-items:center;gap:4px;height:28px;font-size:12px;font-weight:800;color:${inkOf('#1F9D6B')}`)}>${Ico('M5 12l5 5 9-10', 13, 'currentColor', 2.8)}On Your Map</span>`
   : html`<button onClick=${x.save} style=${S(`height:28px;padding:0 11px;border-radius:999px;border:0;background:rgba(255,107,26,.16);color:${THEME.dark ? '#FF9A5C' : '#B8460A'};font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap`)}>+ Save To My Map</button>`;
 
-function FriendsDrawer(v) {
+function FriendsDrawer(v, docked) {
   const seg = (k, label) => html`<button role="tab" aria-selected=${v.frTab === k} onClick=${() => v.frSetTab(k)} style=${S(`height:34px;border:0;border-radius:999px;font-family:inherit;font-size:13px;cursor:pointer;${v.frTab === k ? 'background:#FFFFFF;font-weight:800;color:#10183F;box-shadow:0 3px 8px rgba(16,24,63,.1)' : 'background:transparent;font-weight:700;color:#4A5275'}`)}>${label}</button>`;
-  return html`
-  <div onClick=${v.frClose} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1040;background:rgba(16,24,63,.12);animation:frFade .2s ease')}>
-    <aside aria-label="Your Friends" class="fr-anim" onClick=${e => e.stopPropagation()} style=${S(`position:absolute;left:0;top:0;bottom:0;width:min(86%,340px);border-radius:0 34px 34px 0;overflow:hidden;${FR_GLASS};display:flex;flex-direction:column;animation:frIn .28s cubic-bezier(.2,.9,.3,1)`)}>
+  // Docked (web app on a wide screen): the same panel, always open on the left, with no backdrop.
+  const panel = html`
+    <aside aria-label="Your Friends" class=${docked ? '' : 'fr-anim'} onClick=${e => e.stopPropagation()} style=${S(docked ? `position:absolute;right:20px;top:20px;bottom:20px;width:300px;z-index:820;border-radius:32px;overflow:hidden;${FR_GLASS};border:1px solid rgba(255,255,255,.9);display:flex;flex-direction:column;--st:4px` : `position:absolute;left:0;top:0;bottom:0;width:min(86%,340px);border-radius:0 34px 34px 0;overflow:hidden;${FR_GLASS};display:flex;flex-direction:column;animation:frIn .28s cubic-bezier(.2,.9,.3,1)`)}>
       <div style=${S(`flex:none;padding:${T(58)} 18px 0;display:flex;flex-direction:column;gap:14px`)}>
         <div style=${S('display:flex;align-items:center;justify-content:space-between;gap:10px')}>
           ${frH('Your', 'Friends')}
@@ -1315,8 +1315,10 @@ function FriendsDrawer(v) {
         ${!v.frSetup && html`<button onClick=${v.frOpenSee} style=${S('height:44px;border:0;background:none;padding:0;display:flex;align-items:center;gap:10px;color:#1B3DB8;font-family:inherit;cursor:pointer;text-align:left')}>${Ico(EYE_I, 18)}<span style=${S('flex:1;display:flex;flex-direction:column')}><span style=${S('font-size:14px;font-weight:800')}>What My Friends See</span><span style=${S('font-size:11.5px;font-weight:600;color:#4A5275')}>${v.frSeeLabel}</span></span></button>`}
         <button onClick=${v.frOpenAcct} style=${S('height:48px;border:0;background:none;padding:0;display:flex;align-items:center;gap:10px;color:#10183F;font-family:inherit;cursor:pointer;text-align:left')}>${Avatar(v.avatarSrc, v.avatarInitial, 32, '#1B3DB8')}<span style=${S('flex:1;font-size:14px;font-weight:800')}>Your Account</span>${Ico('M9 6l6 6-6 6', 16)}</button>
       </div>
-    </aside>
-  </div>`;
+    </aside>`;
+  if (docked) return panel;
+  return html`
+  <div onClick=${v.frClose} class="fr-anim" style=${S('position:absolute;inset:0;z-index:1040;background:rgba(16,24,63,.12);animation:frFade .2s ease')}>${panel}</div>`;
 }
 
 function FriendProfile(v) {
@@ -2028,20 +2030,21 @@ function DeskApp(v) {
     ['explore', 'Explore', v.goExplore, 'M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18z M15.5 8.5l-2 5-5 2 2-5z', v.tabExFg],
     ['plan', 'Route', v.goPlan, 'M6 19a2 2 0 1 0 0-4a2 2 0 0 0 0 4z M18 9a2 2 0 1 0 0-4a2 2 0 0 0 0 4z M8 17h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7', v.tabPlanFg],
     ['lists', 'Lists', v.goLists, 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z', v.tabListFg]];
-  const sheetOpen = v.pickerOpen || v.acctOpen || v.tripShare || v.tripEdit || v.tripPick || v.listChoose || v.newTrip || v.addY === '0%' || v.authOpen || v.cityOpen || v.obOpen || v.reviewSheet || v.tourOpen || v.frNeedUser || (v.frOpen && (v.frProf || v.frAdd || v.frSee));
+  const sheetOpen = v.pickerOpen || v.acctOpen || v.tripShare || v.tripEdit || v.tripPick || v.listChoose || v.newTrip || v.addY === '0%' || v.authOpen || v.cityOpen || v.obOpen || v.reviewSheet || v.tourOpen || v.frNeedUser || ((v.frOpen || v.frDock) && (v.frProf || v.frAdd || v.frSee));
   return html`
   <div class="desk" style=${S('position:fixed;inset:0;overflow:hidden;background:var(--bgfx)')}>
     ${MapScreen(v)}
-    <header style=${S('position:absolute;left:20px;right:20px;top:18px;z-index:900;display:flex;align-items:center;gap:12px;pointer-events:none')}>
+    ${v.frDock && FriendsDrawer(v, true)}
+    <header style=${S(`position:absolute;left:20px;right:${v.frDock ? 340 : 20}px;top:18px;z-index:900;display:flex;align-items:center;gap:12px;pointer-events:none`)}>
       <div style=${S(`${DK_GLASS};pointer-events:auto;height:56px;padding:0 10px 0 18px;border-radius:999px;display:flex;align-items:center;gap:12px`)}>
         <span role="img" aria-label="Spotted In" style=${S('display:flex;align-items:flex-end;gap:6px')}>${Wordmark(22, .6)}${InPill(12)}</span>
         <span aria-hidden="true" style=${S('width:1px;height:26px;background:rgba(16,24,63,.15)')}></span>
         <button onClick=${v.openCity} aria-label=${'Change City — Now ' + v.cityName} style=${S('height:34px;padding:0 10px 0 12px;border-radius:999px;border:0;background:#FFC425;color:#10183F;font-family:inherit;font-size:13px;font-weight:900;font-style:italic;cursor:pointer;display:flex;align-items:center;gap:4px')}>${v.cityShort}${Ico('M6 9l6 6 6-6', 12, 'currentColor', 3)}</button>
       </div>
-      <button onClick=${v.goExplore} style=${S(`${DK_GLASS};pointer-events:auto;flex:1;max-width:560px;height:56px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 20px;color:#7A4FD6;font-family:inherit;cursor:pointer;text-align:left`)}>${Ico(SPARK, 20)}<span style=${S('font-size:15px;font-weight:700;color:#6A7090')}>Ask Spotted anything… “cozy date night near me”</span></button>
+      <button onClick=${v.goExplore} style=${S(`${DK_GLASS};pointer-events:auto;flex:1;max-width:560px;height:56px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 20px;color:#7A4FD6;font-family:inherit;cursor:pointer;text-align:left`)}>${Ico(SPARK, 20)}<span style=${S('min-width:0;font-size:15px;font-weight:700;color:#6A7090;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>Ask Spotted anything… “cozy date night near me”</span></button>
       <span style=${S('flex:1')}></span>
       <button onClick=${v.openAdd} style=${S('pointer-events:auto;height:56px;padding:0 22px;border-radius:999px;border:0;background:#FF6B1A;color:#FFFFFF;font-family:inherit;font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 10px 22px rgba(255,107,26,.35)')}>${Ico('M12 5v14M5 12h14', 18, 'currentColor', 2.8)}Add A Spot</button>
-      ${v.syncOn && html`<button onClick=${v.frAvail ? v.openFriends : v.openAcct} aria-label=${v.frAvail ? 'Friends And Your Account' : 'Your Account'} style=${S('pointer-events:auto;position:relative;flex:none;border:0;padding:0;background:none;border-radius:50%;cursor:pointer')}>${Avatar(v.avatarSrc, v.avatarInitial, 56, '#1B3DB8', 'border:3px solid #FFFFFF;box-shadow:0 8px 18px rgba(16,24,63,.2)')}${v.frBadge > 0 && html`<span aria-hidden="true" style=${S('position:absolute;right:-3px;top:-3px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#E8242C;color:#fff;border:2px solid #FFFFFF;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.frBadge}</span>`}</button>`}
+      ${v.syncOn && html`<button onClick=${v.frAvail && !v.frDock ? v.openFriends : v.openAcct} aria-label=${v.frAvail && !v.frDock ? 'Friends And Your Account' : 'Your Account'} style=${S('pointer-events:auto;position:relative;flex:none;border:0;padding:0;background:none;border-radius:50%;cursor:pointer')}>${Avatar(v.avatarSrc, v.avatarInitial, 56, '#1B3DB8', 'border:3px solid #FFFFFF;box-shadow:0 8px 18px rgba(16,24,63,.2)')}${v.frBadge > 0 && !v.frDock && html`<span aria-hidden="true" style=${S('position:absolute;right:-3px;top:-3px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#E8242C;color:#fff;border:2px solid #FFFFFF;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center')}>${v.frBadge}</span>`}</button>`}
     </header>
     <aside aria-label="Spotted In" style=${S(`${DK_GLASS};position:absolute;left:20px;top:92px;bottom:20px;width:400px;z-index:800;border-radius:32px;display:flex;flex-direction:column;overflow:hidden`)}>
       <nav aria-label="Sections" style=${S('flex:none;margin:14px 14px 10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;background:rgba(16,24,63,.06)')}>
@@ -2051,18 +2054,18 @@ function DeskApp(v) {
         ${v.tabMapFg === '#1B3DB8' ? DeskSpots(v) : html`${ExploreScreen(v)}${PlanScreen(v)}${ListsScreen(v)}`}
       </div>
     </aside>
-    <div style=${S('position:absolute;right:20px;top:92px;bottom:20px;width:400px;z-index:850;pointer-events:none;--st:0px;--sb:-10px')}>
+    <div style=${S(`position:absolute;right:${v.frDock ? 340 : 20}px;top:92px;bottom:20px;width:400px;z-index:850;pointer-events:none;--st:0px;--sb:-10px`)}>
       <div style=${S('position:absolute;inset:0;pointer-events:auto;display:' + (v.hasSel || v.hasTripSel || v.routeOpen ? 'block' : 'none'))}>
         ${v.hasSel && PlaceCard(v)}${v.hasTripSel && TripSelCard(v)}${v.routeOpen && RouteSheet(v)}
       </div>
     </div>
-    ${v.frOpen && FriendsDrawer(v)}
+    ${v.frOpen && !v.frDock && FriendsDrawer(v)}
     ${sheetOpen && html`<div aria-hidden="true" style=${S('position:absolute;inset:0;z-index:1090;background:rgba(16,24,63,.3)')}></div>`}
     <div class="desk-sheet" style=${S('position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:460px;height:min(880px,calc(100vh - 40px));z-index:1100;border-radius:38px;overflow:hidden;pointer-events:none;--st:30px;--sb:0px')}>
       ${v.pickerOpen && Picker(v)}
-      ${v.frOpen && v.frProf && FriendProfile(v)}
-      ${v.frOpen && v.frAdd && FriendAddSheet(v)}
-      ${v.frOpen && v.frSee && FriendSeeSheet(v)}
+      ${(v.frOpen || v.frDock) && v.frProf && FriendProfile(v)}
+      ${(v.frOpen || v.frDock) && v.frAdd && FriendAddSheet(v)}
+      ${(v.frOpen || v.frDock) && v.frSee && FriendSeeSheet(v)}
       ${v.frNeedUser && UsernameGate(v)}
       ${v.acctOpen && AccountSheet(v)}
       ${v.tripShare && TripShareSheet(v)}
