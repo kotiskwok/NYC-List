@@ -401,10 +401,10 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 24 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 24 yet, it still needs Archive and Upload.
+- **Current build number:** 25 (`CURRENT_PROJECT_VERSION`). Build 25 adds Friends, usernames, saved sign-in (Keychain plus the `webcredentials` Associated Domain) and the swipe gestures. The Mac's Xcode project is synced to it; if TestFlight doesn't show build 25 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press Try Again.
 
 ### Shipping a new build
-1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all four lines. Push it.
+1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all six lines. Push it.
 2. **Update the Mac's project** (Claude through the linked Mac, or you). The project is **Documents › Spotted In App**, a clone of the repo.
    - Yourself, in Terminal: `cd ~/Documents/"Spotted In App" && git pull && cd native && npm run sync`.
    - Claude through the Mac (`device_bash`): after folder access and delete permission are granted, the folder is mounted at `$HOME/mnt/Spotted In App` in a Linux sandbox on the Mac that has git, Node and npx and can reach GitHub. If git complains about a `.lock` file, remove the stale lock (e.g. `.git/objects/maintenance.lock`) first. Claude runs `git pull --ff-only`, then removes `native/www`, copies `index.html`, `config.js`, `manifest.webmanifest`, `privacy.html`, `support.html` and the `src`, `vendor`, `data`, `icons` folders in with `cp -R`, checks them with `diff -rq`, then runs `npx cap sync ios` in `native/` and checks the new files reached `native/ios/App/App/public`.
