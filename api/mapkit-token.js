@@ -12,7 +12,7 @@ const { cors, send } = require('./_shared');
 
 const b64 = x => Buffer.from(typeof x === 'string' ? x : JSON.stringify(x)).toString('base64url');
 // Only hand out tokens to the app's own pages: the live site, its Vercel previews and the iPhone app.
-const okHost = h => h === 'nyc-lovat.vercel.app' || /^nyc-[a-z0-9-]+-kotis1\.vercel\.app$/.test(h) || h === 'localhost' || h === '127.0.0.1';
+const okHost = h => h === 'nyc-lovat.vercel.app' || h === 'spottedinapp.com' || h === 'www.spottedinapp.com' || /^nyc-[a-z0-9-]+-kotis1\.vercel\.app$/.test(h) || h === 'localhost' || h === '127.0.0.1';
 
 // Rebuild the .p8 text whatever happened to it on the way into Vercel: line breaks turned into spaces or "\n",
 // quotes around it, or only the middle part pasted.

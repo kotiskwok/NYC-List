@@ -41,7 +41,7 @@ async function media(name, w, key) {
   return { type: (r.headers.get('content-type') || 'image/jpeg').split(';')[0], buf: Buffer.from(await r.arrayBuffer()) };
 }
 
-const okHost = h => h === 'nyc-lovat.vercel.app' || /^nyc-[a-z0-9-]+-kotis1\.vercel\.app$/.test(h) || h === 'localhost' || h === '127.0.0.1';
+const okHost = h => h === 'nyc-lovat.vercel.app' || h === 'spottedinapp.com' || h === 'www.spottedinapp.com' || /^nyc-[a-z0-9-]+-kotis1\.vercel\.app$/.test(h) || h === 'localhost' || h === '127.0.0.1';
 // The iPhone app's pages live at capacitor://localhost, and WebKit sends no Referer or Origin from there for <img>,
 // so it's recognized by the app's own image links (&app=ios, from build 5) or, for older builds, by the in-app
 // web view's user agent (iPhone WebKit without "Safari", which Safari itself always includes).
