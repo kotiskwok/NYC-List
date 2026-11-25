@@ -59,7 +59,7 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 | **Claude settings: memory and past chats** | Remembering decisions and preferences between chats in the project, and finding earlier chats about the app. | claude.ai → Settings: turn on **Generate memory from chat history** and **Search and reference chats**. |
 | **Vercel connector** | Reading deploy logs and runtime errors, checking which environment variables are set (never their values), domains and redeploying, without opening the browser pane. | claude.ai → Settings → Connectors → Vercel. The first time Claude uses it in a chat, it sends a link to give it access to the **kotis1** team: approve it. |
 | **Network access for Claude's workspace** (optional) | Opening the live site and Vercel previews straight from Claude's own workspace (otherwise it checks them through the built-in browser). | claude.ai → Settings → Capabilities: add `spottedinapp.com`, `nyc-lovat.vercel.app` and `vercel.app` to the allowed domains. |
-| **Design canvas "Spotted In Icon Options"** (claude.ai artifact) | Laying out visual options to compare before building: icons, share card, wallet, buttons, reviews, personality. | https://claude.ai/artifact/7mWakGhfPe7dfWubzZyqbW. Ask Claude to add a new row of options to it. |
+| **Design canvas "Spotted In Icon Options"** (claude.ai artifact) | Laying out visual options to compare before building: icons, share card, wallet, buttons, reviews, personality. | https://claude.ai/artifact/7mWakGhfPe7dfWubzZyqbW. Ask Claude to add a new row of options to it. Newer canvases: **Liquid Glass** (Explore and Route options) https://claude.ai/artifact/VSHDX3N2A8ht2vho1uCTdW and **Spotted In · Website** (website L1–L6, computer web app D1–D3) https://claude.ai/artifact/2zCLpNT3YL4ZJYHCUXqj1e. |
 
 ### Before each working session
 1. On the Mac, open the **Claude desktop app** and open the chat there (keep the Mac awake).
@@ -204,7 +204,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Website (spottedinapp.com, design L4 with boarding passes)
 - `home.html` is the intro page: "Your saved posts, turned into plans." with three list boarding passes, From Your Feed To Your Table (Share It / Spot It / Go), Now Spotting In (six cities, "More cities on the way."), and a navy "Your next plan is already saved." block. App Store button: apps.apple.com/app/id6828702049; Open The Web App goes to `/app`. Works on phones.
-- `middleware.ts` (Vercel Routing Middleware, `@vercel/functions`) shows `home.html` at "/" only on spottedinapp.com and www; every other host (nyc-lovat.vercel.app, previews) still serves the app at "/". Links with `?join=`, `?friend=` or `?add=` go to the app. `vercel.json` rewrites `/app` to `index.html` on every host. `home.html` also forwards sign-in confirmation links (tokens in the #hash) to `/app`.
+- `middleware.ts` (Vercel Routing Middleware, `@vercel/functions`) shows `home.html` at "/" only on spottedinapp.com and www; every other host (nyc-lovat.vercel.app, previews) serves the app at "/". Links with `?join=`, `?friend=` or `?add=` go to the app. `vercel.json` rewrites `/app` to `index.html` on every host. `home.html` also forwards sign-in confirmation links (tokens in the #hash) to `/app`.
 - Design canvas: "Spotted In · Website" (L1–L6, web app D1–D3).
 
 ### Duplicates and photos
@@ -501,4 +501,6 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 - **Reviews redesign "Y1 · Photo Fades Into Blue Glass"** (on the design canvas): the spot's photo across the top fading into campaign-blue liquid glass, a glass **Must Go / It's Fine / Skip It** vote slider with percentages, glass photo tiles, reviewers' comments as speech bubbles tagged with their vote, and a floating **"Say something about [spot]…"** bar with a photo button. The vote becomes the rating for spots on everyone's own map (votes = ratings on map spots).
 - **Take the I'm In / Skip It votes off spots in shared lists** once Y1's map-spot votes are built (keep the per-person notes on lists unless Kotis says otherwise).
 - Saving a shared link in the background, without opening the app.
+- **Sign up with a phone number** (SMS code). Needs a Twilio account with Twilio Verify, connected in Supabase → Authentication → Providers → Phone, and a decision on whether email stays as a **Use Email Instead** option.
+- **Saved passwords on spottedinapp.com:** add `webcredentials:spottedinapp.com` to `App.entitlements` and the association file is already served there (next build).
 - **Android app on Google Play** (plan in §8b).
