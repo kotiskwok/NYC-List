@@ -19,9 +19,9 @@ It has six maps, each with its own spots, home and day plan:
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
 | Washington, DC | DC 🏛️ | Metro (Red, Orange, Blue, Silver, Green, Yellow) |
 
-The app is built around major cities only. The New York State and New Jersey maps were removed in Nov 2026 (spots saved there stay in the account but show on no map, public map or friends' view: `GONE_MAPS` in `logic.js`; `data/nys-data.js` and `data/nj-data.js` are no longer loaded).
+The app covers major cities only; more get added over time. Old spots tagged `nys` or `nj` (state maps that no longer exist) stay in the account but show on no map, public map or friends' view (`GONE_MAPS` in `logic.js`).
 
-- **Website:** https://spottedinapp.com (intro page) with the web app at https://spottedinapp.com/app (also installs to the home screen). https://nyc-lovat.vercel.app still serves the app at "/".
+- **Website:** https://spottedinapp.com (intro page) with the web app at https://spottedinapp.com/app (also installs to the home screen). The Vercel address https://nyc-lovat.vercel.app serves the app at "/" too.
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
 - **Accounts:** email and password; everything syncs between devices.
 
@@ -53,12 +53,12 @@ Set these up once. With all of them, Claude can change the code, put it live, up
 | **Claude Project "Spotted On:"** | Holds this handoff (`claude/HANDOFF.md`) so every new chat in the project can read it, plus project memory. | Start new chats inside the project. |
 | **GitHub** (private repo `kotiskwok/NYC-List`, branch `main`) | Reading and editing the code, pushing changes, running GitHub Actions. **Every push to `main` deploys the website** (Vercel). Pushing any other branch makes a private Vercel preview. | claude.ai → Settings → Connectors → GitHub (with access to `kotiskwok/NYC-List`). In the chat, ask Claude to attach the repo with **push** access. |
 | **Claude desktop app on the Mac, linked to the chat** | Updating the Xcode project on the Mac: `git pull`, copying the website into the app, `npx cap sync ios`. | Keep the Claude desktop app open on the Mac. When asked, Claude requests access to **Documents › Spotted In App** and the **delete permission** itself (git needs it to replace files): approve both prompts. (You can also add the folder with **+ → Add folder** next to the message box.) Keep the Mac awake with the app open while Claude works. |
-| **Built-in browser** (the browser pane in the Claude desktop app) | Checking the live site, Vercel deploys and logs, running SQL in Supabase, App Store Connect / TestFlight, Google Cloud, and reading Instagram / TikTok posts. | Stay signed in to these sites in the browser pane and approve them when Claude asks: `nyc-lovat.vercel.app`, `vercel.com`, `github.com`, `supabase.com`, `appstoreconnect.apple.com`, `developer.apple.com`, `console.cloud.google.com`, `platform.openai.com`, `console.anthropic.com`, `instagram.com`, `tiktok.com`. |
+| **Built-in browser** (the browser pane in the Claude desktop app) | Checking the live site, Vercel deploys and logs, running SQL in Supabase, App Store Connect / TestFlight, Google Cloud, and reading Instagram / TikTok posts. | Stay signed in to these sites in the browser pane and approve them when Claude asks: `spottedinapp.com`, `nyc-lovat.vercel.app`, `account.squarespace.com` (domain and DNS), `vercel.com`, `github.com`, `supabase.com`, `appstoreconnect.apple.com`, `developer.apple.com`, `console.cloud.google.com`, `platform.openai.com`, `console.anthropic.com`, `instagram.com`, `tiktok.com`. |
 | **Computer use: Xcode** (optional) | Looking at Xcode. Xcode is click-only for Claude, so it can't use Xcode's menus or archive. | Approve Xcode when Claude asks. **You** do Product → Archive → Upload. |
 | **Google Play Console** (for the Android app, §8b) | Creating the Play listing, uploading Android builds, managing the closed test and testers. | Kotis makes the developer account at play.google.com/console ($25 one-time, ID verification). Then approve `play.google.com` in the built-in browser so Claude can fill in the listing. |
 | **Claude settings: memory and past chats** | Remembering decisions and preferences between chats in the project, and finding earlier chats about the app. | claude.ai → Settings: turn on **Generate memory from chat history** and **Search and reference chats**. |
 | **Vercel connector** | Reading deploy logs and runtime errors, checking which environment variables are set (never their values), domains and redeploying, without opening the browser pane. | claude.ai → Settings → Connectors → Vercel. The first time Claude uses it in a chat, it sends a link to give it access to the **kotis1** team: approve it. |
-| **Network access for Claude's workspace** (optional) | Opening the live site and Vercel previews straight from Claude's own workspace (otherwise it checks them through the built-in browser). | claude.ai → Settings → Capabilities: add `nyc-lovat.vercel.app` and `vercel.app` to the allowed domains. |
+| **Network access for Claude's workspace** (optional) | Opening the live site and Vercel previews straight from Claude's own workspace (otherwise it checks them through the built-in browser). | claude.ai → Settings → Capabilities: add `spottedinapp.com`, `nyc-lovat.vercel.app` and `vercel.app` to the allowed domains. |
 | **Design canvas "Spotted In Icon Options"** (claude.ai artifact) | Laying out visual options to compare before building: icons, share card, wallet, buttons, reviews, personality. | https://claude.ai/artifact/7mWakGhfPe7dfWubzZyqbW. Ask Claude to add a new row of options to it. |
 
 ### Before each working session
@@ -75,7 +75,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **After shipping:** bump the iPhone build number, update the Mac's Xcode project, and keep this handoff (repo `HANDOFF.md` and project `claude/HANDOFF.md`) current.
 
 ### Starter message for a new chat
-> I'm working on my app **Spotted In** (GitHub repo **kotiskwok/NYC-List**, live at https://nyc-lovat.vercel.app, iPhone app via Capacitor in `native/`). Please read `HANDOFF.md` in the project first, then attach the repo with push access. Then help me with: [your request].
+> I'm working on my app **Spotted In** (GitHub repo **kotiskwok/NYC-List**, website https://spottedinapp.com, web app https://spottedinapp.com/app, iPhone app via Capacitor in `native/`). Please read `HANDOFF.md` in the project first, then attach the repo with push access. Then help me with: [your request].
 
 ---
 
@@ -161,7 +161,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Sharing into the app
 - **iPhone app:** **Share → Spotted In** (design "C · Spot Preview", canvas https://claude.ai/artifact/B879k2jU4LJAzWApLStAVL): the share sheet closes at once with a faint "Reading The Post…" banner and uploads the link with this phone's share key to `/api/extract` in the background. The server (`api/_share.js`) reads the post like Add A Spot, saves the result as a share job and pushes "Spotted Lucali On The Map!!" · "Carroll Gardens · 18 min." · "Get the vodka pizza." with the spot's photo (added by the `NotificationService` extension) and **Plan It / Open Spotted In / Undo** on press-and-hold (categories in `AppDelegate`). When the app opens, `takeShareJobs` adds the spots (tagged `job`) and skips those links; a failed read falls back to Add A Spot with the link. Needs notifications allowed and `supabase/share.sql`; the share key is made on sign-in (`ensureShareKey`) and removed on Sign Out. Without a key or notifications it falls back to the "Saved To Spotted In" banner or ticket. The minutes in the banner are a rough estimate; the place card has the real one.
-- **Website:** `https://nyc-lovat.vercel.app/?add=<link>` opens Add A Spot with the link (Android share menu via the web manifest; works with an iPhone Shortcut).
+- **Website:** `https://spottedinapp.com/app?add=<link>` opens Add A Spot with the link (Android share menu via the web manifest; works with an iPhone Shortcut).
 
 ### Account, welcome and tour
 - **Sign-in screen** (design SI1 · Frosted Over Your Map): a blurred, drawn map with colored pins (`AuthBackdrop`, night map in dark mode) behind a frosted glass card with the logo, email/password and a show-password eye, plus a glass **New Here? Create An Account** pill. Invite links show "Kotis Invited You".
@@ -193,7 +193,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - Only unvisited, open (or unknown hours) spots within ~600 m; at most one every 90 minutes; the same spot once a week (`localStorage['nycList.nudge']`). Code: `nudgeWatch`, `checkNudge`, `Nudge()` in `view.js`. Not yet when the app is closed (that needs "Always" location and a native iOS piece).
 
 ### Public Profile Map (`/m/<slug>`)
-- Your Account → **My Public Map** → **Make My Map Public** gives a link like `nyc-lovat.vercel.app/m/kotis-ab12` that anyone can open in a browser. Pick **All Spots**, **Been There** or **Hand-Picked** (the Edit sheet's **On My Public Map** switch). **Share My Map**, **Turn Off**.
+- Your Account → **My Public Map** → **Make My Map Public** gives a link like `spottedinapp.com/m/kotis-ab12` that anyone can open in a browser. Pick **All Spots**, **Been There** or **Hand-Picked** (the Edit sheet's **On My Public Map** switch). **Share My Map**, **Turn Off**.
 - `map.html` (vercel.json rewrites `/m/:slug` to it): Apple Map with pins, a city switcher, category chips, a list, and a spot card (photo, What To Order, event, Open In Google Maps, See The Post). Reads `nyc_public_maps` with the public key.
 - Never home, notes, plans or lists. The app rewrites the row 4 s after spots change (`publishPub`). Needs `supabase/public.sql`.
 
@@ -252,10 +252,10 @@ From the iPhone Claude app you can still change the code and the website; only t
 | `OPENAI_API_KEY` | ✅ set | Hearing what's said in videos and reels |
 | `MAPKIT_TEAM_ID`, `MAPKIT_KEY_ID`, `MAPKIT_PRIVATE_KEY` | ✅ set | Apple Maps base map |
 | `APNS_KEY_ID`, `APNS_PRIVATE_KEY` | ✅ set (key `3Q9S8GYR2F`) | List notifications. developer.apple.com → Keys → + → Apple Push Notifications service; Team ID comes from `MAPKIT_TEAM_ID`. |
-| `SUPABASE_SERVICE_ROLE_KEY` | not needed | Delete My Account now works through `supabase/delete-account.sql` with the person's own sign-in. The key is only an optional fallback. |
+| `SUPABASE_SERVICE_ROLE_KEY` | not needed | Delete My Account works through `supabase/delete-account.sql` with the person's own sign-in. The key is only an optional fallback. |
 
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
-- **Domain:** spottedinapp.com was bought on Squarespace (Google Workspace email on it). Squarespace DNS → Custom records: `A @ 216.198.79.1` and `CNAME www 02fda0b297a75253.vercel-dns-017.com` (the Google MX, SPF and DKIM records stay). Vercel → project nyc → Domains: spottedinapp.com redirects (308) to www.spottedinapp.com, which is Production. Supabase → Authentication → URL Configuration lists `https://spottedinapp.com/**`, `https://www.spottedinapp.com/**` and `https://nyc-lovat.vercel.app/**` as redirect URLs.
+- **Domain:** spottedinapp.com is registered on Squarespace (Google Workspace email on it). Squarespace DNS → Custom records: `A @ 216.198.79.1` and `CNAME www 02fda0b297a75253.vercel-dns-017.com` (the Google MX, SPF and DKIM records stay). Vercel → project nyc → Domains: spottedinapp.com redirects (308) to www.spottedinapp.com, which is Production. Supabase → Authentication → URL Configuration lists `https://spottedinapp.com/**`, `https://www.spottedinapp.com/**` and `https://nyc-lovat.vercel.app/**` as redirect URLs.
 - **Supabase setup:** Authentication → Site URL is the Vercel address; "Allow new users to sign up" stays on (friends join lists).
 - **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading), `supabase/friends.sql` (friends). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
 - **Replacing a key** (expired, deleted, or showing an error): make a new key on the service's site, then Vercel → project nyc → Settings → Environment Variables → the variable → **⋯ → Edit**, paste it with no spaces, keep Production and Preview ticked, save, then **Deployments → top production deployment → ⋯ → Redeploy**. No iPhone build is needed, because keys are only used on the server.
@@ -274,7 +274,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Data and sync
 - **Local copy:** `localStorage['nycList.v1']`; current map in `localStorage['nycList.city']`. **Cloud:** one JSON row per user in `nyc_list` (row-level security).
-- **Synced snapshot:** `{places (every map's spots, each tagged city), cats, home, plan (NYC's), cities:{sg,hk,to,bos,nys}:{home, plan}, city, listOrder}`. `src/sync.js` does a three-way merge against the last synced base about a second after any change, and on resume or reconnect.
+- **Synced snapshot:** `{places (every map's spots, each tagged city), cats, home, plan (NYC's), cities:{sg,hk,to,bos,dc}:{home, plan}, city, listOrder}`. `src/sync.js` does a three-way merge against the last synced base about a second after any change, and on resume or reconnect.
 - **Place:** `{id, name, cat, area, lat, lng, url, source, address, note, price 0-4, visited, city?, photo?, hours?, reserve?, reserveChk?, gid?}` (no `city` means NYC).
   - `hours` = `{p:[[openDay, openMin, closeDay, closeMin]…], s: businessStatus, t: checkedAt}` or `{none:1, t}` (days 0 = Sunday, local minutes), refreshed monthly.
   - `reserve` = booking link; `reserveChk` = `{t, r:'walkin'|'notfound'}`; `gid` = Google place id (the key for reviews).
@@ -286,10 +286,10 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Photos:** Storage bucket `avatars`: `<user>/avatar.jpg`, `<user>/spot-<id>.jpg`, `<user>/list-<id>.jpg`, `<user>/review-<place>.jpg`.
 
 ### Maps (cities)
-- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. State maps (NYS, NJ) also have `state:1`, `data` (the window global holding their data: `NYS`, `NJS`; read with `SD()`), `z`, `minZ`, and optionally `hoodKm` and `labZ`. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc, nys, nj`. Each map's clock for Open Now is in `TZ`.
+- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc`. Each map's clock for Open Now is in `TZ`.
 - `setCity()` switches map; `cityMoved()` re-centers and redraws. `state.places` = current map's spots, `state.otherPlaces` = the rest.
-- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn); New York State `data/nys-data.js` (`window.NYS` = regions, outline, towns, hubs, lines, rail stations); New Jersey `data/nj-data.js` (`window.NJS`, same shape).
-- **Travel estimates:** `estimate(a, b)` finds the best ride between stations near each end (one transfer), using each line's speed and wait, compared with walking; on state maps also `drive` and `rail`. `inCore` (inside the five boroughs) cuts New Jersey out of the NYC box. `bestOf()` picks the quickest. Helpers: `inBox`, `inCore`, `reach`, `NYCISH()`, `homeFor()`, `hoodAt`.
+- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn). (`data/nys-data.js` and `data/nj-data.js` are old state-map files that aren't loaded.)
+- **Travel estimates:** `estimate(a, b)` finds the best ride between stations near each end (one transfer), using each line's speed and wait, compared with walking. `inCore` (inside the five boroughs) cuts New Jersey out of the NYC box. `bestOf()` picks the quickest. Helpers: `inBox`, `inCore`, `reach`, `NYCISH()`, `homeFor()`, `hoodAt`.
 - **Bus, tram, streetcar and ferry lines:** other cities use `data/routes/<city>-<kind>.json`, built from OpenStreetMap by the GitHub Action **Build transit routes** (`.github/workflows/routes.yml` → `scripts/build-routes.js` → `api/_osmroutes.js`). It runs weekly; run it by hand from GitHub → Actions (tick **force** to rebuild all). NYC buses come from `/api/bus`. Route files load from the live site, so they don't need a new iPhone build.
 - **Server side:** `CITIES` in `api/_shared.js` mirrors the maps; `localize()` adapts the NYC-written AI prompts to each map. The AI also answers `post_city`, which drives the "Switch To…" question.
 
@@ -410,7 +410,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 25 (`CURRENT_PROJECT_VERSION`). Build 25 adds Friends, usernames, saved sign-in (Keychain plus the `webcredentials` Associated Domain) and the swipe gestures. The Mac's Xcode project is synced to it; if TestFlight doesn't show build 25 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press Try Again.
+- **Current build number:** 25 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 25 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press **Try Again**.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all six lines. Push it.
@@ -452,6 +452,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 
 | File | What's in it |
 |---|---|
+| `home.html`, `middleware.ts` | The spottedinapp.com intro page and the routing that shows it at "/" on that domain |
 | `index.html` | Page shell, global CSS (light and dark tokens), fonts, script order |
 | `src/logic.js` | Behaviour: maps (`CITIES`, `TZ`), categories, Leaflet/Apple maps and layers, travel estimates, opening hours (`openInfo`), Explore (greeting, vibe chips, vibe search, deck), plan, Add A Spot and AI fill, reservations (`findBooking`), reviews, theme switching, `renderVals()` |
 | `src/view.js` | All screens; theme engine (`THEME`, `darkVal`, `S()`); glass styles; `Lines()`; flat-button helpers (`tintOf`, `inkOf`); `PlaceCard`, `Reviews`, `ReviewSheet`, `Tour` (`TOUR` copy), `RouteSheet`, `DeckCard`, the logo |
@@ -462,10 +463,10 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 | `src/video.js` | On-phone video audio and frame extraction |
 | `src/runtime.js` | Base class, `NATIVE`, `API()`, `SITE()` |
 | `api/*.js` | Server functions (above). `_shared.js` (CORS, auth, maps, prompt localizing), `_gmaps.js`, `_osmroutes.js` are helpers. |
-| `data/nyc-*.js`, `data/city-data.js`, `data/nys-data.js`, `data/nj-data.js` | Neighborhoods, stations, lines, streets, NYS and NJ towns and rail |
+| `data/nyc-*.js`, `data/city-data.js` | Neighborhoods, stations, lines and streets for every map |
 | `data/routes/` | Transit route lines (generated by the Action; don't hand-edit) |
 | `scripts/build-routes.js`, `.github/workflows/routes.yml` | Weekly transit-line builder |
-| `supabase/*.sql` | `schema.sql`, `lists.sql`, `avatars.sql`, `reviews.sql` |
+| `supabase/*.sql` | Database setup: spots, lists, photos, reviews, public maps, delete account, push, share, friends (§6) |
 | `sw.js` | Offline cache (bump `CACHE` when `src/` or `data/` changes) |
 | `manifest.webmanifest`, `icons/` | Home-screen name and icons, Android share target |
 | `vercel.json` | Function limits, `includeFiles` for ffmpeg, cache headers (`/path/:path*` patterns) |
@@ -484,9 +485,9 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 - **Bump `CACHE` in `sw.js`** whenever `src/` or `data/` changes. **Bump the iPhone build** for any change that needs one.
 - **Secrets only in Vercel.**
 - **`vercel.json` header sources** use `/path/:path*` patterns.
+- **Adding a web address** (a new domain): add it in Vercel → Domains, in Supabase → Authentication → URL Configuration, and to `okHost` in `api/photo.js` and `api/mapkit-token.js` (otherwise photos and Apple Maps are refused there). For saved passwords in the iPhone app, also add `webcredentials:<domain>` to `App.entitlements` (needs a new build).
 - **Copy:** follow §3 for every new string.
 - **Styles:** use the palette and glass tokens in §5 so dark mode keeps working.
-- **Adding a state map:** copy `data/nj-data.js`, add it to `index.html` and `CORE` in `sw.js`, add a `CITIES` entry with `state:1` and `data`, add to `CITY_ORDER`, `TZ`, the welcome-step filter in `view.js`, `api/_shared.js` (with `poly` and `state: true`) and `post_city` in `api/extract.js`.
 - **Adding a map (city):** `CITIES`, `CITY_ORDER` and `TZ` in `logic.js`; neighborhoods/stations/lines in `data/city-data.js`; `box` and prompt names in `api/_shared.js`; its code in `post_city` in `api/extract.js`; bus/tram/ferry layers in `BOX`/`FILTER` in `api/_osmroutes.js`; bike GBFS feed. Claude's shell can't reach OpenStreetMap or most of the web, but GitHub Actions can: fetch data with a temporary workflow that commits a raw file, process it, then delete the workflow.
 - **Test locally:** `python3 -m http.server` from the repo root with `window.NYC_CONFIG={}` served for `config.js` (local mode). The app instance is `window.__nycApp` and the maps `window.__nycMaps`; stub `/api/*`, `NYCSync.getToken` and `NYCSync.client` to test AI, lists and reviews. Playwright and Chromium are available for screenshots (`color_scheme='dark'` for dark mode).
 - **Swift changes** can't compile in Claude's Linux workspace. Typecheck on a GitHub macOS runner through a temporary workflow, then remove it.
