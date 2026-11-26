@@ -410,7 +410,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 25 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 25 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press **Try Again**.
+- **Current build number:** 26 (`CURRENT_PROJECT_VERSION`). Build 26 is the App Store 1.0 candidate (adds the one-time AI permission prompt). If TestFlight doesn't show build 26 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press **Try Again**.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all six lines. Push it.

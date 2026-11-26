@@ -490,6 +490,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
     if(!token){this.setState({vibeMsg:'Sign in to use vibe search.'});return;}
     if(!s.places.length){this.setState({vibeMsg:'Save a few spots first, then I’ll match the vibe.'});return;}
+    if(!this.aiOk()){this.setState({vibeMsg:'AI is off. Tap again and choose OK to use it.'});return;}
     const cat=Object.fromEntries(s.cats.map(c=>[c.id,c.name]));
     this.setState({vibeBusy:true,vibeMsg:''});
     let j=null,ok=false;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),30000);
@@ -699,6 +700,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
   async webFind(){const s=this.state,q=s.form.name.trim();if(s.webBusy||q.length<2)return;
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
     if(!token){this.setState({webMsg:'Sign in to search the web.'});return;}
+    if(!this.aiOk()){this.setState({webMsg:'AI is off. Tap again and choose OK to use it.'});return;}
     clearTimeout(this._sgt);this.setState({webBusy:true,webMsg:'',sugg:[],suggNone:''});
     let j=null;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),65000);
       const r=await fetch(API('/api/find'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
@@ -730,14 +732,24 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     this.setForm({name:g.name,lat:g.ll[0],lng:g.ll[1],area:area||'auto',address:g.street||f.address,cat:f.cat||g.cat});
     this.toast('Found it'+(area?' in '+area:'')+'!');}
 
+  // ---- Permission to send content to the AI services (App Store guideline 5.1.2(i)) ----
+  // Asked once, before the first AI feature runs. Until it's given, nothing goes to Anthropic or OpenAI
+  // and the Share extension's background reading stays off (links wait for Add A Spot instead).
+  aiAgreed(){try{return localStorage.getItem('nycList.aiOk')==='1';}catch(e){return false;}}
+  aiOk(){if(this.aiAgreed())return true;
+    const ok=window.confirm('Use AI to read posts?\n\nTo find places for you, Spotted In sends what you choose to AI services: links, captions and photos from posts, your search words and saved spots go to Anthropic (Claude); a video\u2019s sound and a few still frames go to OpenAI. They\u2019re used only to answer that request. See the Privacy Policy in Your Account.');
+    if(ok){try{localStorage.setItem('nycList.aiOk','1');}catch(e){}this._skDone=false;setTimeout(()=>this.ensureShareKey(),0);}
+    else this._aiNo=true;
+    return ok;}
   // ---- AI fill from a TikTok / Instagram / Threads link (server: /api/extract) ----
   aiAuto(url,now){clearTimeout(this._ait);const u=(url||'').trim(),src=detect(u);
-    if(this.state.form.id||!src||src==='link'||u===this.state.aiFor||this.state.aiBusy)return;
+    if(this.state.form.id||!src||src==='link'||u===this.state.aiFor||this.state.aiBusy||(this._aiNo&&!this.aiAgreed()))return;
     this._ait=setTimeout(()=>{if(this.state.form.url.trim()===u)this.aiFill();},now?50:700);}
   async aiFill(){const s=this.state,f=s.form,url=f.url.trim();if(s.aiBusy)return;
     if(!url&&!f.note.trim()){this.setState({aiMsg:'Paste a link first.'});return;}
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
     if(!token){this.setState({aiMsg:'Sign in to use AI fill.'});return;}
+    if(!this.aiOk()){this.setState({aiMsg:'AI is off. Tap again and choose OK to use it.'});return;}
     this.setState({aiBusy:true,aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,aiFor:url});
     let j=null;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),45000);
       const r=await fetch(API('/api/extract'),{method:'POST',signal:ac.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
@@ -756,6 +768,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     if(file.size>400*1024*1024){this.setState({aiMsg:'That video is too big. Try a clip under 10 minutes.'});return;}
     const token=window.NYCSync&&NYCSync.getToken?await NYCSync.getToken():null;
     if(!token){this.setState({aiMsg:'Sign in to use AI fill.'});return;}
+    if(!this.aiOk()){this.setState({aiMsg:'AI is off. Tap again and choose OK to use it.'});return;}
     const f=this.state.form,url=f.url.trim();
     this.setState({aiBusy:true,aiStage:'🎬 Watching the video…',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,aiFor:url});
     const frames=await NYCVideo.frames(file,3).catch(()=>[]);
@@ -852,7 +865,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>this.toast('Link copied. Go send it!')).catch(()=>this.toast('Press and hold the link to copy it.'));}
   // ---- Share → Spotted In, read straight away (supabase/share.sql, api/_share.js) ----
   // Signed in on the iPhone app: give this phone a share key, so the share sheet can send links for the server to read.
-  async ensureShareKey(){if(!NATIVE||!window.NYCNative||!NYCNative.setShareKey)return;const c=NYCSync.client&&NYCSync.client();if(!c||this.state.auth!=='signedIn'||this._skDone)return;
+  async ensureShareKey(){if(!NATIVE||!window.NYCNative||!NYCNative.setShareKey)return;const c=NYCSync.client&&NYCSync.client();if(!c||this.state.auth!=='signedIn'||this._skDone||!this.aiAgreed())return;
     let k='';try{k=localStorage.getItem('nycList.shareKey')||'';}catch(e){}
     if(!/^[a-f0-9]{64}$/.test(k)){const b=new Uint8Array(32);crypto.getRandomValues(b);k=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');}
     const {error}=await c.rpc('nyc_set_share_key',{k});if(error)return;
