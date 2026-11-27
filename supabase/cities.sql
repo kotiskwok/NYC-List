@@ -1,7 +1,7 @@
 -- Coming Soon cities: votes to open a city, and a count of spots people save in cities that aren't open yet.
 -- Run once in Supabase → SQL Editor → New query → Run (safe to re-run).
 --
--- One row per person per city. city is a map id from src/logic.js ('jc', 'phl', 'chi'…), or 'else:<Town, ST>'
+-- One row per person per city. city is a Coming Soon map id from src/logic.js ('phl', 'chi', 'la'…), or 'else:<Town, ST>'
 -- for spots saved outside every listed city (for example 'else:Princeton, NJ').
 -- The app writes only through nyc_city_note(), and everyone signed in can read the totals (never who voted).
 --
