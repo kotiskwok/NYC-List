@@ -7,6 +7,7 @@ Rules of thumb:
 - New UI state goes in the `state` initializer and new values/handlers in `renderVals()` in `src/logic.js`.
 - Shared lists live in `src/lists.js` (it mixes Lists-tab methods into `Component`; its values come from `listVals()`).
 - Maps are defined in `CITIES` / `CITY_ORDER` (`src/logic.js`) and mirrored in `api/_shared.js`; station and neighborhood data is in `data/`.
+- Coming Soon cities are in `SOON` (`src/logic.js`, mirrored in `api/_shared.js` and `map.html`). Spots are filed by coordinates with `cityAt()`; never by the map that's open.
 - Bump `CACHE` in `sw.js` whenever `src/` or `data/` changes.
 - Secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_MAPS_API_KEY`, MapKit keys, `SUPABASE_SERVICE_ROLE_KEY`) live only in Vercel environment variables.
 - `vercel.json` header sources must use `/path/:path*` style patterns.

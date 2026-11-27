@@ -34,6 +34,44 @@ CITIES.dc={id:'dc',name:'Washington, DC',short:'DC',emoji:'🏛️',q:'Washingto
   regions:['Northwest','Northeast','Southeast','Southwest','Arlington','Alexandria','Maryland','Northern Virginia'],transit:'Metro',layerSub:'Red, Orange, Blue, Silver, Green & Yellow Line Stations',layers:['bus','bike'],busSub:'Metrobus',
   bike:{name:'Capital Bikeshare',url:'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/',ext:'.json'}};
 const CITY_ORDER=['nyc','sg','hk','to','bos','dc'];
+// Where each map is (state or country) for Pick A City, which groups cities by state.
+Object.assign(CITIES.nyc,{st:'NY',stName:'New York'});Object.assign(CITIES.bos,{st:'MA',stName:'Massachusetts'});Object.assign(CITIES.dc,{st:'DC',stName:'Washington, DC'});
+Object.assign(CITIES.to,{country:'Canada'});Object.assign(CITIES.sg,{country:'Singapore'});Object.assign(CITIES.hk,{country:'Hong Kong'});
+// Coming Soon cities (status 'soon'): spots saved there are filed under the city and show on a simple map of it
+// (pins only: no transit, neighborhoods or bike layers yet), and people can vote to open it (supabase/cities.sql).
+// To open one, give it transit data like the other maps (see "Adding a map" in HANDOFF.md) and take status off.
+// 'else' (Somewhere Else) catches spots outside every listed city.
+const SOON=[
+  ['jc','Jersey City & Hoboken','JC','🌉','NJ','New Jersey','Jersey City, NJ',[40.735,-74.05],[40.64,-74.13,40.9,-73.9]],
+  ['nwk','Newark & Montclair','NWK','🏙️','NJ','New Jersey','Newark, NJ',[40.76,-74.2],[40.6,-74.42,40.92,-74.13]],
+  ['phl','Philadelphia','PHL','🔔','PA','Pennsylvania','Philadelphia, PA',[39.952,-75.165],[39.85,-75.35,40.15,-74.95]],
+  ['chi','Chicago','CHI','🌭','IL','Illinois','Chicago, IL',[41.89,-87.64],[41.64,-87.95,42.08,-87.52]],
+  ['la','Los Angeles','LA','🌴','CA','California','Los Angeles, CA',[34.05,-118.3],[33.7,-118.7,34.35,-117.9]],
+  ['sf','San Francisco Bay','SF','🌁','CA','California','San Francisco, CA',[37.77,-122.42],[37.6,-122.55,37.92,-122.15]],
+  ['mia','Miami','MIA','🦩','FL','Florida','Miami, FL',[25.77,-80.2],[25.55,-80.45,25.98,-80.11]],
+  ['atx','Austin','ATX','🤠','TX','Texas','Austin, TX',[30.27,-97.74],[30.1,-97.95,30.52,-97.55]],
+  ['sea','Seattle','SEA','☕','WA','Washington','Seattle, WA',[47.61,-122.33],[47.48,-122.45,47.75,-122.22]]];
+SOON.forEach(([id,name,short,emoji,st,stName,qc,center,box])=>{CITIES[id]={id,name,short,emoji,st,stName,status:'soon',q:qc.split(',')[0],qc,center,box,z:12,
+  bounds:[[box[0]-.15,box[1]-.2],[box[2]+.15,box[3]+.2]],regions:[],transit:'',layerSub:'',layers:[]};});
+CITIES.else={id:'else',name:'Somewhere Else',short:'Other',emoji:'🌎',status:'soon',q:'',qc:'',center:[39.5,-98.35],box:[-85,-180,85,180],z:4,minZ:2,
+  bounds:[[-85,-180],[85,180]],regions:[],transit:'',layerSub:'',layers:[]};
+const SOON_ORDER=[...SOON.map(c=>c[0]),'else'];
+const ALL_CITIES=[...CITY_ORDER,...SOON_ORDER];
+const isSoon=c=>!!((typeof c==='string'?CITIES[c]:c)||{}).status;
+// New Jersey's shore along the Hudson, the Kill Van Kull and the Arthur Kill (the NYC box also covers Jersey City, Hoboken and Newark).
+const NJ_EDGE=[[41.357,-74.694],[40.995,-73.902],[40.90,-73.925],[40.80,-73.972],[40.75,-74.012],[40.70,-74.035],[40.652,-74.07],[40.642,-74.18],[40.56,-74.248],[40.49,-74.262],[40.3,-74.4],[40.3,-75],[41.357,-75]];
+// Which map a spot belongs on, from its coordinates: the five boroughs are NYC, then any other open map whose area it's in,
+// then the nearest Coming Soon city it's in, else Somewhere Else.
+const cityAt=ll=>{if(!ll||!isFinite(ll[0])||!isFinite(ll[1]))return null;if(inCore(ll))return 'nyc';
+  const inB=(c)=>ll[0]>c.box[0]&&ll[0]<c.box[2]&&ll[1]>c.box[1]&&ll[1]<c.box[3];
+  const open=CITY_ORDER.find(k=>k!=='nyc'&&inB(CITIES[k]));if(open)return open;
+  const soon=SOON.map(c=>CITIES[c[0]]).filter(inB).sort((a,b)=>km(ll,a.center)-km(ll,b.center))[0];return soon?soon.id:'else';};
+// The town and state from a US address ("…, Princeton, NJ 08540, USA" → "Princeton, NJ"), for Somewhere Else spots.
+const townOf=a=>{const m=String(a||'').match(/,\s*([^,\d][^,]*?),\s*([A-Z]{2})(?:\s+\d{5}(?:-\d{4})?)?(?:,\s*(?:USA|United States))?\s*$/);return m?m[1].trim()+', '+m[2]:'';};
+// Spots filed under NYC (or the removed state maps, or Somewhere Else) move to the map their coordinates are on.
+// This is what moves New Jersey saves out of NYC; it runs whenever spots load, so it's the same on every device.
+const REFILE=new Set(['nyc','nj','nys','else']);
+const refile=list=>list.map(p=>{const was=p.city||'nyc';if(!REFILE.has(was))return p;const c=cityAt([+p.lat,+p.lng]);return c&&c!==was?{...p,city:c}:p;});
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
 // Spots saved on the removed New York State and New Jersey maps stay in the account but show on no map.
 const GONE_MAPS=new Set(['nys','nj']);
@@ -48,7 +86,7 @@ const CDATA=()=>(window.CITY_DATA||{})[CUR.id]||{};
 // On a state map, trips may start in the city (your NYC home) and end anywhere in the state.
 const SD=c=>{c=c||CUR;return (c.state&&window[c.data])||{};};
 const inBox=(ll,c)=>{c=c||CUR;const b=c.box;if(!(ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]))return false;return c.state&&SD(c).area?inRing(ll,SD(c).area):true;};
-const inCore=ll=>{const b=CITIES.nyc.box;return ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]&&!(window.NJS&&inRing(ll,NJS.area));};
+const inCore=ll=>{const b=CITIES.nyc.box;return ll[0]>b[0]&&ll[0]<b[2]&&ll[1]>b[1]&&ll[1]<b[3]&&!inRing(ll,NJ_EDGE);};
 const reach=(a,b)=>CUR.state?(inBox(a)||inCore(a))&&(inBox(b)||inCore(b)):km(a,b)<60;
 // State maps use NYC's subway (to reach Grand Central, Penn Station or the PATH) and show regional rail stations on their map.
 const NYCISH=()=>CUR.id==='nyc'||!!CUR.state;
@@ -249,7 +287,8 @@ const SHARED_LINK=(()=>{try{const q=new URLSearchParams(location.search);const r
 const withCity=q=>{const re=CUR.id==='nyc'?/new york|nyc|brooklyn|queens|bronx|staten/i:new RegExp(CUR.q,'i');return re.test(q)?q:q+', '+CUR.qc;};
 // Opening hours (from /api/hours, stored on the spot as hours:{p:[[openDay,openMin,closeDay,closeMin]…],s,t}).
 // Each map's clock, so Open Now is right wherever you are.
-const TZ={nyc:'America/New_York',nys:'America/New_York',nj:'America/New_York',bos:'America/New_York',dc:'America/New_York',to:'America/Toronto',sg:'Asia/Singapore',hk:'Asia/Hong_Kong'};
+const TZ={nyc:'America/New_York',nys:'America/New_York',nj:'America/New_York',bos:'America/New_York',dc:'America/New_York',to:'America/Toronto',sg:'Asia/Singapore',hk:'Asia/Hong_Kong',
+  jc:'America/New_York',nwk:'America/New_York',phl:'America/New_York',mia:'America/New_York',chi:'America/Chicago',atx:'America/Chicago',la:'America/Los_Angeles',sf:'America/Los_Angeles',sea:'America/Los_Angeles'};
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WEEK=10080;
 const cityNow=id=>{try{const f=new Intl.DateTimeFormat('en-US',{timeZone:TZ[id]||TZ.nyc,weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(new Date()),g=t=>(f.find(x=>x.type===t)||{}).value;
   return DAYS.indexOf(g('weekday'))*1440+(+g('hour')%24)*60+(+g('minute'));}catch(e){const d=new Date();return d.getDay()*1440+d.getHours()*60+d.getMinutes();}};
@@ -278,26 +317,26 @@ const placeQ=p=>p.address?`${p.name}, ${p.address}, ${CITIES[cityOf(p)].q}`:`${p
 class Component extends DCLogic {
   mainMapRef=React.createRef(); exMapRef=React.createRef(); planMapRef=React.createRef(); tripMapRef=React.createRef();
   state=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LS))}catch(e){}
-    const all=s?.places||SEED,cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
+    const all=refile(s?.places||SEED),cur=CUR.id,cm={nyc:{home:s?.home||null,plan:s?.plan||{ids:['s3','s10','s5','s11'],start:'first'}},...(s?.cities||{})},m0=cm[cur]||{};
     return {places:all.filter(p=>cityOf(p)===cur),otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,city:cur,cityOpen:false,cats:s?.cats||CATS0,listOrder:Array.isArray(s?.listOrder)?s.listOrder:[],walletDrag:null,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       tab:(this.props?.startTab==='Explore')?'explore':(this.props?.startTab==='Plan')?'plan':'map',mapCats:[],selId:null,confirmDel:false,desk:isDesk(),deskWide:isDeskWide(),
       exCats:[],exAreas:[],exPrices:[],exQuery:'',exFilters:false,deck:{key:'',pos:0},deckSeed:1,feedMenu:'',deckDx:0,deckFly:'',planSheet:'half',planStartOpen:false,exStage:'pick',exView:'list',hideVisited:false,openNow:false,hoursBusy:false,vibe:null,vibeBusy:false,vibeMsg:'',orderBusy:null,nudge:null,nudgesOn:nudgesOn(),evOnly:false,friendRev:null,frOpen:false,frState:{},frData:{},frMe:null,frSetup:'',frTab:'feed',frProfile:null,frProfTab:'lists',frListOpen:null,frAddOpen:false,frSeeOpen:false,frConfirm:null,frAt:0,frQ:'',frRes:null,frSearching:false,frUDraft:null,frUMsg:'',frUBusy:false,frUEdit:false,pubMap:null,pubState:'',bookBusy:null,stopNoteDraft:null,reviews:{},reviewSheet:null,reviewMenu:null,listsTab:null,themeV:0,tourOpen:false,tourStep:0,tourFirst:false,addOpen:false,placing:false,placingReturn:null,form:blank(),saving:false,toast:null,
       showSubway:LAYERS.sub2===true,showBus:!!LAYERS.bus,showBike:!!LAYERS.bike,showTram:!!LAYERS.tram,showFerry:!!LAYERS.ferry,layersOpen:false,busState:'',bikeState:'',tramState:'',ferryState:'',avatarBusy:false,avatarMsg:'',avatarV:0,spotPhotoBusy:false,gphoto:false,obNeed:false,obStep:0,obName:'',obAddr:'',obRes:[],obBusy:false,obMsg:'',obHome:null,showPass:false,here:null,locating:false,hereFailed:false,routeFor:null,routeMode:'home',routeSpot:null,routePick:0,pickerOpen:false,
       auth:window.NYCSync&&NYCSync.enabled?'loading':'local',syncState:'',syncEmail:'',acctOpen:false,authMode:'in',authEmail:'',authPass:'',authMsg:'',authBusy:false,aiBusy:false,aiStage:'',aiMsg:'',aiPlaces:[],aiSkip:[],aiCityAsk:null,addMode:'link',aiFor:'',aiAdding:false,sugg:[],suggBusy:false,suggPicked:'',suggNone:'',webBusy:false,webMsg:'',webFor:'',
       trips:[],tripsState:'',tripsSync:'',tripHere:[],tripStopMap:false,tripId:null,tripView:'list',tripSel:null,sharedMaps:{},tripShareOpen:false,tripPickOpen:false,tripPickQ:'',listChoose:null,
-      newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,addTargetDay:0,tripPickDay:0,authName:'',acctDel:0};})();
+      newTripOpen:false,newTripName:'',newTripDays:0,newTripStart:'',newTripMe:'',newTripAddPid:null,newTripBusy:false,confirmTripDel:false,confirmStopDel:false,confirmNewLink:false,tripEditOpen:false,tripEditName:'',tripEditDays:0,tripEditStart:'',joinInfo:null,addTarget:null,addTargetDay:0,tripPickDay:0,authName:'',acctDel:0,cityVotes:(()=>{try{return JSON.parse(localStorage.getItem('nycList.cityVotes'))||{};}catch(e){return {};}})(),cityCounts:{}};})();
 
   // ---- cloud sync hooks (used by sync.js) ----
   // Synced data keeps every city's spots in one list (each tagged with its city); home and plan are NYC's for older
   // versions, and the other cities' home/plan live under cities.{sg,hk,to}.
   snapshot(){const s=this.state,cur=CUR.id,meta={...(s.cityMeta||{}),[cur]:{home:s.home,plan:s.plan}},cities={};
-    CITY_ORDER.forEach(k=>{if(k!=='nyc'&&meta[k])cities[k]=meta[k];});const ny=meta.nyc||{};
+    ALL_CITIES.forEach(k=>{if(k!=='nyc'&&meta[k])cities[k]=meta[k];});const ny=meta.nyc||{};
     return {places:[...s.places.map(p=>p.city?p:{...p,city:cur}),...(s.otherPlaces||[])],cats:s.cats,home:ny.home||null,plan:ny.plan||{ids:[],start:'first'},cities,city:cur,listOrder:s.listOrder||[]};}
   emptyData(){return {places:[],cats:CATS0,home:null,plan:{ids:[],start:'first'},cities:{}};}
   isExampleOnly(){const ids=new Set(SEED.map(p=>p.id)),s=this.state;return !(s.otherPlaces||[]).length&&s.places.length===SEED.length&&s.places.every(p=>ids.has(p.id))&&s.cats.length===CATS0.length;}
   // The picked city syncs too: when another device switched, this one follows.
   applyRemote(d){const moved=!!(d.city&&CITIES[d.city]&&d.city!==CUR.id);if(moved){setCityData(d.city);try{localStorage.setItem('nycList.city',d.city);}catch(e){}}
-    const names=new Set(areas().map(a=>a.name)),cur=CUR.id,all=d.places||[],cm={nyc:{home:d.home||null,plan:d.plan||{ids:[],start:'first'}},...(d.cities||{})},m0=cm[cur]||{};
+    const names=new Set(areas().map(a=>a.name)),cur=CUR.id,all=refile(d.places||[]),cm={nyc:{home:d.home||null,plan:d.plan||{ids:[],start:'first'}},...(d.cities||{})},m0=cm[cur]||{};
     const places=all.filter(p=>cityOf(p)===cur).map(p=>names.size&&!names.has(p.area)?{...p,area:hoodAt([p.lat,p.lng])||p.area}:p);
     this.setState(st=>({places,otherPlaces:all.filter(p=>cityOf(p)!==cur),cityMeta:cm,cats:d.cats&&d.cats.length?d.cats:CATS0,listOrder:Array.isArray(d.listOrder)?d.listOrder:st.listOrder,home:homeFor(cm,cur),plan:m0.plan||{ids:[],start:'first'},
       selId:places.some(p=>p.id===st.selId)?st.selId:null,routeFor:places.some(p=>p.id===st.routeFor)?st.routeFor:null,
@@ -308,7 +347,8 @@ class Component extends DCLogic {
     this.setState({places:all.filter(p=>cityOf(p)===id),otherPlaces:all.filter(p=>cityOf(p)!==id),cityMeta:cm,home:homeFor(cm,id),plan:m0.plan||{ids:[],start:'first'},city:id,cityOpen:false,
       selId:null,routeFor:null,mapCats:[],exCats:[],exAreas:[],exPrices:[],exQuery:'',vibe:null,vibeMsg:'',exStage:'pick',placing:false,layersOpen:false,obRes:[],obHome:null,obMsg:'',busState:'',tramState:'',ferryState:'',bikeState:''},()=>this.cityMoved());
     this.toast('Welcome to '+CUR.name+' '+CUR.emoji);}
-  cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;this.allMaps().forEach(m=>{try{if(m.kind!=='trip'){m.map.setMinZoom(CUR.minZ||10);m.map.setMaxBounds(CUR.bounds);}m.map.setView(CUR.center,CUR.z||12,{animate:false});}catch(e){}
+  cityMoved(){window.NYCNative&&NYCNative.setCity(CUR.short);if(!this.maps)return;const fit=CUR.id==='else'&&this.state.places.filter(p=>isFinite(p.lat)).map(p=>[p.lat,p.lng]);
+    this.allMaps().forEach(m=>{try{if(m.kind!=='trip'){m.map.setMinZoom(CUR.minZ||10);m.map.setMaxBounds(CUR.bounds);}if(fit&&fit.length)m.map.fitBounds(fit,{maxZoom:12,padding:[60,60],animate:false});else m.map.setView(CUR.center,CUR.z||12,{animate:false});}catch(e){}
       if(m.subway){const on=m.map.hasLayer(m.subway);m.subway.remove();this.buildSubway(m);if(on)m.subway.addTo(m.map);}
       if(!m.apple)this.drawBase(m);if(m.streets)try{m.streets.redraw();}catch(e){}m.sig='';m.ids='';m.psig=null;});
     this.allMaps().forEach(m=>this.fillLayers(m));this.syncMaps();setTimeout(()=>this.refreshVisible(),60);}
@@ -638,6 +678,27 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       if(!best||len(order)<best.l)best={o:order,l:len(order)};});
     this.setState(st=>({plan:{...st.plan,ids:best.o.map(p=>p.id)}}));this.toast('Reordered for the shortest trip. You’re welcome.');}
   move(i,d){this.setState(st=>{const ids=[...st.plan.ids],j=i+d;if(j<0||j>=ids.length)return null;[ids[i],ids[j]]=[ids[j],ids[i]];return {plan:{...st.plan,ids}};});}
+  // Coming Soon demand (supabase/cities.sql): votes, and every spot saved in a city that isn't open yet.
+  // Somewhere Else spots count under their town ("else:Princeton, NJ") so the next city can be picked from real saves.
+  cityKey(city,p){return city==='else'?'else:'+(townOf(p&&p.address)||'Unknown'):city;}
+  async cityNote(key,kind){const c=window.NYCSync&&NYCSync.client&&NYCSync.client();if(!c||this.state.auth!=='signedIn')return false;
+    try{const {error}=await c.rpc('nyc_city_note',{p_city:key,p_kind:kind});return !error;}catch(e){return false;}}
+  cityDemand(city,p,kind){if(!CITIES[city]||!CITIES[city].status)return;this.cityNote(this.cityKey(city,p),kind);}
+  async loadCityCounts(force){const c=window.NYCSync&&NYCSync.client&&NYCSync.client();if(!c||this.state.auth!=='signedIn')return;
+    if(!force&&this._ccAt&&Date.now()-this._ccAt<6e4)return;this._ccAt=Date.now();
+    try{const [all,mine]=await Promise.all([c.rpc('nyc_city_counts'),c.from('nyc_city_demand').select('city,voted')]);
+      const counts={};((all&&all.data)||[]).forEach(r=>{counts[r.city]={v:+r.votes||0,n:+r.people||0};});
+      const st={cityCounts:counts};if(mine&&mine.data){const v={};mine.data.forEach(r=>{if(r.voted)v[r.city]=true;});st.cityVotes=v;try{localStorage.setItem('nycList.cityVotes',JSON.stringify(v));}catch(e){}}
+      this.setState(st);}catch(e){}}
+  voteCity(id){const s=this.state,on=!s.cityVotes[id],c=CITIES[id];if(!c||!c.status||id==='else')return;
+    const votes={...s.cityVotes};if(on)votes[id]=true;else delete votes[id];
+    const cc=s.cityCounts[id]||{v:0,n:0},counts={...s.cityCounts,[id]:{v:Math.max(0,cc.v+(on?1:-1)),n:Math.max(0,cc.n+(on?1:-1))}};
+    this.setState({cityVotes:votes,cityCounts:counts});try{localStorage.setItem('nycList.cityVotes',JSON.stringify(votes));}catch(e){}
+    if(on)this.toast('Vote counted for '+c.name+' '+c.emoji+'\nThe more votes, the sooner it opens.');
+    this.cityNote(id,on?'vote':'unvote');}
+  // New spots go on the map their coordinates are on; spots in Coming Soon cities count toward opening them.
+  fileSpots(list){const out=list.map(p=>{const c=cityAt([+p.lat,+p.lng])||p.city||CUR.id;return {...p,city:c,...(c!==CUR.id&&CITIES[c].status&&townOf(p.address)?{area:townOf(p.address).split(',')[0]}:{})};});
+    out.forEach(p=>this.cityDemand(p.city,p,'save'));return {here:out.filter(p=>p.city===CUR.id),there:out.filter(p=>p.city!==CUR.id)};}
   async save(){const s=this.state,f=s.form;if(!f.name.trim()||!f.cat||s.saving)return;const orig=f.id?s.places.find(p=>p.id===f.id):null;
     let ll=f.lat!=null?[f.lat,f.lng]:null;
     if(!ll){this.setState({saving:true});const ao=areas().find(a=>a.name===f.area);
@@ -645,9 +706,14 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       if(res&&res[0]){ll=[r5(+res[0].lat),r5(+res[0].lon)];if(ao&&!f.address.trim()&&km(ll,ao.c)>3)ll=null;}
       if(!ll&&ao)ll=[r5(ao.c[0]+(Math.random()-.5)*.004),r5(ao.c[1]+(Math.random()-.5)*.004)];
       this.setState({saving:false});if(!ll){this.toast('Couldn’t find it. Drop a pin or pick a neighborhood.');return;}}
-    const area=f.area==='auto'?(hoodAt(ll)||'Midtown'):f.area;
-    const p={id:f.id||('p'+Date.now()),name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),pub:!!f.pub,fpriv:!!f.fpriv,...(()=>{const n=(f.evN||'').trim();return n&&okDay(f.evD1)?{ev:{n,d1:f.evD1,...(okDay(f.evD2)&&f.evD2>f.evD1?{d2:f.evD2}:{}),...((f.evTm||'').trim()?{tm:f.evTm.trim()}:{})}}:{ev:null};})(),order:orderList(f.order),orderChk:orderList(f.order).length?null:(orig&&orig.orderChk)||null,...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
+    // The spot goes on the map its coordinates are on (a Jersey City spot saved from the NYC map is filed under Jersey City).
+    const city=cityAt(ll)||CUR.id,away=city!==CUR.id,town=townOf(f.address);
+    const area=away?(town?town.split(',')[0]:CITIES[city].q||''):f.area==='auto'?(hoodAt(ll)||(isSoon(CUR)?(town.split(',')[0]||CUR.q):'Midtown')):f.area;
+    const p={id:f.id||('p'+Date.now()),city,name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),pub:!!f.pub,fpriv:!!f.fpriv,...(()=>{const n=(f.evN||'').trim();return n&&okDay(f.evD1)?{ev:{n,d1:f.evD1,...(okDay(f.evD2)&&f.evD2>f.evD1?{d2:f.evD2}:{}),...((f.evTm||'').trim()?{tm:f.evTm.trim()}:{})}}:{ev:null};})(),order:orderList(f.order),orderChk:orderList(f.order).length?null:(orig&&orig.orderChk)||null,...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
     if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false,s.addTargetDay);this.setState({addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added to the list.');return;}
+    if(!orig||orig.city!==city)this.cityDemand(city,p,'save');
+    if(away){const c=CITIES[city];this.setState(st=>({addOpen:false,tab:'map',selId:null,places:st.places.filter(x=>x.id!==p.id),otherPlaces:[{...(orig||{}),...p},...(st.otherPlaces||[]).filter(x=>x.id!==p.id)]}));
+      this.toast(c.status?'Saved to '+c.name+' '+c.emoji+'\n'+(city==='else'?'It’s outside our cities for now.':'That city is Coming Soon.')+'\nFind it in Pick A City.':'Saved to your '+c.name+' map '+c.emoji);return;}
     this.setState(st=>({addOpen:false,tab:'map',selId:p.id,mapCats:[],places:orig?st.places.map(x=>x.id===p.id?{...x,...p}:x):[p,...st.places]}),
       ()=>setTimeout(()=>{if(this.maps){this.maps.main.map.invalidateSize();this.maps.main.map.flyTo(ll,15,{duration:.8});}},80));
     this.toast(orig?'Saved. Looking good!':'Stuck it on the map!!');}
@@ -816,8 +882,9 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       made.push({id:'p'+Date.now()+made.length,name:p.name,cat,area:area||hoodAt(ll)||'Midtown',lat:ll[0],lng:ll[1],url,source:detect(url)||'manual',address:p.address||'',note:p.note||'',order:orderList(p.must_order),...(p.event&&p.event.name&&okDay(p.event.start_date)?{ev:{n:p.event.name,d1:p.event.start_date,...(okDay(p.event.end_date)&&p.event.end_date>p.event.start_date?{d2:p.event.end_date}:{}),...(p.event.time?{tm:p.event.time}:{})}}:{}),reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false});}
     if(s.addTarget&&made.length){const tid=s.addTarget;this.addStopsTo(tid,made,false,s.addTargetDay);this.setState({aiAdding:false,addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});
       this.toast(`Added ${made.length} ${made.length===1?'Spot':'Spots'} To The List`+(skipped?` · ${skipped} Couldn’t Be Found`:''));return;}
-    this.setState(st=>({aiAdding:false,addOpen:!made.length,tab:made.length?'map':st.tab,mapCats:[],selId:null,places:[...made,...st.places]}),
-      ()=>setTimeout(()=>{if(this.maps&&made.length){this.maps.main.map.invalidateSize();this.fit(this.maps.main,made,{padding:[70,70],maxZoom:15});}},120));
+    const {here,there}=this.fileSpots(made);
+    this.setState(st=>({aiAdding:false,addOpen:!made.length,tab:made.length?'map':st.tab,mapCats:[],selId:null,places:[...here,...st.places],otherPlaces:[...there,...(st.otherPlaces||[])]}),
+      ()=>setTimeout(()=>{if(this.maps&&here.length){this.maps.main.map.invalidateSize();this.fit(this.maps.main,here,{padding:[70,70],maxZoom:15});}},120));
     this.toast(made.length?`Added ${made.length} ${made.length===1?'Spot':'Spots'}`+(skipped?` · ${skipped} Couldn’t Be Found`:''):'Couldn’t find these on the map. Add them one by one?');}
 
   // Light / dark switched (in Your Account, or the phone's setting under Automatic): redraw, and re-tint Apple's maps.
@@ -869,7 +936,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
         all.push({id:'p'+Date.now()+all.length,job:j.id,name:p.name,cat,area:(city===CUR.id&&(this.aiArea(p.neighborhood)||hoodAt([+p.lat,+p.lng])))||p.neighborhood||'',lat:r5(+p.lat),lng:r5(+p.lng),url:j.link,source:detect(j.link)||'link',
           address:p.address||'',note:p.note||'',order:orderList(p.must_order),...(p.event&&p.event.name&&okDay(p.event.start_date)?{ev:{n:p.event.name,d1:p.event.start_date,...(okDay(p.event.end_date)&&p.event.end_date>p.event.start_date?{d2:p.event.end_date}:{}),...(p.event.time?{tm:p.event.time}:{})}}:{}),
           reserve:p.booking_url||'',price:this.priced(cat)&&p.price?p.price:0,visited:false,city});});});
-      const here=all.filter(p=>p.city===CUR.id),there=all.filter(p=>p.city!==CUR.id);
+      const {here,there}=this.fileSpots(all);
       this.setState(st=>({places:[...here,...st.places],otherPlaces:[...there,...(st.otherPlaces||[])]}));
       this.toast(all.length===1?'Spotted '+all[0].name+' On The Map!!':'Spotted '+all.length+' New Spots On The Map!!');}
     const clear=[...done,...failed,...stale].map(j=>j.id);if(clear.length)await c.from('nyc_share_jobs').delete().in('id',clear);
@@ -1105,9 +1172,25 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       statsText:`${s.places.length} ${s.places.length===1?'Spot':'Spots'} · ${vis} Visited`,mapChips,exTiles,exBoroughs,
       subBtnBg:s.showSubway?C.navy:'#fff',subBtnFg:s.showSubway?'#fff':C.navy,toggleSubway:()=>this.setState({showSubway:!s.showSubway}),
       layersOpen:s.layersOpen,layersOn:s.showSubway||(s.showBus&&CUR.layers.includes('bus'))||(s.showBike&&!!CUR.bike)||(s.showTram&&!!CUR.tram)||(s.showFerry&&!!CUR.ferry),toggleLayers:()=>this.setState({layersOpen:!s.layersOpen}),closeLayers:()=>this.setState({layersOpen:false}),
-      cityShort:CUR.short,cityName:CUR.name,cityEmoji:CUR.emoji,isNyc:CUR.id==='nyc',cityOpen:s.cityOpen,openCity:()=>this.setState({cityOpen:true,layersOpen:false}),closeCity:()=>this.setState({cityOpen:false}),
+      cityShort:CUR.short,cityName:CUR.name,cityEmoji:CUR.emoji,isNyc:CUR.id==='nyc',cityOpen:s.cityOpen,openCity:()=>{this.setState({cityOpen:true,layersOpen:false});this.loadCityCounts();},closeCity:()=>this.setState({cityOpen:false}),
       cityRows:CITY_ORDER.map(k=>{const c=CITIES[k],n=k===CUR.id?s.places.length:(s.otherPlaces||[]).filter(p=>cityOf(p)===k).length;
         return {id:k,name:c.name,short:c.short,emoji:c.emoji,transit:c.transit,count:n,on:k===CUR.id,onClick:()=>this.setCity(k)};}),
+      // Pick A City: US cities grouped by state (open maps and Coming Soon ones together), then the rest of the world.
+      cityGroups:(()=>{const n=k=>k===CUR.id?s.places.length:(s.otherPlaces||[]).filter(p=>cityOf(p)===k).length;
+        const row=k=>{const c=CITIES[k],cc=s.cityCounts[k]||{},cnt=n(k);return {id:k,name:c.name,short:c.short,emoji:c.emoji,soon:!!c.status,count:cnt,on:k===CUR.id,
+          sub:c.status?['Coming Soon',cnt?cnt+(cnt===1?' Spot':' Spots'):'',cc.n?cc.n+' Want It':''].filter(Boolean).join(' · '):cnt+(cnt===1?' Spot':' Spots')+' · '+c.transit,
+          voted:!!s.cityVotes[k],vote:()=>this.voteCity(k),onClick:()=>this.setCity(k)};};
+        const by={};ALL_CITIES.filter(k=>k!=='else'&&CITIES[k].st).forEach(k=>{const g=CITIES[k].stName;(by[g]=by[g]||[]).push(k);});
+        // States with an open map first, then the ones you have spots in, then A to Z.
+        const open=g=>by[g].some(k=>!isSoon(k)),mine=g=>by[g].reduce((t,k)=>t+n(k),0);
+        const us=Object.keys(by).sort((a,b)=>(open(b)-open(a))||(mine(b)-mine(a))||a.localeCompare(b)).map(g=>({label:g,rows:by[g].sort((a,b)=>(isSoon(a)-isSoon(b))||CITIES[a].name.localeCompare(CITIES[b].name)).map(row)}));
+        const world=ALL_CITIES.filter(k=>CITIES[k].country).sort((a,b)=>CITIES[a].country.localeCompare(CITIES[b].country)).map(k=>({label:CITIES[k].country,rows:[row(k)]}));
+        return [{label:'United States',big:true},...us,{label:'Around The World',big:true},...world,...(n('else')||CUR.id==='else'?[{label:'Everywhere Else',rows:[row('else')]}]:[])];})(),
+      soonCard:isSoon(CUR)?(()=>{const cc=s.cityCounts[CUR.id]||{},voted=!!s.cityVotes[CUR.id];
+        return CUR.id==='else'?{emoji:CUR.emoji,title:'Somewhere Else',sub:'Spots outside our cities wait here.\nEvery one counts toward picking the next city.'}
+          :{emoji:CUR.emoji,title:CUR.short+' Is Coming Soon',sub:'Your spots here are saved.\nTransit and travel times arrive when it opens.',voted,count:cc.n||0,
+            btn:voted?'You Voted':'Vote To Open',vote:()=>this.voteCity(CUR.id)};})():null,
+      hasLayers:!isSoon(CUR),
       layerRows:(()=>{const lr=(key,label,sub,on,stv,col,onClick)=>({key,label,sub:on&&stv==='loading'?'Loading…':on&&stv==='error'?'Not Available Right Now':sub,on,col,onClick});
         const rows=[{key:'sub',label:CUR.id==='nyc'?'Subway':CUR.transit,sub:CUR.layerSub,on:s.showSubway,col:CUR.id==='nyc'?'#EE352E':CUR.id==='sg'?'#D42E12':CUR.id==='hk'?'#ED1D24':CUR.id==='nys'?'#0039A6':CUR.id==='nj'?'#003DA5':CUR.id==='bos'?'#DA291C':CUR.id==='dc'?'#BF0D3E':'#DA251D',onClick:()=>this.setState({showSubway:!s.showSubway})}];
         CUR.layers.forEach(k=>{
@@ -1216,7 +1299,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       webLabel:s.sugg.length?'✨ Not Here? Search The Web':'✨ Not Found? Search The Web',webFind:()=>this.webFind(),
       webBusy:s.webBusy,webHasMsg:!!s.webMsg&&!s.webBusy,webMsg:s.webMsg,
       aiShow:!f.id&&!!f.url.trim(),aiVidShow:!f.id,onVideo:e=>{const fl=e.target.files&&e.target.files[0];e.target.value='';this.aiVideo(fl);},aiBtn:s.aiBusy?(s.aiStage||'✨ Reading The Post…'):s.aiFor&&s.aiFor===f.url.trim()?'✨ Read It Again':'✨ Fill From Link',aiBusy:s.aiBusy,
-      aiRun:()=>this.aiFill(),aiCityAsk:s.aiCityAsk?(()=>{const c=CITIES[s.aiCityAsk.city],n=s.aiCityAsk.places.length;return {title:(n===1?'This Spot Is':'These Spots Are')+' In '+c.name,emoji:c.emoji,sub:'Your map is set to '+CUR.name+'. Switch to see '+(n===1?'it':'them')+' on the map.',btn:'Switch To '+c.short+' '+c.emoji,go:()=>this.aiSwitchCity(),stay:()=>this.setState({aiCityAsk:null,aiMsg:'Kept '+CUR.name+'. Switch cities from the map to save '+(n===1?'that spot':'those spots')+'.'}),stayLbl:'Stay In '+CUR.short};})():null,aiHasMsg:!!s.aiMsg&&!s.aiBusy,aiMsg:s.aiMsg,aiMulti:s.aiPlaces.length>1&&!s.aiBusy,aiCount:s.aiPlaces.length,
+      aiRun:()=>this.aiFill(),aiCityAsk:s.aiCityAsk?(()=>{const c=CITIES[s.aiCityAsk.city],n=s.aiCityAsk.places.length;return {title:(n===1?'This Spot Is':'These Spots Are')+(c.id==='else'?' Outside Our Cities':' In '+c.name),emoji:c.emoji,sub:'Your map is set to '+CUR.name+'. Switch to see '+(n===1?'it':'them')+' on the map.'+(c.status?' '+(c.id==='else'?'They wait under Somewhere Else.':c.name+' is Coming Soon, so it’s a simple map for now.'):''),btn:'Switch To '+c.short+' '+c.emoji,go:()=>this.aiSwitchCity(),stay:()=>this.setState({aiCityAsk:null,aiMsg:'Kept '+CUR.name+'. Switch cities from the map to save '+(n===1?'that spot':'those spots')+'.'}),stayLbl:'Stay In '+CUR.short};})():null,aiHasMsg:!!s.aiMsg&&!s.aiBusy,aiMsg:s.aiMsg,aiMulti:s.aiPlaces.length>1&&!s.aiBusy,aiCount:s.aiPlaces.length,
       aiPickCount:s.aiPlaces.length-(s.aiSkip||[]).length,aiAddAllLabel:s.aiAdding?'Adding…':`Add ${s.aiPlaces.length-(s.aiSkip||[]).length} To ${s.addTarget?'The List':'My Map'}`,aiAddAll:()=>this.aiAddAll(),
       aiRows:s.aiPlaces.map((p,i)=>{const c=cat[p.category_id];return {name:p.name,emoji:c?emo(c):'📍',bg:c?c.color:'#A9ADC2',sub:[c&&c.name,p.neighborhood].filter(Boolean).join(' · ')||'NYC',on:p.name===f.name,onPick:()=>this.aiApply(p),checked:!(s.aiSkip||[]).includes(i),onCheck:e=>{e.stopPropagation();const k=s.aiSkip||[];this.setState({aiSkip:k.includes(i)?k.filter(x=>x!==i):[...k,i]});}};}),
       aiConfHigh:s.aiPlaces.length>0&&s.aiPlaces.every(p=>p.confidence==='high'),

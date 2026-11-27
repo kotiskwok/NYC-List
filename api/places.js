@@ -68,13 +68,15 @@ module.exports = async (req, res) => {
       } });
     }
 
+    // Somewhere Else has no area, so its searches aren't limited to one.
+    const anywhere = !!cityFor(body.city).any;
     const box = body.city && body.city !== 'nyc' ? (b => ({ low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } }))(cityFor(body.city).box) : NYC;
     if (body.action === 'find') {
       const q = String(body.q || '').trim().slice(0, 200);
       if (q.length < 2) return send(res, 200, { place: null });
       const j = await google('places:searchText', { method: 'POST', headers: { 'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.shortFormattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.addressComponents' },
         body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', ...(Array.isArray(body.near) && body.near.length === 2 && body.near.every(Number.isFinite)
-          ? { locationBias: { circle: { center: { latitude: body.near[0], longitude: body.near[1] }, radius: 400 } } } : { locationRestriction: { rectangle: box } }) }) });
+          ? { locationBias: { circle: { center: { latitude: body.near[0], longitude: body.near[1] }, radius: 400 } } } : anywhere ? {} : { locationRestriction: { rectangle: box } }) }) });
       const p = (j.places || [])[0];
       if (!p || !p.location) return send(res, 200, { place: null });
       const comp = type => ((p.addressComponents || []).find(c => (c.types || []).includes(type)) || {}).shortText || '';
@@ -92,7 +94,7 @@ module.exports = async (req, res) => {
     const near = Array.isArray(body.near) && body.near.length === 2 && body.near.every(Number.isFinite) ? body.near : null;
     const j = await google('places:autocomplete', { method: 'POST', body: JSON.stringify({
       input: q, sessionToken: session, languageCode: 'en', regionCode: 'us',
-      locationRestriction: { rectangle: box },
+      ...(anywhere ? {} : { locationRestriction: { rectangle: box } }),
       ...(near ? { origin: { latitude: near[0], longitude: near[1] } } : {})
     }) });
     const suggestions = (j.suggestions || []).map(s => s.placePrediction).filter(Boolean).map(p => ({

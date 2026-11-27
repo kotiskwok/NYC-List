@@ -81,8 +81,11 @@ h1 em{font-weight:200;font-style:normal}
 <script>
 "use strict";
 const CITY={nyc:['New York City','NYC','🗽','New York',[40.722,-73.97]],sg:['Singapore','SG','🦁','Singapore',[1.3,103.84]],hk:['Hong Kong','HKG','🌃','Hong Kong',[22.3,114.17]],
-  to:['Toronto','TO','🍁','Toronto',[43.66,-79.39]],bos:['Boston','BOS','🦞','Boston, MA',[42.355,-71.075]],dc:['Washington, DC','DC','🏛️','Washington, DC',[38.9,-77.03]]};
-const ORDER=['nyc','sg','hk','to','bos','dc'],PRICES=['$','$$','$$$','$$$$'];
+  to:['Toronto','TO','🍁','Toronto',[43.66,-79.39]],bos:['Boston','BOS','🦞','Boston, MA',[42.355,-71.075]],dc:['Washington, DC','DC','🏛️','Washington, DC',[38.9,-77.03]],
+  jc:['Jersey City & Hoboken','JC','🌉','Jersey City, NJ',[40.735,-74.05]],nwk:['Newark & Montclair','NWK','🏙️','Newark, NJ',[40.76,-74.2]],phl:['Philadelphia','PHL','🔔','Philadelphia, PA',[39.952,-75.165]],
+  chi:['Chicago','CHI','🌭','Chicago, IL',[41.89,-87.64]],la:['Los Angeles','LA','🌴','Los Angeles, CA',[34.05,-118.3]],sf:['San Francisco Bay','SF','🌁','San Francisco, CA',[37.77,-122.42]],
+  mia:['Miami','MIA','🦩','Miami, FL',[25.77,-80.2]],atx:['Austin','ATX','🤠','Austin, TX',[30.27,-97.74]],sea:['Seattle','SEA','☕','Seattle, WA',[47.61,-122.33]]};
+const ORDER=['nyc','sg','hk','to','bos','dc','jc','nwk','phl','chi','la','sf','mia','atx','sea'],PRICES=['$','$$','$$$','$$$$'];
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=(location.pathname.match(/^\/m\/([a-z0-9-]{3,40})\/?$/)||[])[1]||new URLSearchParams(location.search).get('u')||'';

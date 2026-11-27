@@ -19,7 +19,9 @@ It has six maps, each with its own spots, home and day plan:
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
 | Washington, DC | DC 🏛️ | Metro (Red, Orange, Blue, Silver, Green, Yellow) |
 
-The app covers major cities only; more get added over time. Old spots tagged `nys` or `nj` (state maps that no longer exist) stay in the account but show on no map, public map or friends' view (`GONE_MAPS` in `logic.js`).
+**Coming Soon cities** (opened by popular demand): Jersey City & Hoboken (JC 🌉) and Newark & Montclair (NWK 🏙️) in New Jersey, Philadelphia (PHL 🔔), Chicago (CHI 🌭), Los Angeles (LA 🌴), San Francisco Bay (SF 🌁), Miami (MIA 🦩), Austin (ATX 🤠) and Seattle (SEA ☕). Spots saved there are filed under that city and show on a simple map of it (pins, Explore and Route; no transit, neighborhoods or layers yet), with a **Vote To Open** card. Spots outside every listed city go to **Somewhere Else 🌎**.
+
+Every spot is filed by its coordinates, not by the map you were on: a Jersey City or Hoboken spot saved from the NYC map goes to JC (New Jersey is cut out of the NYC box by `NJ_EDGE`). This runs on every load (`refile()` in `logic.js`), so spots once filed under NYC, or under the old `nys`/`nj` state maps, move to the right city on every device.
 
 - **Website:** https://spottedinapp.com (intro page) with the web app at https://spottedinapp.com/app (also installs to the home screen). The Vercel address https://nyc-lovat.vercel.app serves the app at "/" too.
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -93,6 +95,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Map tab
 - **Apple Maps** base map (MapKit JS), dark scheme in dark mode. If it's unavailable, the app draws its own map in Apple Maps colours.
+- **Pick A City:** US cities grouped by state (states with an open map first, then the ones you have spots in, then A to Z), then Around The World (Toronto, Hong Kong, Singapore), then Everywhere Else once you have spots there. Coming Soon rows show your spot count and "N Want It" with a **Vote** button.
 - **Header card:** "Spotted In" with the yellow **city button** (NYC ▾) that opens **Pick A City**, a big count of **Spots To Try**, your profile photo with a sync dot (tap for **Your Account**), and Visited / In Plan counts.
 - **Chips:** All Spots, **Open Now** (only spots open right now, in that map's local time), then the categories.
 - **Pins:** a frosted ring with the category's line icon (34 px, 54 px when selected; `pinHtml` / `syncOne` in `logic.js`).
@@ -257,7 +260,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
 - **Domain:** spottedinapp.com is registered on Squarespace (Google Workspace email on it). Squarespace DNS → Custom records: `A @ 216.198.79.1` and `CNAME www 02fda0b297a75253.vercel-dns-017.com` (the Google MX, SPF and DKIM records stay). Vercel → project nyc → Domains: spottedinapp.com redirects (308) to www.spottedinapp.com, which is Production. Supabase → Authentication → URL Configuration lists `https://spottedinapp.com/**`, `https://www.spottedinapp.com/**` and `https://nyc-lovat.vercel.app/**` as redirect URLs.
 - **Supabase setup:** Authentication → Site URL is the Vercel address; "Allow new users to sign up" stays on (friends join lists).
-- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading), `supabase/friends.sql` (friends). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
+- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading), `supabase/friends.sql` (friends), `supabase/cities.sql` (Coming Soon votes and demand). All have been run except `cities.sql` (new: run it once so votes and counts save). If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
 - **Replacing a key** (expired, deleted, or showing an error): make a new key on the service's site, then Vercel → project nyc → Settings → Environment Variables → the variable → **⋯ → Edit**, paste it with no spaces, keep Production and Preview ticked, save, then **Deployments → top production deployment → ⋯ → Redeploy**. No iPhone build is needed, because keys are only used on the server.
 - **Which key is broken:** "invalid x-api-key" when pasting a link means `ANTHROPIC_API_KEY` (also check Billing in console.anthropic.com for credit). Missing photos, suggestions or pins point to `GOOGLE_MAPS_API_KEY`; videos that are read without their speech point to `OPENAI_API_KEY`; the drawn fallback map instead of Apple Maps points to the `MAPKIT_*` keys.
 - **Quick checks:** `GET /api/extract?probe=1` → `{"ffmpeg":true,"speech":true}`. `GET /api/photo?probe=1` → 204 when Google photos work.
@@ -286,6 +289,8 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Photos:** Storage bucket `avatars`: `<user>/avatar.jpg`, `<user>/spot-<id>.jpg`, `<user>/list-<id>.jpg`, `<user>/review-<place>.jpg`.
 
 ### Maps (cities)
+- **Coming Soon demand** (`supabase/cities.sql`): `nyc_city_demand` (one row per person per city: `voted`, `saves`), written only through `nyc_city_note(city, 'vote'|'unvote'|'save')`; totals from `nyc_city_counts()` (votes, people who voted or saved there, spots saved). Somewhere Else saves count under their town (`else:Princeton, NJ`, from the address). **Which city to open next:** run `select * from nyc_city_counts() order by people desc;` in the SQL Editor.
+- **Opening a Coming Soon city:** add its transit data like any new map (§10 "Adding a map"), move it from `SOON` to `CITIES`/`CITY_ORDER` in `logic.js` (and drop `soon` in `api/_shared.js`). Its spots are already filed under its id.
 - **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc`. Each map's clock for Open Now is in `TZ`.
 - `setCity()` switches map; `cityMoved()` re-centers and redraws. `state.places` = current map's spots, `state.otherPlaces` = the rest.
 - **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn). (`data/nys-data.js` and `data/nj-data.js` are old state-map files that aren't loaded.)
@@ -466,7 +471,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 | `data/nyc-*.js`, `data/city-data.js` | Neighborhoods, stations, lines and streets for every map |
 | `data/routes/` | Transit route lines (generated by the Action; don't hand-edit) |
 | `scripts/build-routes.js`, `.github/workflows/routes.yml` | Weekly transit-line builder |
-| `supabase/*.sql` | Database setup: spots, lists, photos, reviews, public maps, delete account, push, share, friends (§6) |
+| `supabase/*.sql` | Database setup: spots, lists, photos, reviews, public maps, delete account, push, share, friends, Coming Soon cities (§6) |
 | `sw.js` | Offline cache (bump `CACHE` when `src/` or `data/` changes) |
 | `manifest.webmanifest`, `icons/` | Home-screen name and icons, Android share target |
 | `vercel.json` | Function limits, `includeFiles` for ffmpeg, cache headers (`/path/:path*` patterns) |
