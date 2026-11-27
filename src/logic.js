@@ -33,17 +33,19 @@ CITIES.bos={id:'bos',name:'Boston',short:'BOS',emoji:'🦞',q:'Boston, MA',qc:'B
 CITIES.dc={id:'dc',name:'Washington, DC',short:'DC',emoji:'🏛️',q:'Washington, DC',qc:'Washington, District of Columbia',center:[38.9,-77.03],box:[38.76,-77.25,39.04,-76.88],bounds:[[38.68,-77.45],[39.12,-76.78]],
   regions:['Northwest','Northeast','Southeast','Southwest','Arlington','Alexandria','Maryland','Northern Virginia'],transit:'Metro',layerSub:'Red, Orange, Blue, Silver, Green & Yellow Line Stations',layers:['bus','bike'],busSub:'Metrobus',
   bike:{name:'Capital Bikeshare',url:'https://gbfs.lyft.com/gbfs/2.3/dca-cabi/en/',ext:'.json'}};
-const CITY_ORDER=['nyc','sg','hk','to','bos','dc'];
+// New Jersey: a state map (data/nj-data.js: outline, towns grouped into regions, NJ Transit, PATH and light rail stations).
+// Trips start from your NYC home (by car, NJ Transit or PATH) until you set a home here.
+CITIES.nj={id:'nj',name:'New Jersey',short:'NJ',emoji:'🍅',state:1,data:'NJS',hoodKm:25,labZ:12,q:'New Jersey',qc:'New Jersey',center:[40.15,-74.6],z:8,minZ:7,box:[38.9,-75.6,41.37,-73.88],bounds:[[38.4,-76.4],[41.8,-73.2]],
+  regions:(window.NJS||{}).regions||[],transit:'Train',layerSub:'NJ Transit, PATH & Light Rail Stations',layers:[]};
+const CITY_ORDER=['nyc','sg','hk','to','bos','dc','nj'];
 // Where each map is (state or country) for Pick A City, which groups cities by state.
-Object.assign(CITIES.nyc,{st:'NY',stName:'New York'});Object.assign(CITIES.bos,{st:'MA',stName:'Massachusetts'});Object.assign(CITIES.dc,{st:'DC',stName:'Washington, DC'});
+Object.assign(CITIES.nyc,{st:'NY',stName:'New York'});Object.assign(CITIES.bos,{st:'MA',stName:'Massachusetts'});Object.assign(CITIES.dc,{st:'DC',stName:'Washington, DC'});Object.assign(CITIES.nj,{st:'NJ',stName:'New Jersey'});
 Object.assign(CITIES.to,{country:'Canada'});Object.assign(CITIES.sg,{country:'Singapore'});Object.assign(CITIES.hk,{country:'Hong Kong'});
 // Coming Soon cities (status 'soon'): spots saved there are filed under the city and show on a simple map of it
 // (pins only: no transit, neighborhoods or bike layers yet), and people can vote to open it (supabase/cities.sql).
 // To open one, give it transit data like the other maps (see "Adding a map" in HANDOFF.md) and take status off.
 // 'else' (Somewhere Else) catches spots outside every listed city.
 const SOON=[
-  ['jc','Jersey City & Hoboken','JC','🌉','NJ','New Jersey','Jersey City, NJ',[40.735,-74.05],[40.64,-74.13,40.9,-73.9]],
-  ['nwk','Newark & Montclair','NWK','🏙️','NJ','New Jersey','Newark, NJ',[40.76,-74.2],[40.6,-74.42,40.92,-74.13]],
   ['phl','Philadelphia','PHL','🔔','PA','Pennsylvania','Philadelphia, PA',[39.952,-75.165],[39.85,-75.35,40.15,-74.95]],
   ['chi','Chicago','CHI','🌭','IL','Illinois','Chicago, IL',[41.89,-87.64],[41.64,-87.95,42.08,-87.52]],
   ['la','Los Angeles','LA','🌴','CA','California','Los Angeles, CA',[34.05,-118.3],[33.7,-118.7,34.35,-117.9]],
@@ -64,17 +66,22 @@ const NJ_EDGE=[[41.357,-74.694],[40.995,-73.902],[40.90,-73.925],[40.80,-73.972]
 // then the nearest Coming Soon city it's in, else Somewhere Else.
 const cityAt=ll=>{if(!ll||!isFinite(ll[0])||!isFinite(ll[1]))return null;if(inCore(ll))return 'nyc';
   const inB=(c)=>ll[0]>c.box[0]&&ll[0]<c.box[2]&&ll[1]>c.box[1]&&ll[1]<c.box[3];
-  const open=CITY_ORDER.find(k=>k!=='nyc'&&inB(CITIES[k]));if(open)return open;
+  const open=CITY_ORDER.find(k=>k!=='nyc'&&inBox(ll,CITIES[k]));if(open)return open;
   const soon=SOON.map(c=>CITIES[c[0]]).filter(inB).sort((a,b)=>km(ll,a.center)-km(ll,b.center))[0];return soon?soon.id:'else';};
 // The town and state from a US address ("…, Princeton, NJ 08540, USA" → "Princeton, NJ"), for Somewhere Else spots.
 const townOf=a=>{const m=String(a||'').match(/,\s*([^,\d][^,]*?),\s*([A-Z]{2})(?:\s+\d{5}(?:-\d{4})?)?(?:,\s*(?:USA|United States))?\s*$/);return m?m[1].trim()+', '+m[2]:'';};
-// Spots filed under NYC (or the removed state maps, or Somewhere Else) move to the map their coordinates are on.
-// This is what moves New Jersey saves out of NYC; it runs whenever spots load, so it's the same on every device.
-const REFILE=new Set(['nyc','nj','nys','else']);
-const refile=list=>list.map(p=>{const was=p.city||'nyc';if(!REFILE.has(was))return p;const c=cityAt([+p.lat,+p.lng]);return c&&c!==was?{...p,city:c}:p;});
+// Spots filed under NYC (or the removed New York State map, Somewhere Else, or the short-lived jc/nwk ids) move to the map their
+// coordinates are on. This is what moves New Jersey saves out of NYC to the New Jersey map; it runs whenever spots load, so it's the same on every device.
+const REFILE=new Set(['nyc','nys','else','jc','nwk']);
+// The neighborhood (or, on a state map, the town) of a point on any map, not just the open one.
+const hoodFor=(id,ll,addr)=>{const c=CITIES[id];if(!c||id==='nyc')return '';
+  const A=c.state?(SD(c).towns||[]).map(t=>({name:t[0],c:[t[2],t[3]]})):(((window.CITY_DATA||{})[id]||{}).hoods||[]).map(h=>({name:h.n,c:h.c}));
+  const n=A.length?A.reduce((m,a)=>km(ll,a.c)<km(ll,m.c)?a:m):null;if(n&&km(ll,n.c)<(c.state?(c.hoodKm||40):6))return n.name;
+  return (townOf(addr).split(',')[0])||'';};
+const refile=list=>list.map(p=>{const was=p.city||'nyc';if(!REFILE.has(was))return !p.area&&was!=='nyc'&&CITIES[was]&&isFinite(p.lat)?{...p,area:hoodFor(was,[+p.lat,+p.lng],p.address)}:p;const c=cityAt([+p.lat,+p.lng]);return c&&c!==was?{...p,city:c,area:hoodFor(c,[+p.lat,+p.lng],p.address)||p.area}:p;});
 let CUR=CITIES[(()=>{try{return localStorage.getItem('nycList.city')||'';}catch(e){return '';}})()]||CITIES.nyc;
-// Spots saved on the removed New York State and New Jersey maps stay in the account but show on no map.
-const GONE_MAPS=new Set(['nys','nj']);
+// Spots saved on the removed New York State map stay in the account (and move to the map their coordinates are on).
+const GONE_MAPS=new Set(['nys']);
 // Web app on a computer (design D3): map full screen, glass sidebar, floating place card. Never in the iPhone app.
 const DESK_MQ='(min-width: 1024px) and (min-height: 620px)';
 const isDeskWide=()=>!NATIVE&&!!(window.matchMedia&&window.matchMedia('(min-width: 1280px)').matches);
@@ -288,7 +295,7 @@ const withCity=q=>{const re=CUR.id==='nyc'?/new york|nyc|brooklyn|queens|bronx|s
 // Opening hours (from /api/hours, stored on the spot as hours:{p:[[openDay,openMin,closeDay,closeMin]…],s,t}).
 // Each map's clock, so Open Now is right wherever you are.
 const TZ={nyc:'America/New_York',nys:'America/New_York',nj:'America/New_York',bos:'America/New_York',dc:'America/New_York',to:'America/Toronto',sg:'Asia/Singapore',hk:'Asia/Hong_Kong',
-  jc:'America/New_York',nwk:'America/New_York',phl:'America/New_York',mia:'America/New_York',chi:'America/Chicago',atx:'America/Chicago',la:'America/Los_Angeles',sf:'America/Los_Angeles',sea:'America/Los_Angeles'};
+  phl:'America/New_York',mia:'America/New_York',chi:'America/Chicago',atx:'America/Chicago',la:'America/Los_Angeles',sf:'America/Los_Angeles',sea:'America/Los_Angeles'};
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],WEEK=10080;
 const cityNow=id=>{try{const f=new Intl.DateTimeFormat('en-US',{timeZone:TZ[id]||TZ.nyc,weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(new Date()),g=t=>(f.find(x=>x.type===t)||{}).value;
   return DAYS.indexOf(g('weekday'))*1440+(+g('hour')%24)*60+(+g('minute'));}catch(e){const d=new Date();return d.getDay()*1440+d.getHours()*60+d.getMinutes();}};
@@ -697,7 +704,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
     if(on)this.toast('Vote counted for '+c.name+' '+c.emoji+'\nThe more votes, the sooner it opens.');
     this.cityNote(id,on?'vote':'unvote');}
   // New spots go on the map their coordinates are on; spots in Coming Soon cities count toward opening them.
-  fileSpots(list){const out=list.map(p=>{const c=cityAt([+p.lat,+p.lng])||p.city||CUR.id;return {...p,city:c,...(c!==CUR.id&&CITIES[c].status&&townOf(p.address)?{area:townOf(p.address).split(',')[0]}:{})};});
+  fileSpots(list){const out=list.map(p=>{const c=cityAt([+p.lat,+p.lng])||p.city||CUR.id;return {...p,city:c,...(c!==CUR.id&&hoodFor(c,[+p.lat,+p.lng],p.address)?{area:hoodFor(c,[+p.lat,+p.lng],p.address)}:{})};});
     out.forEach(p=>this.cityDemand(p.city,p,'save'));return {here:out.filter(p=>p.city===CUR.id),there:out.filter(p=>p.city!==CUR.id)};}
   async save(){const s=this.state,f=s.form;if(!f.name.trim()||!f.cat||s.saving)return;const orig=f.id?s.places.find(p=>p.id===f.id):null;
     let ll=f.lat!=null?[f.lat,f.lng]:null;
@@ -708,7 +715,7 @@ if(this.watchPresence)this.watchPresence();if(!this._share&&!s.addOpen&&this._sh
       this.setState({saving:false});if(!ll){this.toast('Couldn’t find it. Drop a pin or pick a neighborhood.');return;}}
     // The spot goes on the map its coordinates are on (a Jersey City spot saved from the NYC map is filed under Jersey City).
     const city=cityAt(ll)||CUR.id,away=city!==CUR.id,town=townOf(f.address);
-    const area=away?(town?town.split(',')[0]:CITIES[city].q||''):f.area==='auto'?(hoodAt(ll)||(isSoon(CUR)?(town.split(',')[0]||CUR.q):'Midtown')):f.area;
+    const area=away?(hoodFor(city,ll,f.address)||CITIES[city].q||''):f.area==='auto'?(hoodAt(ll)||(isSoon(CUR)?(town.split(',')[0]||CUR.q):'Midtown')):f.area;
     const p={id:f.id||('p'+Date.now()),city,name:f.name.trim(),cat:f.cat,area,lat:ll[0],lng:ll[1],url:f.url.trim(),source:detect(f.url.trim())||'manual',address:f.address.trim(),note:f.note.trim(),pub:!!f.pub,fpriv:!!f.fpriv,...(()=>{const n=(f.evN||'').trim();return n&&okDay(f.evD1)?{ev:{n,d1:f.evD1,...(okDay(f.evD2)&&f.evD2>f.evD1?{d2:f.evD2}:{}),...((f.evTm||'').trim()?{tm:f.evTm.trim()}:{})}}:{ev:null};})(),order:orderList(f.order),orderChk:orderList(f.order).length?null:(orig&&orig.orderChk)||null,...(f.gid?{gid:f.gid}:{}),reserve:/^https?:\/\//i.test((f.reserve||"").trim())?f.reserve.trim():'',reserveChk:/^https?:\/\//i.test((f.reserve||"").trim())?null:(orig&&orig.reserveChk)||null,price:this.priced(f.cat)?(f.price||0):0,visited:orig?orig.visited:false};
     if(s.addTarget&&!orig){const tid=s.addTarget;this.addStopsTo(tid,[p],false,s.addTargetDay);this.setState({addOpen:false,addTarget:null,addTargetDay:0,tab:'lists',tripId:tid,tripView:'list',tripSel:null});this.toast('Added to the list.');return;}
     if(!orig||orig.city!==city)this.cityDemand(city,p,'save');

@@ -58,8 +58,13 @@ const CITIES = {
   dc: { name: 'Washington, DC', short: 'DC', area: 'Washington, DC and its close neighbors (Arlington, Alexandria, Bethesda, Silver Spring and nearby)', eg: '"Dupont Circle", "Navy Yard"', eg1: '"Shaw"', addr: '"1309 5th St NE"', box: [38.76, -77.25, 39.04, -76.88] },
   to: { name: 'Toronto', short: 'Toronto', area: 'the City of Toronto', eg: '"Kensington Market", "Leslieville"', eg1: '"Queen West"', addr: '"100 Queen St W"', box: [43.58, -79.64, 43.86, -79.11] },
   // Coming Soon cities (status 'soon' in src/logic.js): spots there are saved on a simple map of the city.
-  jc: { soon: 1, name: 'Jersey City & Hoboken', short: 'Jersey City', area: 'Jersey City, Hoboken, Fort Lee and the nearby Hudson and Bergen County towns along the Hudson in New Jersey', eg: '"Downtown Jersey City", "Hoboken"', eg1: '"Journal Square"', addr: '"150 Newark Ave"', box: [40.64, -74.13, 40.9, -73.9] },
-  nwk: { soon: 1, name: 'Newark & Montclair', short: 'Newark', area: 'Newark, Montclair and the nearby Essex and Union County towns in New Jersey', eg: '"Ironbound", "Montclair"', eg1: '"Ironbound"', addr: '"100 Ferry St"', box: [40.6, -74.42, 40.92, -74.13] },
+  // New Jersey (outline matches data/nj-data.js in the app). The NYC box also covers Jersey City and Hoboken; cityAt() sends them here.
+  nj: { name: 'New Jersey', short: 'New Jersey', pin: 'NJ', state: true, area: 'New Jersey (Jersey City, Hoboken, Bergen County, Newark, Montclair, Princeton, the Jersey Shore, South Jersey and the Skylands)',
+    eg: '"Hoboken", "Montclair"', eg1: '"Asbury Park"', addr: '"221 Washington St"', box: [38.9, -75.6, 41.37, -73.88],
+    poly: [[41.357, -74.694], [40.995, -73.902], [40.90, -73.925], [40.80, -73.972], [40.75, -74.012], [40.70, -74.035], [40.652, -74.07],
+      [40.642, -74.18], [40.56, -74.248], [40.49, -74.262], [40.47, -73.96], [40.20, -73.96], [39.90, -74.03], [39.5, -74.17], [39.30, -74.40], [38.92, -74.84],
+      [38.93, -74.97], [39.20, -75.12], [39.40, -75.45], [39.55, -75.58], [39.70, -75.53], [39.86, -75.33], [39.95, -75.15], [40.10, -74.87],
+      [40.21, -74.77], [40.42, -74.97], [40.57, -75.21], [40.85, -75.10], [40.98, -75.14], [41.20, -74.87]] },
   phl: { soon: 1, name: 'Philadelphia', short: 'Philly', area: 'Philadelphia', eg: '"Fishtown", "Rittenhouse"', eg1: '"Old City"', addr: '"1200 Frankford Ave"', box: [39.85, -75.35, 40.15, -74.95] },
   chi: { soon: 1, name: 'Chicago', short: 'Chicago', area: 'Chicago and its close neighbors (Evanston, Oak Park)', eg: '"Wicker Park", "West Loop"', eg1: '"Logan Square"', addr: '"1500 N Milwaukee Ave"', box: [41.64, -87.95, 42.08, -87.52] },
   la: { soon: 1, name: 'Los Angeles', short: 'LA', area: 'Los Angeles and its close neighbors (Santa Monica, Pasadena, Glendale, Culver City)', eg: '"Silver Lake", "Koreatown"', eg1: '"Arts District"', addr: '"3300 Sunset Blvd"', box: [33.7, -118.7, 34.35, -117.9] },

@@ -8,7 +8,7 @@ Everything a new chat needs to keep working on **Spotted In**: what the app does
 
 **Spotted In** is Kotis's map of the places she's been meaning to try (restaurants, cafés, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station, travel time and opening hours. It also plans a day out, keeps shared trip lists with friends, and lets people rate and review the spots they've saved.
 
-It has six maps, each with its own spots, home and day plan:
+It has seven maps, each with its own spots, home and day plan:
 
 | Map | Button | Transit used for travel times |
 |---|---|---|
@@ -18,10 +18,11 @@ It has six maps, each with its own spots, home and day plan:
 | Toronto | TO 🍁 | TTC subway, LRT, streetcars |
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
 | Washington, DC | DC 🏛️ | Metro (Red, Orange, Blue, Silver, Green, Yellow) |
+| New Jersey (whole state) | NJ 🍅 | NJ Transit, PATH and light rail (trips start from your NYC home until you set one in NJ) |
 
-**Coming Soon cities** (opened by popular demand): Jersey City & Hoboken (JC 🌉) and Newark & Montclair (NWK 🏙️) in New Jersey, Philadelphia (PHL 🔔), Chicago (CHI 🌭), Los Angeles (LA 🌴), San Francisco Bay (SF 🌁), Miami (MIA 🦩), Austin (ATX 🤠) and Seattle (SEA ☕). Spots saved there are filed under that city and show on a simple map of it (pins, Explore and Route; no transit, neighborhoods or layers yet), with a **Vote To Open** card. Spots outside every listed city go to **Somewhere Else 🌎**.
+**Coming Soon cities** (opened by popular demand): Philadelphia (PHL 🔔), Chicago (CHI 🌭), Los Angeles (LA 🌴), San Francisco Bay (SF 🌁), Miami (MIA 🦩), Austin (ATX 🤠) and Seattle (SEA ☕). Spots saved there are filed under that city and show on a simple map of it (pins, Explore and Route; no transit, neighborhoods or layers yet), with a **Vote To Open** card. Spots outside every listed city go to **Somewhere Else 🌎**.
 
-Every spot is filed by its coordinates, not by the map you were on: a Jersey City or Hoboken spot saved from the NYC map goes to JC (New Jersey is cut out of the NYC box by `NJ_EDGE`). This runs on every load (`refile()` in `logic.js`), so spots once filed under NYC, or under the old `nys`/`nj` state maps, move to the right city on every device.
+Every spot is filed by its coordinates, not by the map you were on: a Jersey City or Hoboken spot saved from the NYC map goes to New Jersey (New Jersey is cut out of the NYC box by `NJ_EDGE`). This runs on every load (`refile()` in `logic.js`), so spots once filed under NYC, or under the old `nys` state map, move to the right map on every device. The New Jersey map (a state map, `data/nj-data.js`) was reopened in Nov 2026 so a New Jersey beta tester's spots have a home.
 
 - **Website:** https://spottedinapp.com (intro page) with the web app at https://spottedinapp.com/app (also installs to the home screen). The Vercel address https://nyc-lovat.vercel.app serves the app at "/" too.
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -291,9 +292,9 @@ From the iPhone Claude app you can still change the code and the website; only t
 ### Maps (cities)
 - **Coming Soon demand** (`supabase/cities.sql`): `nyc_city_demand` (one row per person per city: `voted`, `saves`), written only through `nyc_city_note(city, 'vote'|'unvote'|'save')`; totals from `nyc_city_counts()` (votes, people who voted or saved there, spots saved). Somewhere Else saves count under their town (`else:Princeton, NJ`, from the address). **Which city to open next:** run `select * from nyc_city_counts() order by people desc;` in the SQL Editor.
 - **Opening a Coming Soon city:** add its transit data like any new map (§10 "Adding a map"), move it from `SOON` to `CITIES`/`CITY_ORDER` in `logic.js` (and drop `soon` in `api/_shared.js`). Its spots are already filed under its id.
-- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc`. Each map's clock for Open Now is in `TZ`.
+- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc, nj`. Each map's clock for Open Now is in `TZ`.
 - `setCity()` switches map; `cityMoved()` re-centers and redraws. `state.places` = current map's spots, `state.otherPlaces` = the rest.
-- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn). (`data/nys-data.js` and `data/nj-data.js` are old state-map files that aren't loaded.)
+- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn). New Jersey `data/nj-data.js` (`window.NJS`: outline, towns by region, NJ Transit/PATH/light rail stations and hubs; a state map, `state:1`). (`data/nys-data.js` is the old New York State file and isn't loaded.)
 - **Travel estimates:** `estimate(a, b)` finds the best ride between stations near each end (one transfer), using each line's speed and wait, compared with walking. `inCore` (inside the five boroughs) cuts New Jersey out of the NYC box. `bestOf()` picks the quickest. Helpers: `inBox`, `inCore`, `reach`, `NYCISH()`, `homeFor()`, `hoodAt`.
 - **Bus, tram, streetcar and ferry lines:** other cities use `data/routes/<city>-<kind>.json`, built from OpenStreetMap by the GitHub Action **Build transit routes** (`.github/workflows/routes.yml` → `scripts/build-routes.js` → `api/_osmroutes.js`). It runs weekly; run it by hand from GitHub → Actions (tick **force** to rebuild all). NYC buses come from `/api/bus`. Route files load from the live site, so they don't need a new iPhone build.
 - **Server side:** `CITIES` in `api/_shared.js` mirrors the maps; `localize()` adapts the NYC-written AI prompts to each map. The AI also answers `post_city`, which drives the "Switch To…" question.
