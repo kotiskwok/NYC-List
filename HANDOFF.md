@@ -363,8 +363,9 @@ Get There shows the subway or train route next to walking, and opens Google Maps
 Map Layers turns on subway lines, buses and bike docks if you want them.
 Pop-ups and markets keep their dates, and drop off the map once they're over.
 
-SIX MAPS
-Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston and Washington, DC.
+SEVEN MAPS
+Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston, Washington, DC and New Jersey.
+More US cities are Coming Soon. Vote for the ones you want next.
 Each one uses its own transit for travel times.
 
 EXPLORE
@@ -416,7 +417,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 25 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 25 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press **Try Again**.
+- **Current build number:** 26 (`CURRENT_PROJECT_VERSION`; New Jersey map and Coming Soon cities). The Mac's Xcode project needs a pull to get it; if TestFlight doesn't show build 26 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press **Try Again**.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all six lines. Push it.
