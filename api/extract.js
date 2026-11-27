@@ -12,7 +12,7 @@
 //   ANTHROPIC_MODEL     (optional)  defaults to claude-haiku-5-5
 //   SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY (optional) default to the values in config.js
 
-const { cors, send, requireUser, readJson, CITIES, cityFor, inCityBox, localize, localizeObj } = require('./_shared');
+const { cors, send, requireUser, readJson, CITIES, cityFor, inCityBox, cityAt, localize, localizeObj } = require('./_shared');
 const G = require('./_gmaps');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 const UA_BOT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
@@ -205,7 +205,7 @@ async function pinPlace(p, city) {
       const ac = new AbortController(), t = setTimeout(() => ac.abort(), 6000);
       const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', signal: ac.signal,
         headers: { 'content-type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'places.displayName,places.location,places.formattedAddress' },
-        body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', locationRestriction: { rectangle: { low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } } } }) });
+        body: JSON.stringify({ textQuery: q, pageSize: 1, languageCode: 'en', ...(c.any ? {} : { locationRestriction: { rectangle: { low: { latitude: b[0], longitude: b[1] }, high: { latitude: b[2], longitude: b[3] } } } }) }) });
       clearTimeout(t);
       const g = r.ok ? ((await r.json()).places || [])[0] : null;
       return g && g.location && inCityBox(g.location.latitude, g.location.longitude, c) ? g : null;
@@ -313,10 +313,10 @@ async function watchVideo(url, sec, headers) {
 
 // The person's map may be set to another city than the post's (someone in NYC saving a Hong Kong trip, or the
 // picker left on Toronto). Then still list the places and say which city, so the app can offer to switch.
-const OTHER_CITY = c => `\n\nThe person's map is currently set to ${(c && c.name) || 'New York City'}. The app also supports New York City, Singapore, Hong Kong, Toronto, Boston and Washington DC (with Arlington, Alexandria and the close Maryland suburbs). If the places in this post are clearly in one of those other cities, list them anyway (overriding any rule above that limits places to ${(c && c.name) || 'New York City'}) and set post_city to that city. Always set post_city.`;
+const OTHER_CITY = c => `\n\nThe person's map is currently set to ${(c && c.name) || 'New York City'}. The app also supports New York City, Singapore, Hong Kong, Toronto, Boston and Washington DC (with Arlington, Alexandria and the close Maryland suburbs), and New Jersey (the whole state: Jersey City, Hoboken, Newark, Montclair, Princeton, the Jersey Shore), and keeps spots for these Coming Soon cities: Philadelphia (phl), Chicago (chi), Los Angeles (la), the San Francisco Bay Area (sf), Miami (mia), Austin (atx) and Seattle (sea). New Jersey is never New York City. If the places in this post are clearly in one of those other cities, list them anyway (overriding any rule above that limits places to ${(c && c.name) || 'New York City'}) and set post_city to that city. Always set post_city.`;
 
 // Added after localizing, so the city names in it stay as written.
-const withPostCity = t => { t.input_schema.properties.post_city = { type: 'string', enum: ['nyc', 'sg', 'hk', 'to', 'bos', 'dc', 'other', 'unknown'], description: 'Which city the places are in: nyc (New York City), sg (Singapore), hk (Hong Kong), to (Toronto), dc (Washington, DC, including Arlington, Alexandria and the close Maryland suburbs), bos (Boston, including Cambridge, Somerville and Brookline), nys (New York State outside New York City), nj (New Jersey, including Jersey City and Hoboken), other, or unknown.' }; t.input_schema.required = [...t.input_schema.required, 'post_city']; return t; };
+const withPostCity = t => { t.input_schema.properties.post_city = { type: 'string', enum: ['nyc', 'sg', 'hk', 'to', 'bos', 'dc', 'nj', 'phl', 'chi', 'la', 'sf', 'mia', 'atx', 'sea', 'other', 'unknown'], description: 'Which city the places are in: nyc (New York City, the five boroughs only), sg (Singapore), hk (Hong Kong), to (Toronto), dc (Washington, DC, including Arlington, Alexandria and the close Maryland suburbs), bos (Boston, including Cambridge, Somerville and Brookline), nj (anywhere in New Jersey, including Jersey City, Hoboken, Newark and Princeton), phl (Philadelphia), chi (Chicago), la (Los Angeles), sf (San Francisco, Oakland, Berkeley), mia (Miami), atx (Austin), sea (Seattle), other, or unknown.' }; t.input_schema.required = [...t.input_schema.required, 'post_city']; return t; };
 
 // Reservation links (Resy, OpenTable, Tock, SevenRooms, Chope) that appear in the post or the notes. Only these
 // can be saved as a spot's booking link, so the AI can't invent one.
@@ -432,9 +432,9 @@ async function extractCore(body) {
       if (places[0] && post.pin) Object.assign(places[0], { lat: post.pin.lat, lng: post.pin.lng });
     }
     // Which city the spots are in: the Google Maps pin's city, else what the AI said.
-    // A pin inside the map the person is on stays there (Hoboken is in both the NYC box and New Jersey).
     const hereCity = CITIES[body.city] ? body.city : 'nyc';
-    let postCity = post.pin ? (inCityBox(post.pin.lat, post.pin.lng, CITIES[hereCity]) ? hereCity : Object.keys(CITIES).find(k => inCityBox(post.pin.lat, post.pin.lng, CITIES[k]))) : CITIES[out.post_city] ? out.post_city : null;
+    // A Google Maps pin decides by its coordinates (New Jersey is never NYC); otherwise the AI's answer.
+    let postCity = post.pin ? cityAt(post.pin.lat, post.pin.lng) : CITIES[out.post_city] ? out.post_city : null;
     await Promise.all(places.filter(p => p.lat == null).map(p => pinPlace(p, CITIES[postCity || hereCity])));
     return [200, { places, city: postCity || hereCity, summary: out.summary || '', readable: post.text.length > 0, heard: !!(post.spoken || transcript || vSpoken), source: post.source,
       message: places.length ? '' : 'No specific places in this post. Add it by name instead.' }];

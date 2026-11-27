@@ -8,7 +8,7 @@ Everything a new chat needs to keep working on **Spotted In**: what the app does
 
 **Spotted In** is Kotis's map of the places she's been meaning to try (restaurants, cafés, bakeries, gourmet groceries, cute shops), saved straight from TikTok, Instagram, Threads and Google Maps. Share or paste a post and AI reads the caption, photos, on-screen text and what's said in the video, finds the places, and pins them on the map with the nearest station, travel time and opening hours. It also plans a day out, keeps shared trip lists with friends, and lets people rate and review the spots they've saved.
 
-It has six maps, each with its own spots, home and day plan:
+It has seven maps, each with its own spots, home and day plan:
 
 | Map | Button | Transit used for travel times |
 |---|---|---|
@@ -18,8 +18,11 @@ It has six maps, each with its own spots, home and day plan:
 | Toronto | TO 🍁 | TTC subway, LRT, streetcars |
 | Boston | BOS 🦞 | The T (Red, Orange, Blue, Green B/C/D/E, Mattapan, Silver Line) |
 | Washington, DC | DC 🏛️ | Metro (Red, Orange, Blue, Silver, Green, Yellow) |
+| New Jersey (whole state) | NJ 🍅 | NJ Transit, PATH and light rail (trips start from your NYC home until you set one in NJ) |
 
-The app covers major cities only; more get added over time. Old spots tagged `nys` or `nj` (state maps that no longer exist) stay in the account but show on no map, public map or friends' view (`GONE_MAPS` in `logic.js`).
+**Coming Soon cities** (opened by popular demand): Philadelphia (PHL 🔔), Chicago (CHI 🌭), Los Angeles (LA 🌴), San Francisco Bay (SF 🌁), Miami (MIA 🦩), Austin (ATX 🤠) and Seattle (SEA ☕). Spots saved there are filed under that city and show on a simple map of it (pins, Explore and Route; no transit, neighborhoods or layers yet), with a **Vote To Open** card. Spots outside every listed city go to **Somewhere Else 🌎**.
+
+Every spot is filed by its coordinates, not by the map you were on: a Jersey City or Hoboken spot saved from the NYC map goes to New Jersey (New Jersey is cut out of the NYC box by `NJ_EDGE`). This runs on every load (`refile()` in `logic.js`), so spots once filed under NYC, or under the old `nys` state map, move to the right map on every device. The New Jersey map (a state map, `data/nj-data.js`) was reopened in Nov 2026 so a New Jersey beta tester's spots have a home.
 
 - **Website:** https://spottedinapp.com (intro page) with the web app at https://spottedinapp.com/app (also installs to the home screen). The Vercel address https://nyc-lovat.vercel.app serves the app at "/" too.
 - **iPhone app:** the same site wrapped with Capacitor, on TestFlight as **"Spotted in: Places To Go"**.
@@ -93,6 +96,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 
 ### Map tab
 - **Apple Maps** base map (MapKit JS), dark scheme in dark mode. If it's unavailable, the app draws its own map in Apple Maps colours.
+- **Pick A City:** US cities grouped by state (states with an open map first, then the ones you have spots in, then A to Z), then Around The World (Toronto, Hong Kong, Singapore), then Everywhere Else once you have spots there. Coming Soon rows show your spot count and "N Want It" with a **Vote** button.
 - **Header card:** "Spotted In" with the yellow **city button** (NYC ▾) that opens **Pick A City**, a big count of **Spots To Try**, your profile photo with a sync dot (tap for **Your Account**), and Visited / In Plan counts.
 - **Chips:** All Spots, **Open Now** (only spots open right now, in that map's local time), then the categories.
 - **Pins:** a frosted ring with the category's line icon (34 px, 54 px when selected; `pinHtml` / `syncOne` in `logic.js`).
@@ -257,7 +261,7 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Public values** (safe, in `config.js` and as fallbacks in `api/_shared.js`): the Supabase URL and the publishable key `sb_publishable_aP3g7MgD21wvpdskSfHU4A_WCFAC1Tg`.
 - **Domain:** spottedinapp.com is registered on Squarespace (Google Workspace email on it). Squarespace DNS → Custom records: `A @ 216.198.79.1` and `CNAME www 02fda0b297a75253.vercel-dns-017.com` (the Google MX, SPF and DKIM records stay). Vercel → project nyc → Domains: spottedinapp.com redirects (308) to www.spottedinapp.com, which is Production. Supabase → Authentication → URL Configuration lists `https://spottedinapp.com/**`, `https://www.spottedinapp.com/**` and `https://nyc-lovat.vercel.app/**` as redirect URLs.
 - **Supabase setup:** Authentication → Site URL is the Vercel address; "Allow new users to sign up" stays on (friends join lists).
-- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading), `supabase/friends.sql` (friends). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
+- **SQL files** (run once each in Supabase → SQL Editor → New query → Run; safe to re-run): `supabase/schema.sql` (spots), `supabase/lists.sql` (shared lists), `supabase/avatars.sql` (photo storage), `supabase/reviews.sql` (reviews, reports, blocks), `supabase/public.sql` (public profile maps), `supabase/delete-account.sql` (Delete My Account), `supabase/push.sql` (list notifications), `supabase/share.sql` (share reading), `supabase/friends.sql` (friends), `supabase/cities.sql` (Coming Soon votes and demand). All have been run. If the editor shows "syntax error at end of input", make sure nothing is highlighted and the paste is complete.
 - **Replacing a key** (expired, deleted, or showing an error): make a new key on the service's site, then Vercel → project nyc → Settings → Environment Variables → the variable → **⋯ → Edit**, paste it with no spaces, keep Production and Preview ticked, save, then **Deployments → top production deployment → ⋯ → Redeploy**. No iPhone build is needed, because keys are only used on the server.
 - **Which key is broken:** "invalid x-api-key" when pasting a link means `ANTHROPIC_API_KEY` (also check Billing in console.anthropic.com for credit). Missing photos, suggestions or pins point to `GOOGLE_MAPS_API_KEY`; videos that are read without their speech point to `OPENAI_API_KEY`; the drawn fallback map instead of Apple Maps points to the `MAPKIT_*` keys.
 - **Quick checks:** `GET /api/extract?probe=1` → `{"ffmpeg":true,"speech":true}`. `GET /api/photo?probe=1` → 204 when Google photos work.
@@ -286,9 +290,11 @@ From the iPhone Claude app you can still change the code and the website; only t
 - **Photos:** Storage bucket `avatars`: `<user>/avatar.jpg`, `<user>/spot-<id>.jpg`, `<user>/list-<id>.jpg`, `<user>/review-<place>.jpg`.
 
 ### Maps (cities)
-- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc`. Each map's clock for Open Now is in `TZ`.
+- **Coming Soon demand** (`supabase/cities.sql`): `nyc_city_demand` (one row per person per city: `voted`, `saves`), written only through `nyc_city_note(city, 'vote'|'unvote'|'save')`; totals from `nyc_city_counts()` (votes, people who voted or saved there, spots saved). Somewhere Else saves count under their town (`else:Princeton, NJ`, from the address). **Which city to open next:** run `select * from nyc_city_counts() order by people desc;` in the SQL Editor.
+- **Opening a Coming Soon city:** add its transit data like any new map (§10 "Adding a map"), move it from `SOON` to `CITIES`/`CITY_ORDER` in `logic.js` (and drop `soon` in `api/_shared.js`). Its spots are already filed under its id.
+- **`CITIES` in `logic.js`**: per map `id`, `name`, `short`, `emoji`, `center`, `box` ([south, west, north, east]), `bounds`, `regions`, `transit`, `layerSub`, `layers`, bike GBFS feed. **`CITY_ORDER`** = `nyc, sg, hk, to, bos, dc, nj`. Each map's clock for Open Now is in `TZ`.
 - `setCity()` switches map; `cityMoved()` re-centers and redraws. `state.places` = current map's spots, `state.otherPlaces` = the rest.
-- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn). (`data/nys-data.js` and `data/nj-data.js` are old state-map files that aren't loaded.)
+- **Data files:** NYC `data/nyc-map-data.js`, `data/nyc-subway-data.js`, `data/nyc-streets-data.js`; Singapore, Hong Kong, Toronto, Boston, DC `data/city-data.js` (`window.CITY_DATA[city]` = `{hoods, st, lines}`; stops with `k:1` count for travel but aren't drawn). New Jersey `data/nj-data.js` (`window.NJS`: outline, towns by region, NJ Transit/PATH/light rail stations and hubs; a state map, `state:1`). (`data/nys-data.js` is the old New York State file and isn't loaded.)
 - **Travel estimates:** `estimate(a, b)` finds the best ride between stations near each end (one transfer), using each line's speed and wait, compared with walking. `inCore` (inside the five boroughs) cuts New Jersey out of the NYC box. `bestOf()` picks the quickest. Helpers: `inBox`, `inCore`, `reach`, `NYCISH()`, `homeFor()`, `hoodAt`.
 - **Bus, tram, streetcar and ferry lines:** other cities use `data/routes/<city>-<kind>.json`, built from OpenStreetMap by the GitHub Action **Build transit routes** (`.github/workflows/routes.yml` → `scripts/build-routes.js` → `api/_osmroutes.js`). It runs weekly; run it by hand from GitHub → Actions (tick **force** to rebuild all). NYC buses come from `/api/bus`. Route files load from the live site, so they don't need a new iPhone build.
 - **Server side:** `CITIES` in `api/_shared.js` mirrors the maps; `localize()` adapts the NYC-written AI prompts to each map. The AI also answers `post_city`, which drives the "Switch To…" question.
@@ -357,8 +363,9 @@ Get There shows the subway or train route next to walking, and opens Google Maps
 Map Layers turns on subway lines, buses and bike docks if you want them.
 Pop-ups and markets keep their dates, and drop off the map once they're over.
 
-SIX MAPS
-Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston and Washington, DC.
+SEVEN MAPS
+Tap the yellow city button to switch maps: NYC, Singapore, Hong Kong, Toronto, Boston, Washington, DC and New Jersey.
+More US cities are Coming Soon. Vote for the ones you want next.
 Each one uses its own transit for travel times.
 
 EXPLORE
@@ -410,7 +417,7 @@ Screenshots are the best!
 ```
 - Apps with posts from other people (reviews) need report/block (built) and terms of use that forbid abusive content (`terms.html`, agreed to at sign-up).
 
-- **Current build number:** 25 (`CURRENT_PROJECT_VERSION`). The Mac's Xcode project is synced to it; if TestFlight doesn't show build 25 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press **Try Again**.
+- **Current build number:** 26 (`CURRENT_PROJECT_VERSION`; New Jersey map and Coming Soon cities). The Mac's Xcode project needs a pull to get it; if TestFlight doesn't show build 26 yet, it still needs Archive and Upload. If Signing & Capabilities shows an Associated Domains error, press **Try Again**.
 
 ### Shipping a new build
 1. **Bump the build number** (Claude, in the repo): `CURRENT_PROJECT_VERSION` in `native/ios/App/App.xcodeproj/project.pbxproj`, all six lines. Push it.
@@ -466,7 +473,7 @@ Reuse `native/APP_STORE.md` text and `privacy.html` / `support.html`. Play also 
 | `data/nyc-*.js`, `data/city-data.js` | Neighborhoods, stations, lines and streets for every map |
 | `data/routes/` | Transit route lines (generated by the Action; don't hand-edit) |
 | `scripts/build-routes.js`, `.github/workflows/routes.yml` | Weekly transit-line builder |
-| `supabase/*.sql` | Database setup: spots, lists, photos, reviews, public maps, delete account, push, share, friends (§6) |
+| `supabase/*.sql` | Database setup: spots, lists, photos, reviews, public maps, delete account, push, share, friends, Coming Soon cities (§6) |
 | `sw.js` | Offline cache (bump `CACHE` when `src/` or `data/` changes) |
 | `manifest.webmanifest`, `icons/` | Home-screen name and icons, Android share target |
 | `vercel.json` | Function limits, `includeFiles` for ffmpeg, cache headers (`/path/:path*` patterns) |

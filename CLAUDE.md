@@ -1,12 +1,13 @@
 # Spotted In
 
-Read `HANDOFF.md` first: it covers the app, its six city maps (NYC, Singapore, Hong Kong, Toronto, Boston, Washington DC), the services (GitHub, Vercel, Supabase, Anthropic, Google, OpenAI, Apple), the data model, every file and how to ship an iPhone build.
+Read `HANDOFF.md` first: it covers the app, its seven maps (NYC, Singapore, Hong Kong, Toronto, Boston, Washington DC, and the New Jersey state map), the services (GitHub, Vercel, Supabase, Anthropic, Google, OpenAI, Apple), the data model, every file and how to ship an iPhone build.
 
 Rules of thumb:
 - No build step. Edit `src/*.js` and `api/*.js` directly; views use htm templates in `src/view.js`.
 - New UI state goes in the `state` initializer and new values/handlers in `renderVals()` in `src/logic.js`.
 - Shared lists live in `src/lists.js` (it mixes Lists-tab methods into `Component`; its values come from `listVals()`).
 - Maps are defined in `CITIES` / `CITY_ORDER` (`src/logic.js`) and mirrored in `api/_shared.js`; station and neighborhood data is in `data/`.
+- Coming Soon cities are in `SOON` (`src/logic.js`, mirrored in `api/_shared.js` and `map.html`). Spots are filed by coordinates with `cityAt()`; never by the map that's open.
 - Bump `CACHE` in `sw.js` whenever `src/` or `data/` changes.
 - Secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_MAPS_API_KEY`, MapKit keys, `SUPABASE_SERVICE_ROLE_KEY`) live only in Vercel environment variables.
 - `vercel.json` header sources must use `/path/:path*` style patterns.
